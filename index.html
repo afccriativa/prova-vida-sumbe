@@ -901,6 +901,12 @@ const PROVINCIA  = 'CUANZA_SUL';
 // 'firebase' → Firebase Firestore  (Fase 2 — ACTIVO)
 const STORAGE_MODE = 'firebase';
 
+// ─── Chaves de Persistência de Sessão ────────────────────────────────────────
+// sessionStorage: persiste entre refreshes do mesmo separador; apaga ao fechar
+// localStorage:   persiste para sempre no dispositivo
+const SESSION_STORAGE_KEY = 'pvs_session_2r2026';
+const PIN_STORAGE_KEY      = 'pvs_admin_pin_2r2026';
+
 // ─── Sessão do Utilizador Activo ──────────────────────────────────────────────
 // Vive exclusivamente em memória — apaga-se ao recarregar a página (intencional).
 // Em Fases futuras este objecto será persistido no Firebase durante a sessão.
@@ -931,6 +937,11 @@ async function verifyPin(pin, storedHash) {
   return h === storedHash;
 }
 
+// Retorna o hash do PIN — da constante (se definida) ou do localStorage (se configurado no dispositivo)
+function getAdminPinHash() {
+  return ADMIN_PIN_HASH || localStorage.getItem(PIN_STORAGE_KEY) || '';
+}
+
 // ─── Funções de Sessão ────────────────────────────────────────────────────────
 function setSession(perfil, bi, nome, coordenacao) {
   APP_SESSION.perfil          = perfil;
@@ -939,6 +950,15 @@ function setSession(perfil, bi, nome, coordenacao) {
   APP_SESSION.coordenacao     = coordenacao || null;
   APP_SESSION.sessionStart    = new Date().toISOString();
   APP_SESSION.validacoesCount = 0;
+  // Persistir sessão: sobrevive a refreshes no mesmo separador
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      perfil, bi, nome,
+      coordenacao:      coordenacao || null,
+      sessionStart:     APP_SESSION.sessionStart,
+      validacoesCount:  0,
+    }));
+  } catch(e) { /* sessionStorage indisponível — não crítico */ }
 }
 
 function clearSession() {
@@ -948,6 +968,7 @@ function clearSession() {
   APP_SESSION.coordenacao     = null;
   APP_SESSION.sessionStart    = null;
   APP_SESSION.validacoesCount = 0;
+  try { sessionStorage.removeItem(SESSION_STORAGE_KEY); } catch(e) {}
 }
 
 function isAdminSession()      { return APP_SESSION.perfil === 'admin'; }
@@ -1157,10 +1178,10 @@ function selectPerfil(tipo) {
     document.getElementById('auth-admin-bi').classList.remove('inp-err');
     resetAuthMsg('admin');
     // Aviso se PIN ainda não configurado
-    if (!ADMIN_PIN_HASH) {
+    if (!getAdminPinHash()) {
       showAuthMsg('admin', 'warn',
-        '⚠️ PIN não configurado — acesso temporário por BI. Para definir um PIN permanente, ' +
-        'execute no console: hashPin(\'SEU_PIN\').then(h => console.log(\'Hash:\', h))');
+        '🔐 Primeiro acesso — PIN não configurado. Insira o PIN que deseja criar no campo PIN e clique "Entrar". ' +
+        'Ficará guardado neste dispositivo.');
     }
     setTimeout(() => document.getElementById('auth-admin-bi').focus(), 100);
   }
@@ -1217,29 +1238,52 @@ async function doAuthAdmin() {
     document.getElementById('auth-admin-bi').focus(); return;
   }
 
-  // Verificação de PIN (se configurado)
-  if (ADMIN_PIN_HASH) {
+  const storedHash = getAdminPinHash();
+
+  if (!storedHash) {
+    // ── Primeiro acesso: criar PIN ──────────────────────────────────────────
     if (!pin) {
-      showAuthMsg('admin', 'error', 'Por favor insira o PIN de acesso.');
+      showAuthMsg('admin', 'warn',
+        '🔐 Primeiro acesso. Insira o PIN que deseja criar e clique "Entrar". Mínimo 4 caracteres.');
       document.getElementById('auth-admin-pin').focus(); return;
     }
-    btn.disabled = true; btn.textContent = 'A verificar...';
-    const pinOk = await verifyPin(pin, ADMIN_PIN_HASH);
+    if (pin.length < 4) {
+      showAuthMsg('admin', 'error', 'O PIN deve ter pelo menos 4 caracteres.');
+      document.getElementById('auth-admin-pin').focus(); return;
+    }
+    btn.disabled = true; btn.textContent = 'A configurar PIN...';
+    const newHash = await hashPin(pin);
+    try { localStorage.setItem(PIN_STORAGE_KEY, newHash); } catch(e) {}
     btn.disabled = false; btn.textContent = '✔ Entrar';
-    if (!pinOk) {
-      showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
-      document.getElementById('auth-admin-pin').value = '';
-      document.getElementById('auth-admin-pin').focus(); return;
-    }
+    const rec = findBI(bi);
+    setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
+    closeAuthModal('admin');
+    hideSelectionScreen();
+    activateSystem();
+    showToast('🔐 PIN criado e guardado. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
+    return;
   }
-  // ADMIN_PIN_HASH vazio → acesso temporário por BI (sem PIN)
+
+  // ── Acesso normal: verificar PIN ──────────────────────────────────────────
+  if (!pin) {
+    showAuthMsg('admin', 'error', 'Por favor insira o PIN de acesso.');
+    document.getElementById('auth-admin-pin').focus(); return;
+  }
+  btn.disabled = true; btn.textContent = 'A verificar...';
+  const pinOk = await verifyPin(pin, storedHash);
+  btn.disabled = false; btn.textContent = '✔ Entrar';
+  if (!pinOk) {
+    showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
+    document.getElementById('auth-admin-pin').value = '';
+    document.getElementById('auth-admin-pin').focus(); return;
+  }
 
   const rec = findBI(bi);
   setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
   closeAuthModal('admin');
   hideSelectionScreen();
   activateSystem();
-  showToast('✅ Acesso administrativo concedido. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
+  showToast('✅ Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
 }
 
 // ─── Activar o sistema após autenticação ─────────────────────────────────────
@@ -1517,6 +1561,12 @@ async function supConfirmar() {
   // Incrementar contador da sessão
   APP_SESSION.validacoesCount = (APP_SESSION.validacoesCount || 0) + 1;
   supUpdateCounter();
+  // Sincronizar contador no sessionStorage
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+    s.validacoesCount = APP_SESSION.validacoesCount;
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(s));
+  } catch(e) {}
 
   // Actualizar log de sessão no Firebase
   fbLogSessao(APP_SESSION.bi, APP_SESSION.nome, APP_SESSION.coordenacao, APP_SESSION.validacoesCount);
@@ -2894,11 +2944,36 @@ function showToast(msg, type) {
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
   // FASE 2: Firebase pode já ter inicializado antes do DOMContentLoaded
-  // (módulos são diferidos mas executam antes do DOMContentLoaded)
   if (fbReady()) fbUpdateStatusIndicator('online');
 
-  // FASE 3: Mostrar ecrã de selecção de perfil ao carregar
-  showSelectionScreen();
+  // ── Tentar restaurar sessão do separador actual ──────────────────────────
+  // sessionStorage sobrevive a refreshes mas apaga ao fechar o separador
+  let sessionRestored = false;
+  try {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      const age = Date.now() - new Date(s.sessionStart).getTime();
+      // Validar: perfil definido + sessão com menos de 8 horas
+      if (s.perfil && s.bi && age < 8 * 60 * 60 * 1000) {
+        APP_SESSION.perfil          = s.perfil;
+        APP_SESSION.bi              = s.bi;
+        APP_SESSION.nome            = s.nome;
+        APP_SESSION.coordenacao     = s.coordenacao;
+        APP_SESSION.sessionStart    = s.sessionStart;
+        APP_SESSION.validacoesCount = s.validacoesCount || 0;
+        sessionRestored = true;
+      }
+    }
+  } catch(e) { /* sessionStorage indisponível */ }
+
+  if (sessionRestored) {
+    // Retomar sessão sem mostrar ecrã de selecção
+    activateSystem();
+  } else {
+    // FASE 3: Mostrar ecrã de selecção de perfil ao carregar
+    showSelectionScreen();
+  }
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.panel));
