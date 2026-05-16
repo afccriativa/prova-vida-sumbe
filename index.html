@@ -400,6 +400,34 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   .sup-counter-num { font-size: 32px; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASE 8 — PERFIL ADMINISTRATIVO EVOLUÍDO
+   ═══════════════════════════════════════════════════════════════════════ */
+.sup-tab-summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.sup-sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; min-width: 100px; }
+.sup-sum-num { font-size: 28px; font-weight: 900; line-height: 1; }
+.sup-sum-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+.sup-inactive td { opacity: 0.45; }
+.sup-rank-bar { display: inline-block; height: 6px; border-radius: 6px; background: var(--green); vertical-align: middle; margin-right: 6px; transition: width 0.4s; min-width: 2px; }
+
+/* Botão eliminar validação */
+.btn-del-val { background: none; border: 1px solid rgba(231,76,60,0.3); border-radius: 4px; padding: 3px 7px; cursor: pointer; font-size: 11px; color: rgba(231,76,60,0.6); margin-right: 2px; transition: all 0.15s; }
+.btn-del-val:hover { border-color: var(--red); color: var(--red); background: rgba(231,76,60,0.07); }
+
+/* Flag de coordenação cruzada */
+.cross-flag { font-size: 11px; cursor: help; margin-left: 4px; }
+
+/* Modal de confirmação de eliminação */
+.del-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 9800; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.del-box { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--red); border-radius: 12px; max-width: 400px; width: 100%; padding: 26px; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+.del-box h3 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.del-box p  { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.6; }
+.del-box-btns { display: flex; gap: 10px; }
+.btn-del-confirm { flex: 2; padding: 12px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-del-confirm:hover { background: #c0392b; }
+.btn-del-cancel2 { flex: 1; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-del-cancel2:hover { background: var(--border); }
+
 </style>
 </head>
 <body>
@@ -506,6 +534,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <div class="tab active" data-panel="search">🔍 Pesquisa</div>
   <div class="tab" data-panel="dashboard">📊 Dashboard</div>
   <div class="tab" data-panel="history">📋 Consolidação</div>
+  <div class="tab" data-panel="supervisors">👥 Supervisores</div>
   <div class="tab" data-panel="payments">💰 Pagamentos</div>
   <div class="tab" data-panel="audit">⚠️ Auditoria</div>
 </div>
@@ -691,6 +720,23 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <div id="audit-content"></div>
 </div>
 
+<!-- FASE 8 — Painel Supervisores -->
+<div id="panel-supervisors" class="panel">
+  <div id="supervisors-content" style="padding:0 4px"></div>
+</div>
+
+<!-- FASE 8 — Modal de confirmação de eliminação de validação -->
+<div id="del-modal" class="del-modal" style="display:none">
+  <div class="del-box">
+    <h3>🗑️ Eliminar Validação</h3>
+    <p id="del-modal-body">Tem a certeza que pretende eliminar esta validação? A acção será registada na auditoria.</p>
+    <div class="del-box-btns">
+      <button class="btn-del-cancel2" onclick="closeDelModal()">Cancelar</button>
+      <button class="btn-del-confirm" id="btn-del-confirm" onclick="confirmDeleteValidacao()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -705,6 +751,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     doc,
     getDoc,
     setDoc,
+    deleteDoc,
     collection,
     onSnapshot,
     getDocs,
@@ -744,6 +791,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       // Operações Firestore expostas directamente
       getDoc,
       setDoc,
+      deleteDoc,
       getDocs,
       onSnapshot,
       serverTimestamp,
@@ -1518,6 +1566,182 @@ function stopAdminListener() {
 
 // ─── FIM FASE 7 ───────────────────────────────────────────────────────────────
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 8 — PERFIL ADMINISTRATIVO EVOLUÍDO
+// Painel de Supervisores | Eliminação de Validações | Auditoria completa
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─── PAINEL SUPERVISORES ─────────────────────────────────────────────────────
+function renderSupervisors() {
+  if (!isAdminSession()) return;
+
+  const cs    = getMergedConfs();
+  const total = Object.keys(cs).length;
+
+  // Construir mapa de progresso por Supervisor
+  // Para cada supervisor no RH_DATA, contar as validações que fez
+  const supMap = {};
+  Object.keys(SUPERVISORES_INDEX).forEach(bi => {
+    const s = SUPERVISORES_INDEX[bi];
+    supMap[bi] = {
+      bi,
+      nome:        s.nome,
+      coordenacao: s.coordenacao,
+      count:       0,
+      sim:         0,
+      nao:         0,
+      ultimaHora:  '',
+    };
+  });
+
+  // Contar validações por supervisor a partir dos dados merged
+  Object.values(cs).forEach(conf => {
+    const supBI = (conf.supervisorBI || '').toUpperCase();
+    if (supBI && supMap[supBI]) {
+      supMap[supBI].count++;
+      if (conf.status === 'SIM') supMap[supBI].sim++;
+      else if (conf.status === 'NÃO') supMap[supBI].nao++;
+      if (conf.hora > supMap[supBI].ultimaHora) supMap[supBI].ultimaHora = conf.hora;
+    }
+  });
+
+  const supList = Object.values(supMap).sort((a,b) => b.count - a.count);
+  const activos = supList.filter(s => s.count > 0).length;
+  const maxCount = supList[0] ? supList[0].count : 1;
+
+  // Verificar coordenação cruzada (supervisor validou fora da sua coord)
+  const crossCoordMap = {}; // { [supBI]: count }
+  Object.values(cs).forEach(conf => {
+    const supBI   = (conf.supervisorBI || '').toUpperCase();
+    const supCoord = supMap[supBI] ? supMap[supBI].coordenacao : null;
+    if (supBI && supCoord && conf.supervisorCoord && conf.supervisorCoord !== supCoord) {
+      crossCoordMap[supBI] = (crossCoordMap[supBI] || 0) + 1;
+    }
+  });
+
+  const rows = supList.map((s, i) => {
+    const pct      = maxCount > 0 ? Math.round(s.count / maxCount * 100) : 0;
+    const barWidth = Math.max(pct, s.count > 0 ? 4 : 0);
+    const cross    = crossCoordMap[s.bi]
+      ? '<span class="cross-flag" title="'+crossCoordMap[s.bi]+' validação(ões) fora da sua coordenação — verificar">⚠️</span>'
+      : '';
+
+    return '<tr class="'+(s.count===0?'sup-inactive':'')+'">'+
+      '<td style="color:var(--text3);font-size:11px">'+(i+1)+'</td>'+
+      '<td style="font-weight:700;color:var(--text)">'+escH(s.nome.split(' ').slice(0,3).join(' '))+cross+'</td>'+
+      '<td style="font-size:11px;color:var(--text3)">'+escH(s.coordenacao||'—')+'</td>'+
+      '<td style="text-align:center">'+
+        (s.count > 0
+          ? '<span style="font-weight:800;color:var(--green)">'+s.count+'</span>'
+          : '<span style="color:var(--text3)">—</span>')+
+      '</td>'+
+      '<td>'+
+        '<div class="sup-rank-bar" style="width:'+barWidth+'px;max-width:90px"></div>'+
+        '<span style="font-size:11px;color:var(--text3)">'+pct+'%</span>'+
+      '</td>'+
+      '<td style="font-size:11px;color:var(--green)">'+s.sim+'</td>'+
+      '<td style="font-size:11px;color:var(--red)">'+s.nao+'</td>'+
+      '<td style="font-size:10px;color:var(--text3)">'+escH(s.ultimaHora||'—')+'</td>'+
+      '</tr>';
+  }).join('');
+
+  document.getElementById('supervisors-content').innerHTML =
+    // Sumário
+    '<div class="sup-tab-summary">'+
+      '<div class="sup-sum-card"><div class="sup-sum-num c-text">'+supList.length+'</div><div class="sup-sum-lbl">Total Supervisores</div></div>'+
+      '<div class="sup-sum-card"><div class="sup-sum-num c-green">'+activos+'</div><div class="sup-sum-lbl">Com Validações</div></div>'+
+      '<div class="sup-sum-card"><div class="sup-sum-num c-text3">'+(supList.length-activos)+'</div><div class="sup-sum-lbl">Sem Actividade</div></div>'+
+      '<div class="sup-sum-card"><div class="sup-sum-num c-teal">'+total+'</div><div class="sup-sum-lbl">Total Validações</div></div>'+
+      (Object.keys(crossCoordMap).length
+        ? '<div class="sup-sum-card"><div class="sup-sum-num c-orange">'+Object.keys(crossCoordMap).length+'</div><div class="sup-sum-lbl">⚠️ Cross-Coord</div></div>'
+        : '')+
+    '</div>'+
+    // Tabela
+    '<div class="audit-card">'+
+    '<h3>👥 Progresso por Supervisor de Equipa</h3>'+
+    '<div style="overflow-x:auto"><table class="history-table">'+
+    '<thead><tr>'+
+      '<th>#</th><th>Nome</th><th>Coordenação</th>'+
+      '<th style="text-align:center">Validações</th><th>Progresso</th>'+
+      '<th>✅ SIM</th><th>❌ NÃO</th><th>Última às</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '</table></div></div>'+
+    '<div style="margin-top:10px;font-size:11px;color:var(--text3);padding:0 4px">'+
+      '⚠️ Supervisores sem actividade aparecem com baixo contraste. '+
+      'Cross-Coord indica validações fora da coordenação do Supervisor.'+
+    '</div>';
+}
+
+// ─── ELIMINAR VALIDAÇÃO ───────────────────────────────────────────────────────
+let _delPendingBI = null;
+
+function openDelModal(bi) {
+  if (!isAdminSession()) { showToast('Acção exclusiva do Administrador.', 'error'); return; }
+  const prof = findBI(bi);
+  const cs   = getMergedConfs();
+  const conf = cs[bi];
+  if (!conf) { showToast('Validação não encontrada.', 'error'); return; }
+  _delPendingBI = bi;
+  document.getElementById('del-modal-body').innerHTML =
+    'Vai eliminar a validação de <strong>'+escH(prof ? prof.nome : bi)+'</strong> '+
+    '(estado: <strong>'+escH(conf.status)+'</strong>, registada em '+escH(conf.data)+' '+escH(conf.hora)+').<br><br>'+
+    'Esta acção remove o registo do Firebase e do armazenamento local. Não é reversível.';
+  document.getElementById('del-modal').style.display = 'flex';
+}
+
+function closeDelModal() {
+  document.getElementById('del-modal').style.display = 'none';
+  _delPendingBI = null;
+}
+
+async function confirmDeleteValidacao() {
+  if (!_delPendingBI || !isAdminSession()) return;
+  const bi  = _delPendingBI;
+  const btn = document.getElementById('btn-del-confirm');
+  btn.disabled = true; btn.textContent = 'A eliminar...';
+
+  // 1. Remover do localStorage
+  const d = getConfs();
+  delete d[bi];
+  localStorage.setItem(STORE_KEY, JSON.stringify(d));
+
+  // 2. Remover do Firebase
+  if (fbReady()) {
+    try {
+      await window._FB.deleteDoc(window._FB.docRef('validacoes/' + bi.toUpperCase()));
+      // Log de auditoria no Firebase
+      await fbLogSessao(
+        APP_SESSION.bi,
+        'ADMIN_DELETE: ' + bi + ' por ' + (APP_SESSION.nome || 'Admin'),
+        APP_SESSION.coordenacao,
+        -1 // valor -1 sinaliza eliminação no log
+      );
+    } catch(e) {
+      console.warn('[Firebase] Erro ao eliminar:', e.message);
+    }
+  }
+
+  // 3. Actualizar cache em memória
+  if (_fbLiveData[bi]) delete _fbLiveData[bi];
+
+  closeDelModal();
+  btn.disabled = false; btn.textContent = 'Eliminar';
+  showToast('Validação de '+bi+' eliminada e registada na auditoria.', 'success');
+
+  // Re-renderizar a aba activa
+  updateHeaderCount();
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) {
+    const panel = activeTab.getAttribute('data-panel');
+    if      (panel === 'history')     renderHistory();
+    else if (panel === 'dashboard')   renderDashboard();
+    else if (panel === 'supervisors') renderSupervisors();
+  }
+}
+
+// ─── FIM FASE 8 ───────────────────────────────────────────────────────────────
+
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
 }
@@ -1694,9 +1918,10 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   document.querySelector('[data-panel="'+name+'"]').classList.add('active');
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'history') renderHistory();
-  if (name === 'payments') renderPayments();
+  if (name === 'dashboard')   renderDashboard();
+  if (name === 'history')     renderHistory();
+  if (name === 'payments')    renderPayments();
+  if (name === 'supervisors') renderSupervisors(); // FASE 8
 }
 
 function doSearch() {
@@ -1987,9 +2212,11 @@ function renderHistory() {
       ? '<span style="display:inline-block;background:rgba(244,168,50,0.15);color:var(--accent2);border:1px solid rgba(244,168,50,0.3);font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;letter-spacing:0.3px" title="Realocado para 2ª Ronda por '+escH(r.reallocMeta.operador||'—')+' em '+escH(r.reallocMeta.data||'')+'">REALOC 2ª R</span>'
       : '';
     const actionBtns = canRealloc(r.status)
-      ? '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="openReallocModal(this.dataset.bi)" title="Editar para 2ª Ronda">🔧</button>'+
+      ? '<button class="btn-del-val" data-bi="'+r.bi+'" onclick="openDelModal(this.dataset.bi)" title="Eliminar validação">🗑️</button>'+
+        '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="openReallocModal(this.dataset.bi)" title="Editar para 2ª Ronda">🔧</button>'+
         '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="editRecord(this.dataset.bi)" title="Reverificar disponibilidade">✏️</button>'
-      : '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="editRecord(this.dataset.bi)" title="Editar verificação">✏️</button>';
+      : '<button class="btn-del-val" data-bi="'+r.bi+'" onclick="openDelModal(this.dataset.bi)" title="Eliminar validação">🗑️</button>'+
+        '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="editRecord(this.dataset.bi)" title="Editar verificação">✏️</button>';
 
     // FASE 7: Célula do Supervisor
     const supNome = r.supervisorNome || '';
@@ -2100,13 +2327,16 @@ function aCard(n, label, sev) {
 }
 
 function exportCSV() {
-  const cs = getConfs();
+  const cs = getMergedConfs(); // FASE 8: exportar dados completos incluindo Firebase
   const rows = Object.entries(cs).map(([bi,conf]) => {
     const r = findBI(bi)||{};
-    return [r.coordenacao||'',r.nome||bi,r.funcao||'',r.telefone||'',bi,conf.status,conf.obs||'',conf.data+' '+conf.hora]
-      .map(v => '"'+String(v).replace(/"/g,'""')+'"').join(';');
+    return [
+      r.coordenacao||'', r.nome||bi, r.funcao||'', r.telefone||'', bi,
+      conf.status, conf.obs||'', conf.data+' '+conf.hora,
+      conf.supervisorNome||'', conf.origem||''
+    ].map(v => '"'+String(v).replace(/"/g,'""')+'"').join(';');
   });
-  const header = 'Coordenação;Nome Completo;Função;Contacto;BI;Disponibilidade;Observação;Data Verificação';
+  const header = 'Coordenação;Nome Completo;Função;Contacto;BI;Disponibilidade;Observação;Data Verificação;Supervisor;Origem';
   const csv = '\uFEFF'+header+'\n'+rows.join('\n');
   const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
