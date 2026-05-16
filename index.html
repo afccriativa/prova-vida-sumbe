@@ -2,7 +2,10 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<meta name="theme-color" content="#0f1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Prova de Vida — 2ª Ronda Polio | Sumbe 2026</title>
 <style>
 :root {
@@ -445,6 +448,165 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .sw-text span { color: var(--text3); font-size: 12px; }
 .btn-sw-keep { padding: 8px 16px; background: var(--accent2); color: #000; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE 11 — OPTIMIZAÇÃO MOBILE (production-grade para uso em campo)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Globais: touch behavior + iOS quirks ── */
+* { -webkit-tap-highlight-color: rgba(244,168,50,0.18); }
+button, .tab, .sp-card, .sup-estado-btn, .btn-row-action, .btn-del-val,
+.btn-sup-search, .btn-auth-enter, .btn-auth-cancel, .btn-sair,
+.btn-sup-confirmar, .btn-sup-alterar, .btn-sup-nova, .btn-sw-keep,
+.btn-del-confirm, .btn-del-cancel2 {
+  touch-action: manipulation; /* elimina o delay de 300ms */
+}
+input, textarea, select {
+  font-size: 16px !important; /* >=16px evita zoom-on-focus no iOS */
+}
+/* ── Tabela admin: scroll horizontal suave em mobile ── */
+.history-table-wrap { -webkit-overflow-scrolling: touch; }
+
+/* ── Tablet (768px) ── */
+@media (max-width: 768px) {
+  .header { padding: 10px 14px; gap: 10px; }
+  .header-titles h1 { font-size: 13px; line-height: 1.25; }
+  .header-titles p { font-size: 10px; }
+  .header-flag { width: 32px; height: 22px; }
+  .header-count strong { font-size: 18px; }
+  .header-count span { font-size: 9px; }
+  .header-badge { padding: 3px 8px; font-size: 10px; }
+  .fb-status { font-size: 16px; }
+  .fb-status-label { font-size: 8px; }
+
+  /* Tabs: scroll horizontal sem cortar conteúdo */
+  .tabs { padding: 0 14px; overflow-x: auto; flex-wrap: nowrap;
+    scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { height: 3px; }
+  .tab { padding: 11px 14px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Session bar empilhada */
+  .session-bar { padding: 8px 14px; flex-wrap: wrap; gap: 8px; }
+  .sb-name { font-size: 12px; }
+  .sb-coord { font-size: 10px; width: 100%; margin-top: -4px; }
+  .btn-sair { margin-left: auto; }
+
+  /* Filtros e toolbar do histórico */
+  .history-toolbar { gap: 8px; }
+  .history-toolbar > * { min-height: 44px; } /* touch targets */
+
+  /* Search row stack */
+  .search-row { flex-direction: column; }
+  .search-input { font-size: 16px; padding: 14px 16px; }
+
+  /* Ecrã de selecção: cards generosos */
+  .sp-header-text h1 { font-size: 12px; }
+  .sp-header-text p { font-size: 10px; }
+  .sp-card { padding: 24px 18px 20px; }
+  .sp-card-icon { font-size: 36px; }
+  .sp-card h2 { font-size: 15px; }
+
+  /* Modais auth: ocupar largura disponível */
+  .auth-box { max-width: 100%; }
+  .auth-inp { font-size: 16px; padding: 14px 16px; }
+  .btn-auth-enter, .btn-auth-cancel { min-height: 48px; }
+
+  /* Painel Supervisor: contador empilhado */
+  #supervisor-panel { padding: 14px; max-width: 100%; }
+  .sup-counter-bar { padding: 12px 14px; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .sup-counter-num { font-size: 36px; }
+  .sup-session-info { margin-left: 0; text-align: left; width: 100%;
+    padding-top: 8px; border-top: 1px solid var(--border); }
+
+  .sup-search-box { padding: 14px; }
+  .sup-search-row { flex-direction: column; gap: 8px; }
+  .sup-bi-input { font-size: 17px; padding: 16px 18px; letter-spacing: 1px; }
+  .btn-sup-search { padding: 14px; font-size: 14px; width: 100%; }
+
+  .sup-prof-card { padding: 14px; gap: 10px; }
+  .sup-prof-avatar { width: 44px; height: 44px; font-size: 22px; }
+  .sup-prof-nome { font-size: 15px; }
+
+  .sup-validation-box { padding: 16px 14px; }
+  .sup-estado-btn { padding: 22px 8px; min-height: 88px; font-size: 13px; }
+  .sup-estado-btn .bico { font-size: 32px; }
+  .btn-sup-confirmar, .btn-sup-alterar { min-height: 48px; padding: 14px; }
+
+  /* Toast cabe na tela */
+  .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; }
+  /* Aviso de sessão idem */
+  .session-warning { left: 14px; right: 14px; bottom: 14px; transform: none;
+    width: auto; max-width: none; }
+  .btn-sw-keep { min-height: 40px; }
+
+  /* Modal de eliminação ocupa quase toda a largura */
+  .del-box { max-width: 100%; padding: 22px 20px; }
+  .btn-del-confirm, .btn-del-cancel2 { min-height: 48px; }
+
+  /* Action buttons na tabela com mais área de toque */
+  .btn-row-action, .btn-del-val { min-width: 32px; min-height: 32px;
+    padding: 6px 10px; font-size: 13px; }
+}
+
+/* ── Telemóvel comum (480px) ── */
+@media (max-width: 480px) {
+  .header { padding: 9px 12px; gap: 8px; }
+  .header-titles h1 { font-size: 12px; }
+  .header-titles p { display: none; } /* subtítulo só atrapalha */
+  .header-count { margin-right: 4px; }
+  .header-count strong { font-size: 17px; }
+  .fb-status-label { display: none; }
+  .header-badge { padding: 3px 7px; font-size: 9px; letter-spacing: 0.5px; }
+
+  .tab { padding: 10px 12px; font-size: 11px; }
+  .session-bar { padding: 7px 12px; }
+  .sb-badge { font-size: 9px; padding: 2px 8px; }
+
+  /* Supervisor: optimizações máximas para uso de uma mão */
+  #supervisor-panel { padding: 10px 12px; }
+  .sup-counter-num { font-size: 32px; }
+  .sup-bi-input { font-size: 16px; padding: 14px 16px; letter-spacing: 0.5px; }
+  .sup-bi-input::placeholder { font-size: 12px; }
+  .sup-estado-btn { padding: 20px 6px; min-height: 84px; font-size: 12px; }
+  .sup-estado-btn .bico { font-size: 28px; margin-bottom: 4px; }
+
+  .sp-cards { gap: 10px; }
+  .sp-card { padding: 22px 16px 18px; }
+  .sp-footer { font-size: 9px; margin-top: 16px; }
+}
+
+/* ── Phones muito pequenos (360px e abaixo) ── */
+@media (max-width: 360px) {
+  .header-titles h1 { font-size: 11px; }
+  .header-flag { width: 26px; height: 18px; }
+  .header-count strong { font-size: 15px; }
+  .header-count span { display: none; }
+  .header-badge { padding: 2px 6px; }
+  .tab { padding: 10px 10px; font-size: 11px; }
+  .sup-counter-num { font-size: 28px; }
+  .sup-estado-btn { font-size: 11px; padding: 18px 4px; }
+  .sup-estado-btn .bico { font-size: 26px; }
+  .sp-card h2 { font-size: 14px; }
+  .sp-card p { font-size: 10px; min-height: 30px; }
+}
+
+/* ── Safe area para phones com notch (iPhone X+, Android com câmara) ── */
+@supports (padding: max(0px)) {
+  .header { padding-left: max(14px, env(safe-area-inset-left));
+            padding-right: max(14px, env(safe-area-inset-right)); }
+  .session-bar { padding-left: max(14px, env(safe-area-inset-left));
+                 padding-right: max(14px, env(safe-area-inset-right)); }
+  .toast, .session-warning { bottom: max(14px, env(safe-area-inset-bottom)); }
+}
+
+/* ── Orientação landscape em phones (uso menos comum mas existe) ── */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .header { padding: 6px 14px; }
+  .header-titles p { display: none; }
+  .screen-perfil { align-items: flex-start; padding-top: 16px; }
+  .sup-counter-bar { padding: 8px 14px; flex-direction: row; }
+  .sup-session-info { width: auto; border-top: none; padding-top: 0; }
+}
+
 </style>
 </head>
 <body>
@@ -493,7 +655,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <input id="auth-sup-bi" class="auth-inp" type="text"
              placeholder="Ex: 006185927KS046"
              autocomplete="off" autocorrect="off" spellcheck="false"
-             autocapitalize="characters"
+             autocapitalize="characters" inputmode="text" enterkeyhint="go"
              onkeydown="if(event.key==='Enter') doAuthSupervisor()">
       <div id="auth-sup-msg" class="auth-msg msg-error"></div>
     </div>
@@ -516,10 +678,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <input id="auth-admin-bi" class="auth-inp" type="text"
              placeholder="Ex: 007199402KS040"
              autocomplete="off" autocorrect="off" spellcheck="false"
-             autocapitalize="characters">
+             autocapitalize="characters" inputmode="text" enterkeyhint="next">
       <label class="auth-lbl" for="auth-admin-pin">PIN de Acesso</label>
       <input id="auth-admin-pin" class="auth-inp" type="password"
              placeholder="••••••" autocomplete="off"
+             inputmode="numeric" enterkeyhint="go"
              onkeydown="if(event.key==='Enter') doAuthAdmin()">
       <div id="auth-admin-msg" class="auth-msg"></div>
     </div>
@@ -1533,6 +1696,8 @@ function supSelectEstado(estado) {
   if (btn) btn.classList.add('selected');
   const confirmArea = document.getElementById('sup-confirm-area');
   if (confirmArea) confirmArea.style.display = 'block';
+  // FASE 11: feedback háptico em telemóveis que suportam
+  try { if (navigator.vibrate) navigator.vibrate(15); } catch(e) {}
 }
 
 function supCancelEstado() {
@@ -1574,6 +1739,8 @@ async function supConfirmar() {
   // Feedback
   const label = estadoGravado === 'SIM' ? '✅ DISPONÍVEL' : '❌ INDISPONÍVEL';
   showToast('Prova de disponibilidade efectuada com êxito — ' + label, 'success');
+  // FASE 11: vibração de confirmação (padrão duplo curto)
+  try { if (navigator.vibrate) navigator.vibrate([40, 30, 40]); } catch(e) {}
 
   // Limpar para próxima validação
   _supCurrentBI     = null;
@@ -3226,7 +3393,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <input id="sup-bi-input" class="sup-bi-input" type="text"
              placeholder="Número do Bilhete de Identidade"
              autocomplete="off" autocorrect="off" spellcheck="false"
-             autocapitalize="characters"
+             autocapitalize="characters" inputmode="text" enterkeyhint="search"
              onkeydown="if(event.key==='Enter') supSearch()">
       <button class="btn-sup-search" onclick="supSearch()">Pesquisar</button>
     </div>
