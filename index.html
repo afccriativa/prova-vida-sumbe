@@ -428,6 +428,23 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .btn-del-cancel2 { flex: 1; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; }
 .btn-del-cancel2:hover { background: var(--border); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASE 10 — SEGURANÇA: Aviso de expiração de sessão
+   ═══════════════════════════════════════════════════════════════════════ */
+.session-warning {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 2px solid var(--accent2);
+  border-radius: 12px; padding: 14px 22px; z-index: 9900;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  font-size: 13px; color: var(--text); max-width: 420px; width: 90%;
+  animation: spFadeIn 0.3s ease;
+}
+.sw-icon { font-size: 24px; flex-shrink: 0; }
+.sw-text strong { display: block; font-weight: 800; color: var(--accent2); margin-bottom: 3px; }
+.sw-text span { color: var(--text3); font-size: 12px; }
+.btn-sw-keep { padding: 8px 16px; background: var(--accent2); color: #000; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+
 </style>
 </head>
 <body>
@@ -735,6 +752,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <button class="btn-del-confirm" id="btn-del-confirm" onclick="confirmDeleteValidacao()">Eliminar</button>
     </div>
   </div>
+</div>
+
+<!-- FASE 10 — Aviso de expiração de sessão -->
+<div id="session-warning" class="session-warning" style="display:none">
+  <div class="sw-icon">⏱️</div>
+  <div class="sw-text">
+    <strong>Sessão prestes a expirar</strong>
+    <span id="sw-countdown">A sessão termina em 5 minutos por inactividade.</span>
+  </div>
+  <button class="btn-sw-keep" onclick="sessionKeepAlive()">Continuar</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -1218,12 +1245,13 @@ async function doAuthAdmin() {
 // ─── Activar o sistema após autenticação ─────────────────────────────────────
 function activateSystem() {
   updateSessionBar();
+  sessionStartWatcher(); // FASE 10: iniciar vigilância de inactividade
   if (isSupervisorSession()) {
-    showSupervisorPanel();     // FASE 5: interface dedicada
-    stopAdminListener();       // FASE 7: garantir que listener Admin está parado
+    showSupervisorPanel();
+    stopAdminListener();
   } else {
-    hideSupervisorPanel();     // Admin: sistema existente
-    startAdminListener();      // FASE 7: iniciar consolidação em tempo real
+    hideSupervisorPanel();
+    startAdminListener();
   }
 }
 
@@ -1250,7 +1278,9 @@ function updateSessionBar() {
 // ─── Logout ───────────────────────────────────────────────────────────────────
 function doLogout() {
   if (!confirm('Deseja terminar a sessão e voltar ao ecrã de selecção de perfil?')) return;
-  stopAdminListener();  // FASE 7: parar listener Firebase
+  sessionStopWatcher();  // FASE 10: parar vigilância
+  sessionHideWarning();  // FASE 10: esconder aviso se visível
+  stopAdminListener();
   clearSession();
   document.getElementById('session-bar').style.display = 'none';
   showSelectionScreen();
@@ -1741,6 +1771,105 @@ async function confirmDeleteValidacao() {
 }
 
 // ─── FIM FASE 8 ───────────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 10 — SEGURANÇA: EXPIRAÇÃO DE SESSÃO POR INACTIVIDADE
+// 4 horas sem interacção → logout automático com aviso prévio de 5 minutos
+// ═════════════════════════════════════════════════════════════════════════════
+
+const SESSION_TIMEOUT_MS  = 4 * 60 * 60 * 1000; // 4 horas em ms
+const SESSION_WARN_MS     = 5 * 60 * 1000;        // Aviso 5 minutos antes
+const SESSION_CHECK_MS    = 30 * 1000;             // Verificar a cada 30 segundos
+
+let _sessionLastActivity = Date.now();
+let _sessionCheckInterval = null;
+let _sessionWarnShown = false;
+
+// Actualizar timestamp de última actividade
+function sessionTouch() {
+  _sessionLastActivity = Date.now();
+  if (_sessionWarnShown) sessionHideWarning();
+}
+
+// Iniciar o sistema de vigilância de inactividade
+function sessionStartWatcher() {
+  sessionStopWatcher(); // garantir que não há interval duplo
+  _sessionLastActivity = Date.now();
+  _sessionWarnShown    = false;
+
+  // Eventos que constituem actividade do utilizador
+  const events = ['click', 'keydown', 'touchstart', 'input', 'scroll'];
+  events.forEach(ev => document.addEventListener(ev, sessionTouch, { passive: true }));
+
+  _sessionCheckInterval = setInterval(() => {
+    if (!isAuthenticated()) { sessionStopWatcher(); return; }
+
+    const idle    = Date.now() - _sessionLastActivity;
+    const timeLeft = SESSION_TIMEOUT_MS - idle;
+
+    if (timeLeft <= 0) {
+      // Tempo esgotado — logout automático
+      sessionStopWatcher();
+      sessionHideWarning();
+      const perfil = APP_SESSION.perfil === 'supervisor' ? 'Supervisor' : 'Administrador';
+      stopAdminListener();
+      clearSession();
+      document.getElementById('session-bar').style.display = 'none';
+      if (isSupervisorSession || document.getElementById('supervisor-panel').style.display !== 'none') {
+        document.getElementById('supervisor-panel').style.display = 'none';
+        const tabs = document.querySelector('.tabs');
+        if (tabs) tabs.style.removeProperty('display');
+      }
+      showSelectionScreen();
+      // Toast após redireccionar
+      setTimeout(() => showToast(
+        'Sessão ' + perfil + ' terminada por inactividade (4 horas).', 'error'), 300);
+
+    } else if (timeLeft <= SESSION_WARN_MS && !_sessionWarnShown) {
+      // Mostrar aviso nos últimos 5 minutos
+      sessionShowWarning(timeLeft);
+    } else if (_sessionWarnShown && timeLeft > SESSION_WARN_MS) {
+      sessionHideWarning();
+    } else if (_sessionWarnShown) {
+      // Actualizar countdown
+      sessionUpdateCountdown(timeLeft);
+    }
+  }, SESSION_CHECK_MS);
+}
+
+// Parar a vigilância (logout manual, mudança de perfil)
+function sessionStopWatcher() {
+  if (_sessionCheckInterval) { clearInterval(_sessionCheckInterval); _sessionCheckInterval = null; }
+  const events = ['click', 'keydown', 'touchstart', 'input', 'scroll'];
+  events.forEach(ev => document.removeEventListener(ev, sessionTouch));
+}
+
+// Mostrar aviso visual de expiração iminente
+function sessionShowWarning(timeLeftMs) {
+  _sessionWarnShown = true;
+  sessionUpdateCountdown(timeLeftMs);
+  document.getElementById('session-warning').style.display = 'flex';
+}
+
+function sessionHideWarning() {
+  _sessionWarnShown = false;
+  document.getElementById('session-warning').style.display = 'none';
+}
+
+function sessionUpdateCountdown(ms) {
+  const mins = Math.ceil(ms / 60000);
+  const el   = document.getElementById('sw-countdown');
+  if (el) el.textContent = 'A sessão termina em ' + mins + ' minuto' + (mins === 1 ? '' : 's') + ' por inactividade.';
+}
+
+// Botão "Continuar" no aviso — reinicia o contador
+function sessionKeepAlive() {
+  sessionTouch();
+  sessionHideWarning();
+  showToast('Sessão renovada. ✅', 'success');
+}
+
+// ─── FIM FASE 10 ──────────────────────────────────────────────────────────────
 
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
