@@ -1781,6 +1781,9 @@ function showToast(msg, type) {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // FASE 2: Firebase pode já ter inicializado antes do DOMContentLoaded
+  // (módulos são diferidos mas executam antes do DOMContentLoaded)
+  if (fbReady()) fbUpdateStatusIndicator('online');
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.panel));
