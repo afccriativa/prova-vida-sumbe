@@ -1226,6 +1226,10 @@ function resetAuthMsg(modal) {
 let _supCurrentBI     = null; // BI do profissional em análise
 let _supCurrentEstado = null; // 'SIM' | 'NÃO'
 
+// FASE 6 — Camada 3: cache em memória de BIs validados nesta sessão
+// Verificação instantânea sem consulta a localStorage ou Firebase
+let _supValidatedThisSession = new Set();
+
 // ─── Mostrar / ocultar painel do Supervisor ───────────────────────────────────
 function showSupervisorPanel() {
   // Ocultar sistema administrativo
@@ -1249,6 +1253,7 @@ function hideSupervisorPanel() {
 function supInit() {
   _supCurrentBI     = null;
   _supCurrentEstado = null;
+  _supValidatedThisSession = new Set(); // FASE 6: limpar cache ao iniciar sessão
   supReset();
   supUpdateCounter();
   // Info de sessão no canto superior direito
@@ -1282,46 +1287,55 @@ async function supSearch() {
     return;
   }
 
-  // 1. Existe no RH_DATA?
+  // ── 1. Existe no RH_DATA? ─────────────────────────────────────────────────
   const prof = getR2Record(bi);
   if (!prof) {
     supShowAlert('error',
-      '❌ Titular não encontrado. Verifique se o número do Bilhete está correcto. ' +
-      'Caso esteja, significa que este profissional não integrou a 2ª Ronda 2026.');
+      'Titular não encontrado. Verifique se o número do Bilhete está correcto. ' +
+      'Caso esteja, significa que não integrou a 2ª Ronda 2026.');
     document.getElementById('sup-bi-input').focus();
     return;
   }
 
-  // 2. Função elegível para Supervisores?
+  // ── 2. Função elegível para Supervisores? ────────────────────────────────
   const funcao = prof.funcao_r2 || prof.funcao;
   if (!isEligibleForSupervisor(funcao)) {
     supShowAlert('error',
-      '🚫 Este profissional (' + escH(funcao) + ') não pode ser validado por Supervisores de Equipa. ' +
-      'Apenas Vacinadores, Registadores e Mobilizadores são elegíveis.');
+      'Este profissional não pode ser validado por Supervisores de Equipa. ' +
+      '(' + escH(funcao) + ')');
     document.getElementById('sup-bi-input').focus();
     return;
   }
 
-  // 3. Mostrar cartão do profissional
+  // ── Mostrar cartão ────────────────────────────────────────────────────────
   supShowProfCard(prof, bi);
 
-  // 4. Verificar duplicidade — localStorage (instantâneo)
-  const localConf = getConfs()[bi];
-  if (localConf) {
-    supShowBlocked('Registado em ' + localConf.data + ' às ' + localConf.hora + ' — Estado: ' + localConf.status);
+  // ── 3. CAMADA 3 — Cache de sessão (mais rápido, sem I/O) ─────────────────
+  if (_supValidatedThisSession.has(bi)) {
+    supShowBlocked('Validado nesta sessão de trabalho.');
     return;
   }
 
-  // 5. Verificar Firebase (pode existir validação noutro dispositivo)
+  // ── 4. CAMADA 2a — localStorage (instantâneo) ────────────────────────────
+  const localConf = getConfs()[bi];
+  if (localConf) {
+    supShowBlocked(
+      'Registado em ' + localConf.data + ' às ' + localConf.hora +
+      ' — Estado: ' + localConf.status);
+    return;
+  }
+
+  // ── 5. CAMADA 2b — Firebase (valida noutro dispositivo em tempo real) ─────
   const valArea = document.getElementById('sup-validation-area');
-  valArea.innerHTML = '<div class="sup-loading">⟳ A verificar sincronização...</div>';
+  valArea.innerHTML = '<div class="sup-loading">⟳ A verificar sincronização Firebase...</div>';
   valArea.style.display = 'block';
 
   const fbConf = await fbGetValidacao(bi);
 
   if (fbConf) {
-    // Validado noutro dispositivo — sincronizar localStorage
+    // Sincronizar no localStorage para acelerar verificações futuras
     saveConf(bi, fbConf.estado, fbConf.obs || '');
+    _supValidatedThisSession.add(bi); // actualizar cache de sessão
     const detail = fbConf.dataHoraLocal
       ? 'Registado em ' + fbConf.dataHoraLocal + ' por ' + (fbConf.supervisorNome || 'Supervisor')
       : 'Já validado por outro Supervisor';
@@ -1329,7 +1343,7 @@ async function supSearch() {
     return;
   }
 
-  // 6. Profissional disponível para validação
+  // ── 6. Profissional elegível — mostrar botões de validação ────────────────
   supShowValidationButtons();
   _supCurrentBI = bi;
 }
@@ -1410,8 +1424,14 @@ async function supConfirmar() {
   const btn = document.getElementById('btn-sup-confirmar');
   if (btn) { btn.disabled = true; btn.textContent = 'A gravar...'; }
 
+  const biGravado = _supCurrentBI;
+  const estadoGravado = _supCurrentEstado;
+
+  // FASE 6 — Camada 3: registar na cache ANTES do dual-write (previne duplo clique)
+  _supValidatedThisSession.add(biGravado);
+
   // Dual-write: localStorage + Firebase (via saveConf modificado na Fase 2)
-  saveConf(_supCurrentBI, _supCurrentEstado, '');
+  saveConf(biGravado, estadoGravado, '');
 
   // Incrementar contador da sessão
   APP_SESSION.validacoesCount = (APP_SESSION.validacoesCount || 0) + 1;
@@ -1421,7 +1441,7 @@ async function supConfirmar() {
   fbLogSessao(APP_SESSION.bi, APP_SESSION.nome, APP_SESSION.coordenacao, APP_SESSION.validacoesCount);
 
   // Feedback
-  const label = _supCurrentEstado === 'SIM' ? '✅ DISPONÍVEL' : '❌ INDISPONÍVEL';
+  const label = estadoGravado === 'SIM' ? '✅ DISPONÍVEL' : '❌ INDISPONÍVEL';
   showToast('Prova de disponibilidade efectuada com êxito — ' + label, 'success');
 
   // Limpar para próxima validação
@@ -1476,8 +1496,19 @@ function saveConf(bi, status, obs) {
       if (result.success) {
         fbUpdateStatusIndicator('online');
       } else {
-        fbUpdateStatusIndicator('offline');
-        console.warn('[Firebase] Guardado localmente, Firebase indisponível:', result.error);
+        // FASE 6: distinguir rejeição por duplicidade (Rules) de falha de rede
+        const isDuplicate = result.error && (
+          result.error.includes('permission-denied') ||
+          result.error.includes('PERMISSION_DENIED')
+        );
+        if (isDuplicate) {
+          // Firebase confirmou que já existe — não é falha crítica
+          fbUpdateStatusIndicator('online');
+          console.info('[Firebase] Registo já existe no Firestore (duplicidade bloqueada pelas Rules).');
+        } else {
+          fbUpdateStatusIndicator('offline');
+          console.warn('[Firebase] Guardado localmente, Firebase indisponível:', result.error);
+        }
       }
     });
   }
