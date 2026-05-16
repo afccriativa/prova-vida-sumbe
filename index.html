@@ -268,9 +268,160 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .fb-status { font-size: 18px; line-height: 1; cursor: default; flex-shrink: 0; transition: color 0.5s ease; user-select: none; }
 .fb-status-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .fb-status-label { font-size: 9px; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+/* ═══════════════════════════════════════════════════════════════════════
+   FASES 3 + 4 — SELECÇÃO DE PERFIL E AUTENTICAÇÃO
+   ═══════════════════════════════════════════════════════════════════════ */
+.screen-perfil {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  background-image: radial-gradient(ellipse at 20% 60%, rgba(230,51,41,0.06) 0%, transparent 55%),
+                    radial-gradient(ellipse at 80% 20%, rgba(244,168,50,0.05) 0%, transparent 55%);
+  z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.sp-enter { animation: spFadeIn 0.45s ease; }
+@keyframes spFadeIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.sp-inner { max-width: 680px; width: 100%; }
+.sp-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.sp-flag { width: 42px; height: 28px; background: linear-gradient(180deg, #cc0000 50%, #000 50%); border-radius: 4px; position: relative; overflow: hidden; flex-shrink: 0; }
+.sp-flag::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 18px; height: 18px; border: 2.5px solid #f4c542; border-radius: 50%; }
+.sp-header-text h1 { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: 0.3px; }
+.sp-header-text p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.sp-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+.sp-prompt { font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 20px; }
+.sp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .sp-cards { grid-template-columns: 1fr; } }
+.sp-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 28px 22px 22px; cursor: pointer; transition: all 0.25s ease; text-align: center; }
+.sp-card-icon { font-size: 40px; margin-bottom: 12px; }
+.sp-card h2 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.sp-card p { font-size: 11px; color: var(--text3); line-height: 1.6; margin-bottom: 20px; min-height: 34px; }
+.sp-card-btn { padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; display: inline-block; transition: all 0.2s; }
+.sp-card-sup { border-color: rgba(46,204,113,0.25); }
+.sp-card-sup:hover { border-color: var(--green); box-shadow: 0 8px 32px rgba(46,204,113,0.12); transform: translateY(-4px); }
+.sp-card-sup .sp-card-btn { background: var(--green); color: #fff; }
+.sp-card-admin { border-color: rgba(244,168,50,0.2); }
+.sp-card-admin:hover { border-color: var(--accent2); box-shadow: 0 8px 32px rgba(244,168,50,0.08); transform: translateY(-4px); }
+.sp-card-admin .sp-card-btn { background: transparent; color: var(--accent2); border: 2px solid var(--accent2); padding: 9px 20px; }
+.sp-footer { text-align: center; margin-top: 22px; font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
+
+/* Modais de autenticação */
+.auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.auth-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; max-width: 420px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.6); animation: spFadeIn 0.2s ease; }
+.auth-box-hdr { padding: 24px 24px 0; }
+.auth-box-hdr h2 { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.auth-box-hdr p { font-size: 12px; color: var(--text3); }
+.auth-box-body { padding: 20px 24px 0; }
+.auth-lbl { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 6px; margin-top: 14px; }
+.auth-lbl:first-child { margin-top: 0; }
+.auth-inp { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 8px; padding: 13px 16px; font-size: 15px; color: var(--text); font-weight: 700; letter-spacing: 1px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+.auth-inp:focus { border-color: var(--accent2); }
+.auth-inp.inp-err { border-color: var(--red); }
+.auth-msg { border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-top: 12px; display: none; line-height: 1.5; }
+.auth-msg.on { display: block; }
+.msg-error { background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); color: #e74c3c; }
+.msg-warn  { background: rgba(244,168,50,0.1); border: 1px solid rgba(244,168,50,0.3); color: var(--accent2); }
+.auth-box-ftr { padding: 18px 24px 22px; display: flex; gap: 10px; }
+.btn-auth-cancel { flex: 1; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-auth-cancel:hover { background: var(--border); }
+.btn-auth-enter { flex: 2; padding: 12px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; }
+.btn-auth-enter:hover:not(:disabled) { background: #c0291f; }
+.btn-auth-enter:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Barra de sessão activa */
+.session-bar { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 7px 24px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text2); }
+.sb-badge { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+.sb-admin { background: rgba(244,168,50,0.15); color: var(--accent2); }
+.sb-supervisor { background: rgba(46,204,113,0.15); color: var(--green); }
+.sb-name { font-weight: 700; color: var(--text); }
+.sb-coord { color: var(--text3); font-size: 11px; }
+.btn-sair { margin-left: auto; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text3); font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.15s; }
+.btn-sair:hover { border-color: var(--red); color: var(--red); }
+
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     FASE 3 — Ecrã de Selecção de Perfil (visível ao carregar a página)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="screen-perfil" class="screen-perfil sp-enter" style="display:none">
+  <div class="sp-inner">
+    <div class="sp-header">
+      <div class="sp-flag"></div>
+      <div class="sp-header-text">
+        <h1>🏥 PROVA DE DISPONIBILIDADE — 2ª RONDA PÓLIO | SUMBE 2026</h1>
+        <p>Direcção Municipal de Saúde · Campanha nOPV2 · Cuanza Sul · Angola</p>
+      </div>
+    </div>
+    <hr class="sp-divider">
+    <p class="sp-prompt">Seleccione o seu perfil para continuar</p>
+    <div class="sp-cards">
+      <div class="sp-card sp-card-sup" onclick="selectPerfil('supervisor')">
+        <div class="sp-card-icon">🏥</div>
+        <h2>Supervisor de Equipa</h2>
+        <p>Validar a disponibilidade dos profissionais sob a sua supervisão</p>
+        <div class="sp-card-btn">Entrar como Supervisor →</div>
+      </div>
+      <div class="sp-card sp-card-admin" onclick="selectPerfil('admin')">
+        <div class="sp-card-icon">⚙️</div>
+        <h2>Administrador</h2>
+        <p>Acesso total à consolidação, gestão e auditoria do sistema</p>
+        <div class="sp-card-btn">Acesso Administrativo →</div>
+      </div>
+    </div>
+    <div class="sp-footer">Ibisner Solutions · Direcção Municipal de Saúde do Sumbe · 2026</div>
+  </div>
+</div>
+
+<!-- FASE 4 — Modal: Autenticação Supervisor (por BI) -->
+<div id="modal-auth-sup" class="auth-modal" style="display:none">
+  <div class="auth-box">
+    <div class="auth-box-hdr">
+      <h2>🏥 Acesso Supervisor de Equipa</h2>
+      <p>Insira o número do seu Bilhete de Identidade para continuar</p>
+    </div>
+    <div class="auth-box-body">
+      <label class="auth-lbl" for="auth-sup-bi">Número do Bilhete de Identidade</label>
+      <input id="auth-sup-bi" class="auth-inp" type="text"
+             placeholder="Ex: 006185927KS046"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             autocapitalize="characters"
+             onkeydown="if(event.key==='Enter') doAuthSupervisor()">
+      <div id="auth-sup-msg" class="auth-msg msg-error"></div>
+    </div>
+    <div class="auth-box-ftr">
+      <button class="btn-auth-cancel" onclick="closeAuthModal('sup')">Cancelar</button>
+      <button class="btn-auth-enter" onclick="doAuthSupervisor()">✔ Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FASE 4 — Modal: Autenticação Administrador (por BI + PIN) -->
+<div id="modal-auth-admin" class="auth-modal" style="display:none">
+  <div class="auth-box">
+    <div class="auth-box-hdr">
+      <h2>⚙️ Acesso Administrativo</h2>
+      <p>Insira o seu Bilhete de Identidade e PIN de acesso</p>
+    </div>
+    <div class="auth-box-body">
+      <label class="auth-lbl" for="auth-admin-bi">Número do Bilhete de Identidade</label>
+      <input id="auth-admin-bi" class="auth-inp" type="text"
+             placeholder="Ex: 007199402KS040"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             autocapitalize="characters">
+      <label class="auth-lbl" for="auth-admin-pin">PIN de Acesso</label>
+      <input id="auth-admin-pin" class="auth-inp" type="password"
+             placeholder="••••••" autocomplete="off"
+             onkeydown="if(event.key==='Enter') doAuthAdmin()">
+      <div id="auth-admin-msg" class="auth-msg"></div>
+    </div>
+    <div class="auth-box-ftr">
+      <button class="btn-auth-cancel" onclick="closeAuthModal('admin')">Cancelar</button>
+      <button id="btn-auth-admin-enter" class="btn-auth-enter" onclick="doAuthAdmin()">✔ Entrar</button>
+    </div>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-flag"></div>
@@ -295,6 +446,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <div class="tab" data-panel="history">📋 Consolidação</div>
   <div class="tab" data-panel="payments">💰 Pagamentos</div>
   <div class="tab" data-panel="audit">⚠️ Auditoria</div>
+</div>
+
+<!-- FASE 4 — Barra de sessão activa (aparece após autenticação) -->
+<div id="session-bar" class="session-bar" style="display:none">
+  <span class="sb-badge" id="sb-role-badge">—</span>
+  <span class="sb-name" id="sb-name">—</span>
+  <span class="sb-coord" id="sb-coord"></span>
+  <button class="btn-sair" onclick="doLogout()">↩ Terminar Sessão</button>
 </div>
 
 <div id="panel-search" class="panel active">
@@ -827,6 +986,172 @@ async function fbLogSessao(supervisorBI, nome, coordenacao, totalValidacoes) {
 }
 
 // ─── FIM FASE 2 ───────────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASES 3 + 4 — SELECÇÃO DE PERFIL E AUTENTICAÇÃO
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─── Visibilidade do ecrã de selecção ────────────────────────────────────────
+function showSelectionScreen() {
+  const s = document.getElementById('screen-perfil');
+  if (s) { s.style.display = 'flex'; s.classList.add('sp-enter'); }
+}
+
+function hideSelectionScreen() {
+  const s = document.getElementById('screen-perfil');
+  if (s) s.style.display = 'none';
+}
+
+// ─── Ecrã de Selecção: clique nos cartões ────────────────────────────────────
+function selectPerfil(tipo) {
+  if (tipo === 'supervisor') {
+    const modal = document.getElementById('modal-auth-sup');
+    modal.style.display = 'flex';
+    document.getElementById('auth-sup-bi').value = '';
+    resetAuthMsg('sup');
+    document.getElementById('auth-sup-bi').classList.remove('inp-err');
+    setTimeout(() => document.getElementById('auth-sup-bi').focus(), 100);
+
+  } else if (tipo === 'admin') {
+    const modal = document.getElementById('modal-auth-admin');
+    modal.style.display = 'flex';
+    document.getElementById('auth-admin-bi').value = '';
+    document.getElementById('auth-admin-pin').value = '';
+    document.getElementById('auth-admin-bi').classList.remove('inp-err');
+    resetAuthMsg('admin');
+    // Aviso se PIN ainda não configurado
+    if (!ADMIN_PIN_HASH) {
+      showAuthMsg('admin', 'warn',
+        '⚠️ PIN não configurado — acesso temporário por BI. Para definir um PIN permanente, ' +
+        'execute no console: hashPin(\'SEU_PIN\').then(h => console.log(\'Hash:\', h))');
+    }
+    setTimeout(() => document.getElementById('auth-admin-bi').focus(), 100);
+  }
+}
+
+function closeAuthModal(which) {
+  const m = document.getElementById('modal-auth-' + which);
+  if (m) m.style.display = 'none';
+}
+
+// ─── Autenticação: Supervisor ─────────────────────────────────────────────────
+function doAuthSupervisor() {
+  const biRaw = document.getElementById('auth-sup-bi').value;
+  const bi    = biRaw.toUpperCase().trim();
+  const input = document.getElementById('auth-sup-bi');
+
+  if (!bi) {
+    showAuthMsg('sup', 'error', 'Por favor insira o número do Bilhete de Identidade.');
+    input.focus(); return;
+  }
+
+  if (!isSupervisorAuthorized(bi)) {
+    showAuthMsg('sup', 'error',
+      'Acesso negado. Apenas Supervisores de Equipa autorizados podem efectuar validações.');
+    input.classList.add('inp-err');
+    input.focus(); return;
+  }
+
+  // ✅ Autenticação bem-sucedida
+  const sup = SUPERVISORES_INDEX[bi];
+  setSession('supervisor', bi, sup.nome, sup.coordenacao);
+  closeAuthModal('sup');
+  hideSelectionScreen();
+  activateSystem();
+  fbLogSessao(bi, sup.nome, sup.coordenacao, 0);
+  APP_SESSION.validacoesCount = 0;
+  showToast('✅ Bem-vindo(a), ' + sup.nome.split(' ')[0] + '!', 'success');
+}
+
+// ─── Autenticação: Administrador ──────────────────────────────────────────────
+async function doAuthAdmin() {
+  const bi  = document.getElementById('auth-admin-bi').value.toUpperCase().trim();
+  const pin = document.getElementById('auth-admin-pin').value;
+  const btn = document.getElementById('btn-auth-admin-enter');
+
+  if (!bi) {
+    showAuthMsg('admin', 'error', 'Por favor insira o número do Bilhete de Identidade.');
+    document.getElementById('auth-admin-bi').focus(); return;
+  }
+
+  if (!isAdminBI(bi)) {
+    showAuthMsg('admin', 'error', 'Bilhete não reconhecido como Administrador do sistema.');
+    document.getElementById('auth-admin-bi').classList.add('inp-err');
+    document.getElementById('auth-admin-bi').focus(); return;
+  }
+
+  // Verificação de PIN (se configurado)
+  if (ADMIN_PIN_HASH) {
+    if (!pin) {
+      showAuthMsg('admin', 'error', 'Por favor insira o PIN de acesso.');
+      document.getElementById('auth-admin-pin').focus(); return;
+    }
+    btn.disabled = true; btn.textContent = 'A verificar...';
+    const pinOk = await verifyPin(pin, ADMIN_PIN_HASH);
+    btn.disabled = false; btn.textContent = '✔ Entrar';
+    if (!pinOk) {
+      showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
+      document.getElementById('auth-admin-pin').value = '';
+      document.getElementById('auth-admin-pin').focus(); return;
+    }
+  }
+  // ADMIN_PIN_HASH vazio → acesso temporário por BI (sem PIN)
+
+  const rec = findBI(bi);
+  setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
+  closeAuthModal('admin');
+  hideSelectionScreen();
+  activateSystem();
+  showToast('✅ Acesso administrativo concedido. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
+}
+
+// ─── Activar o sistema após autenticação ─────────────────────────────────────
+function activateSystem() {
+  updateSessionBar();
+  // Fase 5: supervisores terão interface própria (actualmente acede ao sistema geral)
+}
+
+// ─── Barra de sessão activa ───────────────────────────────────────────────────
+function updateSessionBar() {
+  const bar   = document.getElementById('session-bar');
+  const badge = document.getElementById('sb-role-badge');
+  const name  = document.getElementById('sb-name');
+  const coord = document.getElementById('sb-coord');
+  if (!bar) return;
+  if (!isAuthenticated()) { bar.style.display = 'none'; return; }
+  bar.style.display  = 'flex';
+  name.textContent   = APP_SESSION.nome || '—';
+  coord.textContent  = APP_SESSION.coordenacao ? '· ' + APP_SESSION.coordenacao : '';
+  if (APP_SESSION.perfil === 'admin') {
+    badge.className   = 'sb-badge sb-admin';
+    badge.textContent = '⚙️ ADMINISTRADOR';
+  } else {
+    badge.className   = 'sb-badge sb-supervisor';
+    badge.textContent = '🏥 SUPERVISOR';
+  }
+}
+
+// ─── Logout ───────────────────────────────────────────────────────────────────
+function doLogout() {
+  if (!confirm('Deseja terminar a sessão e voltar ao ecrã de selecção de perfil?')) return;
+  clearSession();
+  document.getElementById('session-bar').style.display = 'none';
+  showSelectionScreen();
+}
+
+// ─── Utilitários de mensagem nos modais ───────────────────────────────────────
+function showAuthMsg(modal, tipo, texto) {
+  const el = document.getElementById('auth-' + modal + '-msg');
+  if (!el) return;
+  el.className = 'auth-msg msg-' + tipo + ' on';
+  el.textContent = texto;
+}
+function resetAuthMsg(modal) {
+  const el = document.getElementById('auth-' + modal + '-msg');
+  if (el) { el.className = 'auth-msg msg-error'; el.textContent = ''; }
+}
+
+// ─── FIM FASES 3+4 ───────────────────────────────────────────────────────────
 
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
@@ -1784,6 +2109,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // FASE 2: Firebase pode já ter inicializado antes do DOMContentLoaded
   // (módulos são diferidos mas executam antes do DOMContentLoaded)
   if (fbReady()) fbUpdateStatusIndicator('online');
+
+  // FASE 3: Mostrar ecrã de selecção de perfil ao carregar
+  showSelectionScreen();
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.panel));
