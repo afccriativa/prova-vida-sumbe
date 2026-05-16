@@ -338,6 +338,68 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .btn-sair { margin-left: auto; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text3); font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.15s; }
 .btn-sair:hover { border-color: var(--red); color: var(--red); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASE 5 — INTERFACE DE VALIDAÇÃO DO SUPERVISOR
+   ═══════════════════════════════════════════════════════════════════════ */
+#supervisor-panel { max-width: 620px; margin: 0 auto; padding: 20px 24px; }
+
+.sup-counter-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.sup-counter-num { font-size: 40px; font-weight: 900; color: var(--green); line-height: 1; }
+.sup-counter-lbl { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+.sup-session-info { margin-left: auto; text-align: right; font-size: 12px; color: var(--text2); line-height: 1.5; }
+.sup-session-info strong { color: var(--text); display: block; }
+
+.sup-search-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+.sup-search-box h2 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+.sup-search-row { display: flex; gap: 10px; }
+.sup-bi-input { flex: 1; background: var(--bg); border: 2px solid var(--border); border-radius: 8px; padding: 14px 18px; font-size: 16px; color: var(--text); font-weight: 700; letter-spacing: 1.5px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+.sup-bi-input:focus { border-color: var(--accent2); }
+.sup-bi-input::placeholder { font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--text3); }
+.btn-sup-search { padding: 14px 22px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.btn-sup-search:hover { background: #c0291f; }
+
+.sup-prof-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent2); border-radius: var(--radius); padding: 18px; display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+.sup-prof-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.sup-avatar-m { background: rgba(52,152,219,0.15); border: 2px solid rgba(52,152,219,0.3); }
+.sup-avatar-f { background: rgba(155,89,182,0.15); border: 2px solid rgba(155,89,182,0.3); }
+.sup-prof-nome { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.sup-prof-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sup-prof-meta-item { font-size: 11px; color: var(--text3); background: var(--bg); padding: 4px 10px; border-radius: 6px; }
+
+.sup-validation-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.sup-validation-prompt { font-size: 12px; font-weight: 700; color: var(--text2); text-align: center; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px; }
+.sup-estado-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.sup-estado-btn { padding: 20px 10px; border-radius: 10px; border: 3px solid transparent; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s; text-align: center; background: var(--bg); letter-spacing: 0.5px; line-height: 1.6; }
+.sup-estado-btn .bico { font-size: 28px; display: block; margin-bottom: 6px; }
+.sup-btn-sim { color: var(--green); border-color: rgba(46,204,113,0.3); }
+.sup-btn-sim:hover, .sup-btn-sim.selected { background: rgba(46,204,113,0.1); border-color: var(--green); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(46,204,113,0.18); }
+.sup-btn-nao { color: var(--red); border-color: rgba(231,76,60,0.3); }
+.sup-btn-nao:hover, .sup-btn-nao.selected { background: rgba(231,76,60,0.08); border-color: var(--red); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(231,76,60,0.14); }
+.sup-confirm-row { display: flex; gap: 10px; margin-top: 12px; }
+.btn-sup-confirmar { flex: 2; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+.btn-sup-confirmar:hover:not(:disabled) { background: #27ae60; }
+.btn-sup-confirmar:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sup-alterar { flex: 1; padding: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-sup-alterar:hover { background: var(--border); }
+
+.sup-blocked-card { background: rgba(46,204,113,0.07); border: 1px solid rgba(46,204,113,0.3); border-radius: var(--radius); padding: 24px 20px; text-align: center; }
+.sup-blocked-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+.sup-blocked-msg { font-size: 14px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+.sup-blocked-detail { font-size: 11px; color: var(--text3); display: block; margin-top: 4px; }
+.btn-sup-nova { margin-top: 14px; padding: 10px 22px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-sup-nova:hover { background: var(--border); }
+
+.sup-alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
+.sup-alert-error { background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.4); color: #e74c3c; }
+.sup-alert-info { background: rgba(52,152,219,0.1); border: 1px solid rgba(52,152,219,0.4); color: var(--blue); }
+.sup-loading { text-align: center; padding: 24px; color: var(--text3); font-size: 13px; }
+
+@media (max-width: 480px) {
+  #supervisor-panel { padding: 12px 14px; }
+  .sup-estado-btn { padding: 16px 8px; font-size: 12px; }
+  .sup-counter-num { font-size: 32px; }
+}
+
 </style>
 </head>
 <body>
@@ -1108,7 +1170,11 @@ async function doAuthAdmin() {
 // ─── Activar o sistema após autenticação ─────────────────────────────────────
 function activateSystem() {
   updateSessionBar();
-  // Fase 5: supervisores terão interface própria (actualmente acede ao sistema geral)
+  if (isSupervisorSession()) {
+    showSupervisorPanel();   // FASE 5: interface dedicada
+  } else {
+    hideSupervisorPanel();   // Admin: sistema existente
+  }
 }
 
 // ─── Barra de sessão activa ───────────────────────────────────────────────────
@@ -1152,6 +1218,246 @@ function resetAuthMsg(modal) {
 }
 
 // ─── FIM FASES 3+4 ───────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 5 — INTERFACE DE VALIDAÇÃO DO SUPERVISOR
+// ═════════════════════════════════════════════════════════════════════════════
+
+let _supCurrentBI     = null; // BI do profissional em análise
+let _supCurrentEstado = null; // 'SIM' | 'NÃO'
+
+// ─── Mostrar / ocultar painel do Supervisor ───────────────────────────────────
+function showSupervisorPanel() {
+  // Ocultar sistema administrativo
+  const tabs = document.querySelector('.tabs');
+  if (tabs) tabs.style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  // Mostrar painel do Supervisor
+  document.getElementById('supervisor-panel').style.display = 'block';
+  supInit();
+}
+
+function hideSupervisorPanel() {
+  document.getElementById('supervisor-panel').style.display = 'none';
+  // Restaurar sistema administrativo (CSS .panel e .panel.active tratam da visibilidade)
+  const tabs = document.querySelector('.tabs');
+  if (tabs) tabs.style.removeProperty('display');
+  document.querySelectorAll('.panel').forEach(p => p.style.removeProperty('display'));
+}
+
+// ─── Inicializar painel ───────────────────────────────────────────────────────
+function supInit() {
+  _supCurrentBI     = null;
+  _supCurrentEstado = null;
+  supReset();
+  supUpdateCounter();
+  // Info de sessão no canto superior direito
+  const info = document.getElementById('sup-session-info');
+  if (info) {
+    info.innerHTML =
+      '<strong>' + escH(APP_SESSION.nome || '') + '</strong>' +
+      (APP_SESSION.coordenacao ? '<br><span>' + escH(APP_SESSION.coordenacao) + '</span>' : '');
+  }
+  setTimeout(() => {
+    const inp = document.getElementById('sup-bi-input');
+    if (inp) inp.focus();
+  }, 200);
+}
+
+function supUpdateCounter() {
+  const el = document.getElementById('sup-counter');
+  if (el) el.textContent = APP_SESSION.validacoesCount || 0;
+}
+
+// ─── Pesquisar profissional por BI ────────────────────────────────────────────
+async function supSearch() {
+  const bi = (document.getElementById('sup-bi-input').value || '').toUpperCase().trim();
+  supClearAlert();
+  supHideResult();
+  _supCurrentBI = null;
+
+  if (!bi) {
+    supShowAlert('error', '⚠️ Insira o número do Bilhete de Identidade.');
+    document.getElementById('sup-bi-input').focus();
+    return;
+  }
+
+  // 1. Existe no RH_DATA?
+  const prof = getR2Record(bi);
+  if (!prof) {
+    supShowAlert('error',
+      '❌ Titular não encontrado. Verifique se o número do Bilhete está correcto. ' +
+      'Caso esteja, significa que este profissional não integrou a 2ª Ronda 2026.');
+    document.getElementById('sup-bi-input').focus();
+    return;
+  }
+
+  // 2. Função elegível para Supervisores?
+  const funcao = prof.funcao_r2 || prof.funcao;
+  if (!isEligibleForSupervisor(funcao)) {
+    supShowAlert('error',
+      '🚫 Este profissional (' + escH(funcao) + ') não pode ser validado por Supervisores de Equipa. ' +
+      'Apenas Vacinadores, Registadores e Mobilizadores são elegíveis.');
+    document.getElementById('sup-bi-input').focus();
+    return;
+  }
+
+  // 3. Mostrar cartão do profissional
+  supShowProfCard(prof, bi);
+
+  // 4. Verificar duplicidade — localStorage (instantâneo)
+  const localConf = getConfs()[bi];
+  if (localConf) {
+    supShowBlocked('Registado em ' + localConf.data + ' às ' + localConf.hora + ' — Estado: ' + localConf.status);
+    return;
+  }
+
+  // 5. Verificar Firebase (pode existir validação noutro dispositivo)
+  const valArea = document.getElementById('sup-validation-area');
+  valArea.innerHTML = '<div class="sup-loading">⟳ A verificar sincronização...</div>';
+  valArea.style.display = 'block';
+
+  const fbConf = await fbGetValidacao(bi);
+
+  if (fbConf) {
+    // Validado noutro dispositivo — sincronizar localStorage
+    saveConf(bi, fbConf.estado, fbConf.obs || '');
+    const detail = fbConf.dataHoraLocal
+      ? 'Registado em ' + fbConf.dataHoraLocal + ' por ' + (fbConf.supervisorNome || 'Supervisor')
+      : 'Já validado por outro Supervisor';
+    supShowBlocked(detail);
+    return;
+  }
+
+  // 6. Profissional disponível para validação
+  supShowValidationButtons();
+  _supCurrentBI = bi;
+}
+
+// ─── Mostrar cartão do profissional ──────────────────────────────────────────
+function supShowProfCard(prof, bi) {
+  const funcao = prof.funcao_r2 || prof.funcao;
+  const sexo   = prof.sexo || 'M';
+  const avatar = document.getElementById('sup-prof-avatar');
+  avatar.textContent = sexo === 'F' ? '👩' : '👨';
+  avatar.className   = 'sup-prof-avatar ' + (sexo === 'F' ? 'sup-avatar-f' : 'sup-avatar-m');
+
+  document.getElementById('sup-prof-nome').textContent  = prof.nome;
+  document.getElementById('sup-prof-coord').textContent = prof.coordenacao_r2 || prof.coordenacao || '—';
+  document.getElementById('sup-prof-bi').textContent    = bi;
+
+  const badge = document.getElementById('sup-prof-funcao-badge');
+  badge.innerHTML = '<span class="funcao-badge ' + funcaoBadgeCls(funcao) + '">' + escH(funcao) + '</span>';
+
+  document.getElementById('sup-result-area').style.display  = 'block';
+  document.getElementById('sup-blocked-area').style.display = 'none';
+}
+
+// ─── Mostrar botões de estado (recria o HTML para limpar estados anteriores) ──
+function supShowValidationButtons() {
+  const area = document.getElementById('sup-validation-area');
+  area.innerHTML =
+    '<p class="sup-validation-prompt">Qual é a disponibilidade deste profissional?</p>' +
+    '<div class="sup-estado-btns">' +
+      '<button class="sup-estado-btn sup-btn-sim" id="sup-btn-sim" onclick="supSelectEstado(\'SIM\')">' +
+        '<span class="bico">✅</span>DISPONÍVEL' +
+      '</button>' +
+      '<button class="sup-estado-btn sup-btn-nao" id="sup-btn-nao" onclick="supSelectEstado(\'NÃO\')">' +
+        '<span class="bico">❌</span>INDISPONÍVEL' +
+      '</button>' +
+    '</div>' +
+    '<div id="sup-confirm-area" style="display:none">' +
+      '<div class="sup-confirm-row">' +
+        '<button class="btn-sup-alterar" onclick="supCancelEstado()">← Alterar</button>' +
+        '<button class="btn-sup-confirmar" id="btn-sup-confirmar" onclick="supConfirmar()">✔ Confirmar e Gravar</button>' +
+      '</div>' +
+    '</div>';
+  area.style.display = 'block';
+  _supCurrentEstado = null;
+}
+
+// ─── Mostrar mensagem de duplicidade ─────────────────────────────────────────
+function supShowBlocked(detail) {
+  const valArea = document.getElementById('sup-validation-area');
+  if (valArea) { valArea.innerHTML = ''; valArea.style.display = 'none'; }
+  document.getElementById('sup-blocked-area').style.display = 'block';
+  const det = document.getElementById('sup-blocked-detail');
+  if (det) det.textContent = detail || '';
+}
+
+// ─── Seleccionar estado ───────────────────────────────────────────────────────
+function supSelectEstado(estado) {
+  _supCurrentEstado = estado;
+  document.querySelectorAll('.sup-estado-btn').forEach(b => b.classList.remove('selected'));
+  const id = estado === 'SIM' ? 'sup-btn-sim' : 'sup-btn-nao';
+  const btn = document.getElementById(id);
+  if (btn) btn.classList.add('selected');
+  const confirmArea = document.getElementById('sup-confirm-area');
+  if (confirmArea) confirmArea.style.display = 'block';
+}
+
+function supCancelEstado() {
+  _supCurrentEstado = null;
+  document.querySelectorAll('.sup-estado-btn').forEach(b => b.classList.remove('selected'));
+  const confirmArea = document.getElementById('sup-confirm-area');
+  if (confirmArea) confirmArea.style.display = 'none';
+}
+
+// ─── Confirmar e gravar validação ─────────────────────────────────────────────
+async function supConfirmar() {
+  if (!_supCurrentBI || !_supCurrentEstado) return;
+
+  const btn = document.getElementById('btn-sup-confirmar');
+  if (btn) { btn.disabled = true; btn.textContent = 'A gravar...'; }
+
+  // Dual-write: localStorage + Firebase (via saveConf modificado na Fase 2)
+  saveConf(_supCurrentBI, _supCurrentEstado, '');
+
+  // Incrementar contador da sessão
+  APP_SESSION.validacoesCount = (APP_SESSION.validacoesCount || 0) + 1;
+  supUpdateCounter();
+
+  // Actualizar log de sessão no Firebase
+  fbLogSessao(APP_SESSION.bi, APP_SESSION.nome, APP_SESSION.coordenacao, APP_SESSION.validacoesCount);
+
+  // Feedback
+  const label = _supCurrentEstado === 'SIM' ? '✅ DISPONÍVEL' : '❌ INDISPONÍVEL';
+  showToast('Prova de disponibilidade efectuada com êxito — ' + label, 'success');
+
+  // Limpar para próxima validação
+  _supCurrentBI     = null;
+  _supCurrentEstado = null;
+  setTimeout(() => {
+    supReset();
+    document.getElementById('sup-bi-input').focus();
+  }, 1000);
+}
+
+// ─── Utilitários de UI ────────────────────────────────────────────────────────
+function supReset() {
+  const inp = document.getElementById('sup-bi-input');
+  if (inp) inp.value = '';
+  supHideResult();
+  supClearAlert();
+  _supCurrentBI = null; _supCurrentEstado = null;
+}
+
+function supHideResult() {
+  const r = document.getElementById('sup-result-area');
+  if (r) r.style.display = 'none';
+}
+
+function supShowAlert(tipo, texto) {
+  const el = document.getElementById('sup-alert-area');
+  if (el) el.innerHTML = '<div class="sup-alert sup-alert-' + tipo + '">' + escH(texto) + '</div>';
+}
+
+function supClearAlert() {
+  const el = document.getElementById('sup-alert-area');
+  if (el) el.innerHTML = '';
+}
+
+// ─── FIM FASE 5 ───────────────────────────────────────────────────────────────
 
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
@@ -2335,5 +2641,85 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 5000);
 });
 </script>
+<!-- ═══════════════════════════════════════════════════════════════════
+     FASE 5 — Interface de Validação do Supervisor de Equipa
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="supervisor-panel" style="display:none">
+
+  <!-- Contador de sessão -->
+  <div class="sup-counter-bar">
+    <div>
+      <div class="sup-counter-num" id="sup-counter">0</div>
+      <div class="sup-counter-lbl">validações nesta sessão</div>
+    </div>
+    <div class="sup-session-info" id="sup-session-info"></div>
+  </div>
+
+  <!-- Pesquisa por BI -->
+  <div class="sup-search-box">
+    <h2>🔍 Inserir BI do Profissional</h2>
+    <div class="sup-search-row">
+      <input id="sup-bi-input" class="sup-bi-input" type="text"
+             placeholder="Número do Bilhete de Identidade"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             autocapitalize="characters"
+             onkeydown="if(event.key==='Enter') supSearch()">
+      <button class="btn-sup-search" onclick="supSearch()">Pesquisar</button>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div id="sup-alert-area"></div>
+
+  <!-- Área de resultado (profissional encontrado) -->
+  <div id="sup-result-area" style="display:none">
+
+    <!-- Cartão do profissional -->
+    <div class="sup-prof-card">
+      <div class="sup-prof-avatar" id="sup-prof-avatar">👤</div>
+      <div style="flex:1">
+        <div class="sup-prof-nome" id="sup-prof-nome">—</div>
+        <div id="sup-prof-funcao-badge"></div>
+        <div class="sup-prof-meta">
+          <span class="sup-prof-meta-item" id="sup-prof-coord"></span>
+          <span class="sup-prof-meta-item" id="sup-prof-bi"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Área de validação -->
+    <div id="sup-validation-area" class="sup-validation-box" style="display:none">
+      <p class="sup-validation-prompt">Qual é a disponibilidade deste profissional?</p>
+      <div class="sup-estado-btns">
+        <button class="sup-estado-btn sup-btn-sim" id="sup-btn-sim" onclick="supSelectEstado('SIM')">
+          <span class="bico">✅</span>DISPONÍVEL
+        </button>
+        <button class="sup-estado-btn sup-btn-nao" id="sup-btn-nao" onclick="supSelectEstado('NÃO')">
+          <span class="bico">❌</span>INDISPONÍVEL
+        </button>
+      </div>
+      <div id="sup-confirm-area" style="display:none">
+        <div class="sup-confirm-row">
+          <button class="btn-sup-alterar" onclick="supCancelEstado()">← Alterar</button>
+          <button class="btn-sup-confirmar" id="btn-sup-confirmar" onclick="supConfirmar()">
+            ✔ Confirmar e Gravar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Área bloqueada (já validado) -->
+    <div id="sup-blocked-area" style="display:none">
+      <div class="sup-blocked-card">
+        <span class="sup-blocked-icon">✅</span>
+        <div class="sup-blocked-msg">O titular deste Bilhete de Identidade já tem a sua disponibilidade registada.</div>
+        <span class="sup-blocked-detail" id="sup-blocked-detail"></span>
+        <button class="btn-sup-nova" onclick="supReset()">← Nova Pesquisa</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>
