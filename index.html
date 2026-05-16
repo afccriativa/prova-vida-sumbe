@@ -1781,35 +1781,43 @@ async function confirmDeleteValidacao() {
   const btn = document.getElementById('btn-del-confirm');
   btn.disabled = true; btn.textContent = 'A eliminar...';
 
-  // 1. Remover do localStorage
+  // 1. Remover do Firebase PRIMEIRO e aguardar confirmação
+  if (fbReady()) {
+    try {
+      await window._FB.deleteDoc(window._FB.docRef('validacoes/' + bi.toUpperCase()));
+    } catch(e) {
+      // Falha no Firebase — abortar: não tocar no localStorage, mostrar erro
+      btn.disabled = false; btn.textContent = 'Eliminar';
+      closeDelModal();
+      showToast('Erro ao eliminar no servidor: ' + e.message, 'error');
+      console.error('[Firebase] deleteDoc falhou:', e);
+      return;
+    }
+  }
+
+  // 2. Firebase confirmou — agora limpar localmente
   const d = getConfs();
   delete d[bi];
   localStorage.setItem(STORE_KEY, JSON.stringify(d));
 
-  // 2. Remover do Firebase
-  if (fbReady()) {
-    try {
-      await window._FB.deleteDoc(window._FB.docRef('validacoes/' + bi.toUpperCase()));
-      // Log de auditoria no Firebase
-      await fbLogSessao(
-        APP_SESSION.bi,
-        'ADMIN_DELETE: ' + bi + ' por ' + (APP_SESSION.nome || 'Admin'),
-        APP_SESSION.coordenacao,
-        -1 // valor -1 sinaliza eliminação no log
-      );
-    } catch(e) {
-      console.warn('[Firebase] Erro ao eliminar:', e.message);
-    }
-  }
-
-  // 3. Actualizar cache em memória
+  // 3. Remover da cache em memória (o onSnapshot irá confirmar em seguida)
   if (_fbLiveData[bi]) delete _fbLiveData[bi];
+
+  // 4. Log de auditoria
+  if (fbReady()) {
+    fbLogSessao(
+      APP_SESSION.bi,
+      'ADMIN_DELETE: ' + bi + ' por ' + (APP_SESSION.nome || 'Admin'),
+      APP_SESSION.coordenacao,
+      -1
+    ).catch(() => {});
+  }
 
   closeDelModal();
   btn.disabled = false; btn.textContent = 'Eliminar';
-  showToast('Validação de '+bi+' eliminada e registada na auditoria.', 'success');
+  showToast('Validação eliminada com sucesso.', 'success');
 
-  // Re-renderizar a aba activa
+  // Re-renderizar
   updateHeaderCount();
   const activeTab = document.querySelector('.tab.active');
   if (activeTab) {
