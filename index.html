@@ -607,6 +607,44 @@ input, textarea, select {
   .sup-session-info { width: auto; border-top: none; padding-top: 0; }
 }
 
+/* ── Modal de segurança: Limpar Dados com PIN ── */
+.clear-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  z-index: 9900; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.clear-box { background: var(--surface); border: 1px solid var(--border);
+  border-top: 4px solid var(--red); border-radius: 14px;
+  max-width: 440px; width: 100%;
+  box-shadow: 0 0 0 1px rgba(231,76,60,0.2), 0 32px 80px rgba(0,0,0,0.7);
+  animation: spFadeIn 0.2s ease; }
+.clear-box-hdr { padding: 24px 24px 0; }
+.clear-box-hdr h2 { font-size: 17px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
+.clear-warning-card { background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.25);
+  border-radius: 8px; padding: 12px 14px; margin-top: 12px;
+  font-size: 12px; color: var(--text2); line-height: 1.6; }
+.clear-warning-card strong { color: var(--text); display: block; margin-bottom: 4px; }
+.clear-count { font-size: 28px; font-weight: 900; color: var(--red);
+  display: inline-block; margin: 0 4px; vertical-align: baseline; }
+.clear-box-body { padding: 18px 24px 0; }
+.clear-pin-label { font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 7px; }
+.clear-pin-input { width: 100%; background: var(--bg); border: 2px solid var(--border);
+  border-radius: 8px; padding: 13px 16px; font-size: 16px; color: var(--text);
+  font-weight: 700; outline: none; transition: border-color 0.2s;
+  font-family: inherit; letter-spacing: 2px; }
+.clear-pin-input:focus { border-color: var(--accent2); }
+.clear-pin-input.inp-err { border-color: var(--red); }
+.clear-pin-msg { font-size: 12px; margin-top: 8px; min-height: 18px;
+  color: var(--red); font-weight: 600; }
+.clear-box-ftr { padding: 16px 24px 22px; display: flex; gap: 10px; }
+.btn-clear-cancel { flex: 1; padding: 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text2);
+  font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.btn-clear-cancel:hover { background: var(--border); }
+.btn-clear-execute { flex: 2; padding: 12px; background: var(--red); color: #fff;
+  border: none; border-radius: 8px; font-size: 13px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s; touch-action: manipulation; letter-spacing: 0.3px; }
+.btn-clear-execute:hover:not(:disabled) { background: #c0392b; }
+.btn-clear-execute:disabled { opacity: 0.35; cursor: not-allowed; }
+
 </style>
 </head>
 <body>
@@ -785,9 +823,9 @@ input, textarea, select {
       <option value="AUSENTE">🚶 Ausente</option>
     </select>
     <select class="filter-select" id="hist-coord"><option value="">Todas as coordenações</option></select>
-    <button class="btn btn-secondary" id="btn-export" style="margin-left:auto">⬇️ Exportar CSV</button>
-    <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
-    <button class="btn btn-secondary" id="btn-clear-all" style="color:#e74c3c;border-color:#e74c3c">🗑️ Limpar Dados</button>
+    <button class="btn btn-secondary" id="btn-export" style="margin-left:auto;padding:8px 14px;font-size:12px">⬇️ CSV</button>
+    <button class="btn btn-secondary" onclick="window.print()" style="padding:8px 14px;font-size:12px">🖨️ Imprimir</button>
+    <button class="btn btn-secondary" id="btn-clear-all" style="color:#e74c3c;border-color:#e74c3c;padding:8px 14px;font-size:12px">🗑️ Limpar</button>
   </div>
   <div class="print-header">
     <h2 style="font-size:14pt;margin-bottom:4px">PROVA DE VIDA / CONFIRMAÇÃO DE DISPONIBILIDADE — 2ª RONDA</h2>
@@ -892,6 +930,37 @@ input, textarea, select {
       <button class="btn btn-secondary" id="realloc-modal-revert" style="margin-right:auto;color:var(--red);border-color:var(--red);display:none">↺ Reverter para 1ª Ronda</button>
       <button class="btn btn-secondary" id="realloc-modal-cancel">Cancelar</button>
       <button class="btn-save" id="realloc-modal-save">💾 Guardar Realocação</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEGURANÇA — Modal: Limpar Dados com confirmação por PIN -->
+<div id="clear-all-modal" class="clear-modal" style="display:none">
+  <div class="clear-box">
+    <div class="clear-box-hdr">
+      <h2>🚨 Confirmação de Segurança</h2>
+      <div class="clear-warning-card">
+        <strong>Esta acção vai eliminar permanentemente:</strong>
+        <span id="clear-count-line">• <span class="clear-count" id="clear-rec-count">0</span> registos de validação do Firestore</span><br>
+        <span>• Todos os dados locais deste dispositivo</span><br>
+        <span>• Toda a cache em memória da sessão actual</span><br><br>
+        <span style="color:var(--red);font-weight:700">⚠️ Esta operação não pode ser desfeita.</span>
+      </div>
+    </div>
+    <div class="clear-box-body">
+      <label class="clear-pin-label" for="clear-pin-input">Confirme com o seu PIN de Administrador</label>
+      <input id="clear-pin-input" class="clear-pin-input" type="password"
+             placeholder="••••••" autocomplete="off"
+             inputmode="numeric" enterkeyhint="go"
+             oninput="onClearPinInput()"
+             onkeydown="if(event.key==='Enter') executeClearAll()">
+      <div class="clear-pin-msg" id="clear-pin-msg"></div>
+    </div>
+    <div class="clear-box-ftr">
+      <button class="btn-clear-cancel" onclick="closeClearAllModal()">Cancelar</button>
+      <button class="btn-clear-execute" id="btn-clear-execute" onclick="executeClearAll()" disabled>
+        🗑️ Eliminar Tudo
+      </button>
     </div>
   </div>
 </div>
@@ -1996,6 +2065,107 @@ async function confirmDeleteValidacao() {
 }
 
 // ─── FIM FASE 8 ───────────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SEGURANÇA — LIMPAR DADOS COM CONFIRMAÇÃO POR PIN
+// Protege a acção mais destrutiva do sistema com verificação de identidade
+// ═════════════════════════════════════════════════════════════════════════════
+
+function openClearAllModal() {
+  if (!isAdminSession()) { showToast('Acção exclusiva do Administrador.', 'error'); return; }
+
+  // Mostrar contagem real de registos a eliminar
+  const count = Object.keys(getMergedConfs()).length;
+  const el    = document.getElementById('clear-rec-count');
+  if (el) el.textContent = count;
+
+  // Resetar estado do modal
+  document.getElementById('clear-pin-input').value = '';
+  document.getElementById('clear-pin-input').classList.remove('inp-err');
+  document.getElementById('clear-pin-msg').textContent = '';
+  document.getElementById('btn-clear-execute').disabled = true;
+  document.getElementById('clear-all-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('clear-pin-input').focus(), 120);
+}
+
+function closeClearAllModal() {
+  document.getElementById('clear-all-modal').style.display = 'none';
+  document.getElementById('clear-pin-input').value = '';
+  document.getElementById('clear-pin-msg').textContent = '';
+  document.getElementById('clear-pin-input').classList.remove('inp-err');
+}
+
+// Habilitar botão conforme utilizador escreve (sem hashing em tempo real)
+function onClearPinInput() {
+  const val = document.getElementById('clear-pin-input').value;
+  document.getElementById('btn-clear-execute').disabled = val.length < 4;
+  document.getElementById('clear-pin-msg').textContent = '';
+  document.getElementById('clear-pin-input').classList.remove('inp-err');
+}
+
+async function executeClearAll() {
+  const pin = document.getElementById('clear-pin-input').value;
+  const btn = document.getElementById('btn-clear-execute');
+  if (!pin || pin.length < 4) return;
+
+  // 1. Verificar PIN
+  const storedHash = getAdminPinHash();
+  if (!storedHash) {
+    // Sistema sem PIN configurado — não deveria acontecer, mas tratamos
+    document.getElementById('clear-pin-msg').textContent =
+      'PIN não configurado. Termine a sessão e configure um PIN primeiro.';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'A verificar PIN...';
+  const pinOk = await verifyPin(pin, storedHash);
+  if (!pinOk) {
+    btn.disabled = false; btn.textContent = '🗑️ Eliminar Tudo';
+    document.getElementById('clear-pin-input').classList.add('inp-err');
+    document.getElementById('clear-pin-msg').textContent = 'PIN incorrecto. Operação cancelada.';
+    document.getElementById('clear-pin-input').value = '';
+    document.getElementById('clear-pin-input').focus();
+    return;
+  }
+
+  // 2. PIN correcto — iniciar eliminação
+  btn.textContent = 'A eliminar do Firebase...';
+
+  // 2a. Eliminar todos os documentos do Firestore
+  if (fbReady()) {
+    try {
+      const snap = await window._FB.getDocs(window._FB.colRef('validacoes'));
+      const deletions = [];
+      snap.forEach(d => deletions.push(window._FB.deleteDoc(window._FB.docRef('validacoes/' + d.id))));
+      await Promise.all(deletions);
+      // Log de auditoria
+      fbLogSessao(
+        APP_SESSION.bi,
+        'ADMIN_CLEAR_ALL: ' + deletions.length + ' registos eliminados por ' + (APP_SESSION.nome || 'Admin'),
+        APP_SESSION.coordenacao,
+        -99
+      ).catch(() => {});
+    } catch(e) {
+      btn.disabled = false; btn.textContent = '🗑️ Eliminar Tudo';
+      document.getElementById('clear-pin-msg').textContent =
+        'Erro ao eliminar do servidor: ' + e.message;
+      return;
+    }
+  }
+
+  // 2b. Limpar localStorage e cache em memória
+  localStorage.removeItem(STORE_KEY);
+  _fbLiveData = {};
+
+  // 3. Fechar modal e actualizar UI
+  closeClearAllModal();
+  updateHeaderCount();
+  renderHistory();
+  renderDashboard();
+  showToast('Todos os registos foram eliminados com sucesso.', 'warn');
+}
+
+// ─── FIM SEGURANÇA LIMPAR DADOS ────────────────────────────────────────────
 
 // ═════════════════════════════════════════════════════════════════════════════
 // FASE 10 — SEGURANÇA: EXPIRAÇÃO DE SESSÃO POR INACTIVIDADE
@@ -3306,12 +3476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hist-status').addEventListener('change', renderHistory);
   document.getElementById('hist-coord').addEventListener('change', renderHistory);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
-  document.getElementById('btn-clear-all').addEventListener('click', () => {
-    if (!confirm('⚠️ Atenção! Isto vai apagar TODOS os registos de verificação. Tens a certeza?')) return;
-    localStorage.removeItem(STORE_KEY);
-    showToast('Todos os dados foram apagados.','warn');
-    updateHeaderCount();
-  });
+  document.getElementById('btn-clear-all').addEventListener('click', openClearAllModal);
 
   // Payments events
   document.getElementById('pay-search').addEventListener('input', renderPayments);
