@@ -3311,7 +3311,13 @@ function updateAlocacoesCache(docs) {
 // USA getR2Record para respeitar realocações de função e coordenação.
 function getAvailablePool(funcoes) {
   const pool = [];
-  const jaAlocados = new Set(Object.keys(_alocacoesCache));
+  // Excluir apenas quem está DEFINITIVAMENTE colocado: coord, supervisor ou alocado numa equipa.
+  // 'por_alocar' significa "confirmado para 2R mas ainda sem equipa" — DEVE aparecer no picker.
+  const jaAlocados = new Set(
+    Object.values(_alocacoesCache)
+      .filter(a => a.status !== 'por_alocar')
+      .map(a => (a.bi || '').toUpperCase())
+  );
   const funcoesSet = Array.isArray(funcoes) ? new Set(funcoes) : new Set([funcoes]);
 
   // Fonte 1: RH_DATA com estado SIM na Consolidação
