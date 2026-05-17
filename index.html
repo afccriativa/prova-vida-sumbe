@@ -1976,25 +1976,70 @@ function closeAuthModal(which) {
 }
 
 // ─── Autenticação: Supervisor ─────────────────────────────────────────────────
-function doAuthSupervisor() {
+async function doAuthSupervisor() {
   const biRaw = document.getElementById('auth-sup-bi').value;
   const bi    = biRaw.toUpperCase().trim();
   const input = document.getElementById('auth-sup-bi');
+  const btn   = document.querySelector('#modal-auth-sup .btn-auth-enter');
 
   if (!bi) {
     showAuthMsg('sup', 'error', 'Por favor insira o número do Bilhete de Identidade.');
     input.focus(); return;
   }
 
+  // ── Caminho rápido: BI já no índice estático (supervisores de origem + realloc local) ──
+  if (isSupervisorAuthorized(bi)) {
+    const sup = SUPERVISORES_INDEX[bi];
+    _completeSupervisorLogin(bi, sup);
+    return;
+  }
+
+  // ── Fallback Firebase: verificar se foi realocado para Supervisor em qualquer dispositivo ──
+  if (!fbReady()) {
+    showAuthMsg('sup', 'error',
+      'Acesso negado. Apenas Supervisores de Equipa autorizados podem efectuar validações.');
+    input.classList.add('inp-err'); input.focus(); return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ A verificar...'; }
+  try {
+    const alocDocs = await fbGetAlocacoes();
+    alocDocs.forEach(doc => {
+      const docBI = (doc.bi || '').toUpperCase();
+      if (!docBI || SUPERVISORES_INDEX[docBI]) return;
+      // Aceitar quem tem status 'supervisor' OU função 'Supervisor equipa' no Firebase
+      const isSup = doc.status === 'supervisor' || doc.funcao === 'Supervisor equipa';
+      if (!isSup) return;
+      // Também aceitar quem tem efectivamente função de Supervisor (após reparação automática)
+      const r2 = getR2Record(doc.bi);
+      const funcaoEf = (r2 && r2.funcao_r2) || doc.funcao || '';
+      if (!isSup && funcaoEf !== 'Supervisor equipa') return;
+      SUPERVISORES_INDEX[docBI] = {
+        bi:          doc.bi,
+        nome:        doc.nome,
+        coordenacao: (r2 && r2.coordenacao_r2) || doc.coordenacao || '',
+        sexo:        doc.sexo || 'M',
+        _fromFirebase: true,
+      };
+    });
+  } catch(e) {
+    console.error('[Auth] Firebase fallback falhou:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✔ Entrar'; }
+  }
+
   if (!isSupervisorAuthorized(bi)) {
     showAuthMsg('sup', 'error',
       'Acesso negado. Apenas Supervisores de Equipa autorizados podem efectuar validações.');
-    input.classList.add('inp-err');
-    input.focus(); return;
+    input.classList.add('inp-err'); input.focus(); return;
   }
 
-  // ✅ Autenticação bem-sucedida
   const sup = SUPERVISORES_INDEX[bi];
+  _completeSupervisorLogin(bi, sup);
+}
+
+// ── Finalizar autenticação de Supervisor ─────────────────────────────────────
+function _completeSupervisorLogin(bi, sup) {
   setSession('supervisor', bi, sup.nome, sup.coordenacao);
   closeAuthModal('sup');
   hideSelectionScreen();
