@@ -844,6 +844,38 @@ input, textarea, select {
   .assign-box    { max-height:92vh; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASES E + F — EQUIPAS DE CAMPO (3 MEMBROS)
+   ═══════════════════════════════════════════════════════════════════════ */
+.btn-2r-add { padding:3px 8px; background:none; border:1px solid rgba(46,204,113,.35);
+  border-radius:5px; color:var(--green); font-size:11px; cursor:pointer;
+  white-space:nowrap; transition:all .15s; touch-action:manipulation; }
+.btn-2r-add:hover { background:rgba(46,204,113,.1); }
+.badge-2r-ok { font-size:10px; font-weight:700; background:rgba(46,204,113,.12);
+  color:var(--green); padding:2px 7px; border-radius:8px; }
+
+.team-card { background:rgba(52,152,219,.04); border:1px solid rgba(52,152,219,.2);
+  border-radius:7px; padding:10px 12px; margin-top:8px; }
+.team-header { display:flex; align-items:center; gap:7px; margin-bottom:8px;
+  font-size:11px; font-weight:700; color:var(--text2); }
+.team-status { font-size:9px; font-weight:700; padding:2px 7px; border-radius:8px; }
+.ts-completa   { background:rgba(46,204,113,.15);  color:var(--green); }
+.ts-incompleta { background:rgba(244,168,50,.15);  color:var(--accent2); }
+.ts-vazia      { background:rgba(100,100,100,.15); color:var(--text3); }
+.team-slot { display:flex; align-items:center; gap:7px; padding:5px 7px;
+  border-radius:5px; font-size:11px; margin-bottom:3px; }
+.team-slot.filled { background:rgba(46,204,113,.06); }
+.team-slot-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; }
+.team-slot-role { color:var(--text3); min-width:68px; font-size:10px;
+  text-transform:uppercase; letter-spacing:0.5px; }
+.team-slot-name { flex:1; color:var(--text); font-weight:600; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.btn-nova-equipa { width:100%; padding:7px; background:none;
+  border:1px dashed var(--border); border-radius:6px; color:var(--text3);
+  font-size:11px; cursor:pointer; margin-top:8px; transition:all .15s;
+  touch-action:manipulation; }
+.btn-nova-equipa:hover { border-color:#3498db; color:#3498db; background:rgba(52,152,219,.05); }
+
 </style>
 </head>
 <body>
@@ -1872,7 +1904,8 @@ function activateSystem() {
   } else {
     hideSupervisorPanel();
     startAdminListener();
-    loadRhNovos(); // FASE A: carregar novos RH na sessão Admin
+    loadRhNovos();                                    // FASE A
+    fbGetAlocacoes().then(docs => updateAlocacoesCache(docs)); // FASE F: pré-carregar cache
   }
 }
 
@@ -3051,8 +3084,9 @@ function getAvailablePool(funcoes) {
 
 // ── Inicializar hierarquia ────────────────────────────────────────────────────
 async function loadHierarquia() {
-  const docs = await fbGetAlocacoes();
-  updateAlocacoesCache(docs);
+  const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes(), fbGetEquipas()]);
+  updateAlocacoesCache(alocDocs);
+  updateEquipasCache(eqDocs);
   renderHierarquia();
 }
 
@@ -3063,12 +3097,15 @@ function renderHierarquia() {
   const coordsOk      = COORDENACOES_2R.filter(c => getCoordsAreaDa(c)).length;
   const totalSups     = Object.values(_alocacoesCache).filter(a => a.status === 'supervisor').length;
   const totalPool     = getAvailablePool(['Supervisor equipa','Mobilizador','Vacinador','Registador','Sup Mob Social']).length;
+  const totalEquipas  = Object.keys(_equipasCache).length;
+  const equipasComp   = Object.values(_equipasCache).filter(e => e.status === 'completa').length;
 
   // Sumário
   const sumEl = document.getElementById('hier-summary-bar');
   if (sumEl) sumEl.innerHTML =
     hierSumCard(coordsOk + '/' + totalCoords, 'Coords Definidos', coordsOk === totalCoords ? 'var(--green)' : 'var(--accent2)') +
     hierSumCard(totalSups, 'Supervisores', 'var(--blue)') +
+    hierSumCard(equipasComp + '/' + totalEquipas, 'Equipas Completas', equipasComp === totalEquipas && totalEquipas > 0 ? 'var(--green)' : 'var(--accent2)') +
     hierSumCard(totalPool, 'Disponíveis', 'var(--text2)') +
     hierSumCard(Object.keys(_alocacoesCache).length, 'Total Alocados', 'var(--text3)');
 
@@ -3135,16 +3172,7 @@ function renderCoordCard(coordenacao) {
 
   // Lista de supervisores
   const supsHtml = sups.length > 0
-    ? sups.map(s =>
-        '<div class="sup-slot filled">' +
-          '<span style="font-size:18px">' + (s.sexo === 'F' ? '👩' : '👨') + '</span>' +
-          '<div class="slot-info">' +
-            '<div class="sup-slot-nome">' + escH(s.nome.split(' ').slice(0,3).join(' ')) + '</div>' +
-            '<div class="sup-slot-coord" style="font-size:9px;color:var(--text3)">Supervisor equipa</div>' +
-          '</div>' +
-          '<button class="btn-slot-remove" onclick="removerAlocacao(\'' + escAttr(s.bi) + '\')" title="Remover supervisor">✕</button>' +
-        '</div>'
-      ).join('')
+    ? sups.map(s => renderSupWithTeams(s, coordenacao)).join('')
     : '<div class="pool-empty">Nenhum supervisor atribuído</div>';
 
   const supsSection =
@@ -3220,7 +3248,7 @@ async function removerAlocacao(bi) {
 }
 
 // ── Internal: alocar um profissional ─────────────────────────────────────────
-async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, fonte) {
+async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, fonte, skipRender = false) {
   const now = new Date();
   const doc = {
     bi, nome, funcao, coordenacao, sexo: sexo || 'M',
@@ -3235,21 +3263,29 @@ async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, 
   const result = await fbSaveAlocacao(doc);
   if (result.success) {
     _alocacoesCache[bi.toUpperCase()] = doc;
-    renderHierarquia();
-    showToast(nome.split(' ')[0] + ' atribuído com sucesso. ✅', 'success');
+    if (!skipRender) {
+      renderHierarquia();
+      showToast(nome.split(' ')[0] + ' atribuído com sucesso. ✅', 'success');
+    }
+    return { success: true };
   } else {
     showToast('Erro ao atribuir: ' + result.error, 'error');
+    return { success: false };
   }
 }
 
 // ── Modal de atribuição (picker) ─────────────────────────────────────────────
-function openAssignModal(coordenacao, role) {
-  _assignContext = { coordenacao, role };
-  const isCoord = role === 'coord';
-  document.getElementById('assign-modal-title').textContent =
-    isCoord ? '🏛️ Atribuir Coord área/Comuna' : '👤 Atribuir Supervisor de Equipa';
-  document.getElementById('assign-modal-sub').textContent =
-    'Coordenação: ' + coordenacao;
+function openAssignModal(coordenacao, role, equipaId, memberRole) {
+  _assignContext = { coordenacao, role, equipaId: equipaId || null, memberRole: memberRole || null };
+  const isCoord  = role === 'coord';
+  const isMember = role === 'member';
+  const memberTitles = { mobilizador:'📱 Atribuir Mobilizador', vacinador:'💉 Atribuir Vacinador', registador:'📋 Atribuir Registador' };
+  document.getElementById('assign-modal-title').textContent = isMember
+    ? (memberTitles[memberRole] || 'Atribuir Membro')
+    : isCoord ? '🏛️ Atribuir Coord área/Comuna' : '👤 Atribuir Supervisor de Equipa';
+  document.getElementById('assign-modal-sub').textContent = isMember
+    ? 'Equipa — ' + coordenacao
+    : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp').value = '';
   renderAssignList();
   document.getElementById('assign-modal').style.display = 'flex';
@@ -3263,22 +3299,21 @@ function closeAssignModal() {
 
 function renderAssignList() {
   if (!_assignContext) return;
-  const { coordenacao, role } = _assignContext;
-  const isCoord = role === 'coord';
-  const funcoes = isCoord ? ['Coord area/ Comuna'] : ['Supervisor equipa'];
+  const { coordenacao, role, memberRole } = _assignContext;
+  const isMember = role === 'member';
   const q = (document.getElementById('assign-search-inp')?.value || '').toLowerCase();
 
-  // Pool total (não filtra por coordenação — Admin pode atribuir qualquer um)
-  let pool = getAvailablePool(funcoes);
-  if (q) pool = pool.filter(r =>
-    (r.nome||'').toLowerCase().includes(q) ||
-    (r.bi||'').toLowerCase().includes(q));
+  let funcoes;
+  if (role === 'coord')   funcoes = ['Coord area/ Comuna'];
+  else if (isMember)      funcoes = [({mobilizador:'Mobilizador',vacinador:'Vacinador',registador:'Registador'})[memberRole] || 'Mobilizador'];
+  else                    funcoes = ['Supervisor equipa'];
 
-  // Ordenar: mesma coordenação primeiro (auto-sugestão)
+  let pool = getAvailablePool(funcoes);
+  if (q) pool = pool.filter(r => (r.nome||'').toLowerCase().includes(q) || (r.bi||'').toLowerCase().includes(q));
   pool.sort((a, b) => {
-    const aMatch = a.coordenacao === coordenacao ? -1 : 0;
-    const bMatch = b.coordenacao === coordenacao ? -1 : 0;
-    return aMatch - bMatch || (a.nome||'').localeCompare(b.nome||'');
+    const aM = a.coordenacao === coordenacao ? -1 : 0;
+    const bM = b.coordenacao === coordenacao ? -1 : 0;
+    return aM - bM || (a.nome||'').localeCompare(b.nome||'');
   });
 
   const el = document.getElementById('assign-list-content');
@@ -3295,8 +3330,7 @@ function renderAssignList() {
   el.innerHTML = pool.map(r => {
     const isAuto = r.coordenacao === coordenacao;
     const icon   = r.sexo === 'F' ? '👩' : '👨';
-    const fonte  = r._fonte === 'rh_novo'
-      ? '<span class="rh-novo-badge" style="margin-left:4px">NOVO</span>' : '';
+    const fonte  = r._fonte === 'rh_novo' ? '<span class="rh-novo-badge" style="margin-left:4px">NOVO</span>' : '';
     return '<div class="assign-item' + (isAuto ? ' auto-suggest' : '') + '" ' +
       'onclick="selectAssignItem(\'' + escAttr(r.bi) + '\')">' +
       '<div class="assign-item-icon">' + icon + '</div>' +
@@ -3305,20 +3339,21 @@ function renderAssignList() {
           (isAuto ? ' <span class="auto-badge">✦ Mesma coord.</span>' : '') +
         '</div>' +
         '<div class="assign-item-sub">' + escH(r.coordenacao||'—') + ' · ' + escH(r.bi) + '</div>' +
-      '</div>' +
-      '</div>';
+      '</div></div>';
   }).join('');
 }
 
 async function selectAssignItem(bi) {
   if (!_assignContext) return;
-  const { coordenacao, role } = _assignContext;
+  const { coordenacao, role, equipaId, memberRole } = _assignContext;
   const prof = findProfissional(bi);
   if (!prof) return;
   closeAssignModal();
-  await _alocarProfissional(
-    prof.bi, prof.nome, prof.funcao, coordenacao,
-    prof.sexo || 'M', role, prof._fonte || 'rh_data');
+  if (role === 'member') {
+    await _assignMemberToTeam(equipaId, memberRole, prof);
+  } else {
+    await _alocarProfissional(prof.bi, prof.nome, prof.funcao, coordenacao, prof.sexo || 'M', role, prof._fonte || 'rh_data');
+  }
 }
 
 // ── Utilitário: escape para atributos HTML ────────────────────────────────────
@@ -3327,6 +3362,235 @@ function escAttr(v) {
 }
 
 // ─── FIM FASES C+D ───────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE E — INTEGRAÇÃO COM CONSOLIDAÇÃO (botão ⚽ 2ª Ronda)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Funções elegíveis para envio à 2ª Ronda a partir da Consolidação
+const ELIGIBLE_2R_FUNCOES = new Set([
+  'Coord area/ Comuna', 'Supervisor equipa',
+  'Mobilizador', 'Vacinador', 'Registador', 'Sup Mob Social',
+]);
+
+// Status em /alocacoes_2r/ por função
+function statusPorFuncao(funcao) {
+  if (funcao === 'Coord area/ Comuna')  return 'coord';
+  if (funcao === 'Supervisor equipa')   return 'supervisor';
+  return 'por_alocar';
+}
+
+// Chamado pelo botão ⚽ na Consolidação
+async function confirmarExistentePara2R(bi) {
+  const prof = findProfissional(bi);
+  if (!prof) { showToast('Profissional não encontrado.', 'error'); return; }
+  if (_alocacoesCache[bi.toUpperCase()]) { showToast('Já confirmado para a 2ª Ronda.', 'warn'); return; }
+  const status = statusPorFuncao(prof.funcao);
+  await _alocarProfissional(
+    prof.bi, prof.nome, prof.funcao,
+    prof.coordenacao, prof.sexo || 'M',
+    status, prof._fonte || 'rh_data', true
+  );
+  // Actualizar cache sem re-render da hierarquia (não está à vista)
+  showToast(prof.nome.split(' ')[0] + ' confirmado para a 2ª Ronda. ✅', 'success');
+}
+
+// ─── FIM FASE E ───────────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE F — FORMAÇÃO INTERACTIVA DE EQUIPAS (3 membros por equipa)
+// Firebase: /equipas_2r/ | Criar/Eliminar equipas | Atribuir Mob/Vac/Reg
+// ═════════════════════════════════════════════════════════════════════════════
+
+let _equipasCache = {}; // { [equipa_id]: doc }
+
+// ── Firebase: equipas ────────────────────────────────────────────────────────
+async function fbGetEquipas() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('equipas_2r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetEquipas:', e); return []; }
+}
+
+async function fbSaveEquipa(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('equipas_2r/' + data.id), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+async function fbDeleteEquipa(id) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('equipas_2r/' + id));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+function updateEquipasCache(docs) {
+  _equipasCache = {};
+  docs.forEach(doc => { const id = doc.id || doc._id; if (id) _equipasCache[id] = doc; });
+}
+
+function updateEquipaStatus(eq) {
+  const filled = [eq.mobilizador, eq.vacinador, eq.registador].filter(Boolean).length;
+  eq.status = filled === 3 ? 'completa' : filled === 0 ? 'vazia' : 'incompleta';
+}
+
+// ── Criar nova equipa sob um Supervisor ──────────────────────────────────────
+async function criarNovaEquipa(supervisorBI, coordenacao) {
+  const sup = _alocacoesCache[supervisorBI.toUpperCase()] || {};
+  const supsTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === supervisorBI.toUpperCase());
+  const num = supsTeams.length + 1;
+  const id  = supervisorBI.toUpperCase() + '_E' + Date.now();
+  const eq  = {
+    id, ronda: RONDA_ID, municipio: MUNICIPIO,
+    coordenacao, supervisor_id: supervisorBI.toUpperCase(),
+    supervisor_nome: sup.nome || '',
+    equipa_num: num,
+    mobilizador: null, vacinador: null, registador: null,
+    status: 'vazia',
+    createdAt: window._FB ? window._FB.serverTimestamp() : null,
+    updatedBy: APP_SESSION.bi || '',
+  };
+  const result = await fbSaveEquipa(eq);
+  if (result.success) {
+    _equipasCache[id] = eq;
+    renderHierarquia();
+    showToast('Equipa ' + num + ' criada. ✅', 'success');
+  } else {
+    showToast('Erro ao criar equipa: ' + result.error, 'error');
+  }
+}
+
+// ── Eliminar equipa e devolver membros ao pool ────────────────────────────────
+async function removerEquipa(equipaId) {
+  const eq = _equipasCache[equipaId];
+  if (!eq) return;
+  if (!confirm('Eliminar Equipa ' + eq.equipa_num + ' do Supervisor ' + (eq.supervisor_nome||'') + '?\nOs membros voltam ao pool disponível.')) return;
+  // Remover membros de /alocacoes_2r/
+  const members = ['mobilizador','vacinador','registador'];
+  const removals = members.filter(r => eq[r]?.bi).map(r => {
+    delete _alocacoesCache[(eq[r].bi||'').toUpperCase()];
+    return fbRemoveAlocacao(eq[r].bi);
+  });
+  await Promise.all(removals);
+  await fbDeleteEquipa(equipaId);
+  delete _equipasCache[equipaId];
+  renderHierarquia();
+  showToast('Equipa eliminada. Membros devolvidos ao pool.', 'warn');
+}
+
+// ── Remover membro de um slot de equipa ──────────────────────────────────────
+async function removerMembroEquipa(equipaId, role) {
+  const eq = _equipasCache[equipaId];
+  if (!eq || !eq[role]?.bi) return;
+  const bi   = eq[role].bi;
+  const nome = eq[role].nome;
+  await fbRemoveAlocacao(bi);
+  delete _alocacoesCache[(bi||'').toUpperCase()];
+  eq[role] = null;
+  updateEquipaStatus(eq);
+  await fbSaveEquipa(eq);
+  _equipasCache[equipaId] = eq;
+  renderHierarquia();
+  showToast((nome||'').split(' ')[0] + ' removido da equipa.', 'warn');
+}
+
+// ── Atribuir membro a um slot de equipa ──────────────────────────────────────
+async function _assignMemberToTeam(equipaId, memberRole, prof) {
+  const eq = _equipasCache[equipaId];
+  if (!eq) return;
+  // Gravar em alocacoes_2r
+  const now = new Date();
+  const doc = {
+    bi: prof.bi, nome: prof.nome, funcao: prof.funcao,
+    coordenacao: eq.coordenacao, sexo: prof.sexo || 'M',
+    fonte: prof._fonte || 'rh_data', status: 'alocado',
+    supervisor_id: eq.supervisor_id, equipa_id: equipaId,
+    role_na_equipa: memberRole,
+    confirmadoPor: APP_SESSION.bi || '',
+    confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
+    dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
+    ronda: RONDA_ID, municipio: MUNICIPIO,
+  };
+  await fbSaveAlocacao(doc);
+  _alocacoesCache[(prof.bi||'').toUpperCase()] = doc;
+  // Actualizar equipa
+  eq[memberRole] = { bi: prof.bi, nome: prof.nome };
+  updateEquipaStatus(eq);
+  await fbSaveEquipa(eq);
+  _equipasCache[equipaId] = eq;
+  renderHierarquia();
+  showToast(prof.nome.split(' ')[0] + ' adicionado à Equipa ' + eq.equipa_num + '. ✅', 'success');
+}
+
+// ── Renderizar Supervisor com as suas equipas ────────────────────────────────
+function renderSupWithTeams(s, coordenacao) {
+  const supTeams = Object.values(_equipasCache)
+    .filter(e => e.supervisor_id === (s.bi||'').toUpperCase())
+    .sort((a,b) => (a.equipa_num||0) - (b.equipa_num||0));
+
+  const supHeader =
+    '<div class="sup-slot filled" style="margin-bottom:6px">' +
+      '<span style="font-size:18px">' + (s.sexo==='F'?'👩':'👨') + '</span>' +
+      '<div class="slot-info">' +
+        '<div class="sup-slot-nome">' + escH((s.nome||'').split(' ').slice(0,3).join(' ')) + '</div>' +
+        '<div class="sup-slot-coord" style="font-size:9px;color:var(--text3)">Supervisor equipa · ' + supTeams.length + ' equipa' + (supTeams.length!==1?'s':'') + '</div>' +
+      '</div>' +
+      '<button class="btn-slot-remove" onclick="removerAlocacao(\'' + escAttr(s.bi) + '\')" title="Remover supervisor">✕</button>' +
+    '</div>';
+
+  const teamsHtml = supTeams.map(eq => renderTeamCard(eq)).join('');
+
+  const btnNova =
+    '<button class="btn-nova-equipa" onclick="criarNovaEquipa(\'' + escAttr(s.bi) + '\',\'' + escAttr(coordenacao) + '\')">+ Nova Equipa</button>';
+
+  return '<div style="margin-bottom:12px">' + supHeader + teamsHtml + btnNova + '</div>';
+}
+
+// ── Renderizar um card de equipa (3 slots) ────────────────────────────────────
+function renderTeamCard(eq) {
+  const statusCls = { completa:'ts-completa', incompleta:'ts-incompleta', vazia:'ts-vazia' }[eq.status] || 'ts-vazia';
+  const statusLbl = { completa:'✅ Completa', incompleta:'⚡ Incompleta', vazia:'⬜ Vazia' }[eq.status] || '⬜';
+
+  const memberSlot = (role, icon, label) => {
+    const m = eq[role];
+    return m?.bi
+      ? '<div class="team-slot filled">' +
+          '<span class="team-slot-icon">' + icon + '</span>' +
+          '<span class="team-slot-role">' + label + '</span>' +
+          '<span class="team-slot-name">' + escH((m.nome||'').split(' ')[0]) + '</span>' +
+          '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" ' +
+            'onclick="removerMembroEquipa(\'' + escAttr(eq.id) + '\',\'' + role + '\')" title="Remover">✕</button>' +
+        '</div>'
+      : '<div class="team-slot">' +
+          '<span class="team-slot-icon">' + icon + '</span>' +
+          '<span class="team-slot-role">' + label + '</span>' +
+          '<button class="btn-slot-add" style="padding:3px 8px;font-size:10px" ' +
+            'onclick="openAssignModal(\'' + escAttr(eq.coordenacao) + '\',\'member\',\'' + escAttr(eq.id) + '\',\'' + role + '\')">' +
+            '+ ' + label +
+          '</button>' +
+        '</div>';
+  };
+
+  return '<div class="team-card">' +
+    '<div class="team-header">' +
+      'Equipa ' + eq.equipa_num +
+      '<span class="team-status ' + statusCls + '">' + statusLbl + '</span>' +
+      '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" ' +
+        'onclick="removerEquipa(\'' + escAttr(eq.id) + '\')" title="Eliminar equipa">🗑️</button>' +
+    '</div>' +
+    memberSlot('mobilizador', '📱', 'Mob') +
+    memberSlot('vacinador',   '💉', 'Vac') +
+    memberSlot('registador',  '📋', 'Reg') +
+  '</div>';
+}
+
+// ─── FIM FASE F ───────────────────────────────────────────────────────────────
 
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
@@ -3798,11 +4062,22 @@ function renderHistory() {
     const reallocBadge = r.hasRealloc
       ? '<span style="display:inline-block;background:rgba(244,168,50,0.15);color:var(--accent2);border:1px solid rgba(244,168,50,0.3);font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;letter-spacing:0.3px" title="Realocado para 2ª Ronda por '+escH(r.reallocMeta.operador||'—')+' em '+escH(r.reallocMeta.data||'')+'">REALOC 2ª R</span>'
       : '';
+    // FASE E: botão ⚽ para confirmar profissional disponível para 2ª Ronda
+    const is2REligible = r.status === 'SIM' && ELIGIBLE_2R_FUNCOES.has(r.funcao_r2);
+    const isJa2R = !!_alocacoesCache[(r.bi||'').toUpperCase()];
+    const btn2R = is2REligible
+      ? (isJa2R
+          ? '<span class="badge-2r-ok" title="Já confirmado para a 2ª Ronda">✅ 2ª R</span>'
+          : '<button class="btn-2r-add" data-bi="'+r.bi+'" onclick="confirmarExistentePara2R(this.dataset.bi)" title="Confirmar para 2ª Ronda">⚽ 2ª R</button>')
+      : '';
+
     const actionBtns = canRealloc(r.status)
       ? '<button class="btn-del-val" data-bi="'+r.bi+'" onclick="openDelModal(this.dataset.bi)" title="Eliminar validação">🗑️</button>'+
+        btn2R+
         '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="openReallocModal(this.dataset.bi)" title="Editar para 2ª Ronda">🔧</button>'+
         '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="editRecord(this.dataset.bi)" title="Reverificar disponibilidade">✏️</button>'
       : '<button class="btn-del-val" data-bi="'+r.bi+'" onclick="openDelModal(this.dataset.bi)" title="Eliminar validação">🗑️</button>'+
+        btn2R+
         '<button class="btn-row-action" data-bi="'+r.bi+'" onclick="editRecord(this.dataset.bi)" title="Editar verificação">✏️</button>';
 
     // FASE 7: Célula do Supervisor
