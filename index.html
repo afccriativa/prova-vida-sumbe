@@ -2937,6 +2937,9 @@ function renderRhNovosList() {
 }
 
 // ── Formulário: validar e gravar ─────────────────────────────────────────────
+// ── Formulário: validar e gravar ─────────────────────────────────────────────
+let _editingRhBI = null; // BI do registo em edição (null = modo criação)
+
 async function saveRhNovo() {
   const nome   = (document.getElementById('rh-f-nome').value  || '').trim();
   const bi     = (document.getElementById('rh-f-bi').value    || '').toUpperCase().trim();
@@ -2945,6 +2948,7 @@ async function saveRhNovo() {
   const tel    = (document.getElementById('rh-f-tel').value   || '').trim();
   const sexo   = (document.getElementById('rh-f-sexo').value  || 'M');
   const btn    = document.getElementById('btn-rh-save');
+  const modoEdicao = !!_editingRhBI;
 
   // Limpar erros anteriores
   ['rh-f-nome','rh-f-bi','rh-f-funcao','rh-f-coord'].forEach(id => {
@@ -2958,31 +2962,35 @@ async function saveRhNovo() {
   if (!bi)     { erros.push('Bilhete de Identidade obrigatório.'); document.getElementById('rh-f-bi').classList.add('inp-err'); }
   if (!funcao) { erros.push('Função obrigatória.'); document.getElementById('rh-f-funcao').classList.add('inp-err'); }
   if (!coord)  { erros.push('Coordenação obrigatória.'); document.getElementById('rh-f-coord').classList.add('inp-err'); }
-
   if (erros.length) { rhFormMsg('err', erros.join(' ')); return; }
 
-  // Verificar duplicidade
-  if (biJaExiste(bi)) {
+  // Verificar duplicidade apenas em modo criação
+  // Em modo edição o BI já existe por definição — é o próprio registo
+  if (!modoEdicao && biJaExiste(bi)) {
     rhFormMsg('err', 'O Bilhete ' + bi + ' já existe no sistema (RH existente ou já registado para a 2ª Ronda).');
     document.getElementById('rh-f-bi').classList.add('inp-err');
     return;
   }
 
-  // Gravar
-  btn.disabled = true; btn.textContent = 'A guardar...';
+  btn.disabled = true;
+  btn.textContent = modoEdicao ? 'A actualizar...' : 'A guardar...';
 
-  const now = new Date();
+  const now      = new Date();
+  const existing = modoEdicao ? (_rhNovosCache[bi] || {}) : {};
   const doc = {
+    ...existing,          // preservar campos existentes (confirmado2R, registadoEm, etc.)
     bi, nome, funcao, coordenacao: coord,
     telefone: tel, sexo, ronda: '2R2026',
-    municipio: MUNICIPIO, registadoPor: APP_SESSION.bi || '',
-    registadoEm: window._FB ? window._FB.serverTimestamp() : null,
-    dataRegisto: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
-    confirmado2R: false,
+    municipio: MUNICIPIO,
+    registadoPor: existing.registadoPor || APP_SESSION.bi || '',
+    registadoEm:  existing.registadoEm  || (window._FB ? window._FB.serverTimestamp() : null),
+    dataRegisto:  existing.dataRegisto  || now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
+    dataActualizacao: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
   };
 
   const result = await fbSaveRhNovo(doc);
-  btn.disabled = false; btn.textContent = '💾 Registar Profissional';
+  btn.disabled = false;
+  btn.textContent = modoEdicao ? '💾 Actualizar' : '💾 Registar Profissional';
 
   if (!result.success) {
     rhFormMsg('err', 'Erro ao guardar: ' + result.error);
@@ -2991,14 +2999,26 @@ async function saveRhNovo() {
 
   // Actualizar cache local
   _rhNovosCache[bi] = doc;
-  if (funcao === 'Supervisor equipa' && !SUPERVISORES_INDEX[bi]) {
+  // Actualizar SUPERVISORES_INDEX se for supervisor
+  if (funcao === 'Supervisor equipa') {
     SUPERVISORES_INDEX[bi] = { bi, nome, coordenacao: coord, sexo, _novo: true };
+  } else if (existing.funcao === 'Supervisor equipa' && funcao !== 'Supervisor equipa') {
+    // Mudou de Supervisor para outra função — remover do índice
+    if (SUPERVISORES_INDEX[bi]?._novo) delete SUPERVISORES_INDEX[bi];
   }
 
-  // Guardar para modal e mostrar modal pós-registo
-  _rhNovoSalvoActual = { bi, nome, funcao, coordenacao: coord, telefone: tel };
-  showRhSavedModal();
-  rhFormReset();
+  if (modoEdicao) {
+    // Modo edição: confirmar e voltar à lista
+    _editingRhBI = null;
+    rhFormReset();
+    equipasSubtab('rh-list');
+    showToast('Registo de ' + nome.split(' ')[0] + ' actualizado com sucesso. ✅', 'success');
+  } else {
+    // Modo criação: modal pós-registo
+    _rhNovoSalvoActual = { bi, nome, funcao, coordenacao: coord, telefone: tel };
+    showRhSavedModal();
+    rhFormReset();
+  }
 }
 
 // ── Modal pós-registo ────────────────────────────────────────────────────────
@@ -3044,18 +3064,20 @@ async function confirmarRhPara2R(bi) {
 function editRhNovo(bi) {
   const r = _rhNovosCache[bi.toUpperCase()];
   if (!r) return;
+  _editingRhBI = bi.toUpperCase(); // sinalizar modo edição
   equipasSubtab('rh-novo');
   setTimeout(() => {
-    document.getElementById('rh-f-nome').value   = r.nome    || '';
-    document.getElementById('rh-f-bi').value     = r.bi      || '';
-    document.getElementById('rh-f-bi').readOnly  = true; // BI não editável após registo
+    document.getElementById('rh-f-nome').value   = r.nome       || '';
+    document.getElementById('rh-f-bi').value     = r.bi         || '';
+    document.getElementById('rh-f-bi').readOnly  = true; // BI imutável após criação
     document.getElementById('rh-f-bi').style.opacity = '0.6';
-    document.getElementById('rh-f-funcao').value = r.funcao  || '';
-    document.getElementById('rh-f-coord').value  = r.coordenacao || '';
-    document.getElementById('rh-f-tel').value    = r.telefone|| '';
-    document.getElementById('rh-f-sexo').value   = r.sexo    || 'M';
+    document.getElementById('rh-f-funcao').value = r.funcao     || '';
+    document.getElementById('rh-f-coord').value  = r.coordenacao|| '';
+    document.getElementById('rh-f-tel').value    = r.telefone   || '';
+    document.getElementById('rh-f-sexo').value   = r.sexo       || 'M';
     document.getElementById('btn-rh-save').textContent = '💾 Actualizar';
-    rhFormMsg('ok', 'A editar o registo de ' + r.nome + '. O BI não pode ser alterado.');
+    rhFormMsg('ok', 'A editar: ' + r.nome + '. Altere os campos necessários e clique "Actualizar".');
+    document.getElementById('rh-f-nome').focus();
   }, 80);
 }
 
@@ -3081,6 +3103,7 @@ async function deleteRhNovo(bi) {
 
 // ── Utilitários do formulário ────────────────────────────────────────────────
 function rhFormReset() {
+  _editingRhBI = null; // sair do modo edição
   ['rh-f-nome','rh-f-bi','rh-f-tel'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; el.readOnly = false; el.style.opacity = ''; el.classList.remove('inp-err'); }
