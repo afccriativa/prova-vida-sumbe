@@ -3341,9 +3341,15 @@ function getAvailablePool(funcoes) {
 
 // ── Inicializar hierarquia ────────────────────────────────────────────────────
 async function loadHierarquia() {
-  const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes(), fbGetEquipas()]);
+  // Carregar as três colecções em paralelo — inclui novos RH para garantir pool actualizado
+  const [alocDocs, eqDocs, novosDocs] = await Promise.all([
+    fbGetAlocacoes(),
+    fbGetEquipas(),
+    fbGetRhNovos(),   // garante que novos RH confirmados aparecem no picker da hierarquia
+  ]);
   updateAlocacoesCache(alocDocs);
   updateEquipasCache(eqDocs);
+  updateRhNovosCache(novosDocs);
   await _cleanupOrphans(); // limpar registos cujo supervisor foi removido
   renderHierarquia();
 }
