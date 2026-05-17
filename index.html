@@ -730,6 +730,120 @@ input, textarea, select {
   .rh-saved-btns { flex-direction:column; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASES C + D — VISTA HIERÁRQUICA DAS COORDENAÇÕES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Barra de sumário da hierarquia */
+.hier-summary { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+.hier-sum-card { background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:12px 16px; text-align:center; min-width:90px; flex:1; }
+.hier-sum-num  { font-size:26px; font-weight:900; line-height:1; }
+.hier-sum-lbl  { font-size:9px; color:var(--text3); text-transform:uppercase;
+  letter-spacing:0.7px; margin-top:3px; }
+
+/* Grid de cards de coordenação */
+.hier-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr));
+  gap:14px; }
+@media(max-width:700px){ .hier-grid { grid-template-columns:1fr; } }
+
+/* Card de coordenação */
+.coord-card { background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; overflow:hidden; }
+.coord-card-hdr { background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:12px 16px; display:flex; align-items:center; gap:10px; }
+.coord-card-hdr h3 { font-size:12px; font-weight:800; color:var(--text);
+  text-transform:uppercase; letter-spacing:0.5px; flex:1; line-height:1.3; }
+.coord-card-num { font-size:11px; color:var(--text3); white-space:nowrap; }
+.coord-card-body { padding:14px 16px; }
+
+/* Slot de Coord área */
+.slot-coord-area { background:var(--bg); border:2px dashed var(--border);
+  border-radius:8px; padding:10px 14px; margin-bottom:12px;
+  display:flex; align-items:center; gap:10px; min-height:52px; }
+.slot-coord-area.filled { border-style:solid;
+  border-color:rgba(244,168,50,.4); background:rgba(244,168,50,.05); }
+.slot-icon { font-size:22px; flex-shrink:0; }
+.slot-info { flex:1; min-width:0; }
+.slot-nome { font-size:13px; font-weight:700; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.slot-sub  { font-size:10px; color:var(--text3); margin-top:1px; }
+.slot-empty-lbl { font-size:11px; color:var(--text3); font-style:italic; }
+.btn-slot-add { padding:5px 10px; background:none;
+  border:1px solid var(--border); border-radius:6px;
+  color:var(--text3); font-size:12px; cursor:pointer;
+  white-space:nowrap; flex-shrink:0; transition:all .15s;
+  touch-action:manipulation; }
+.btn-slot-add:hover { border-color:var(--accent2); color:var(--accent2); }
+.btn-slot-remove { padding:4px 8px; background:none;
+  border:1px solid rgba(231,76,60,.3); border-radius:6px;
+  color:rgba(231,76,60,.6); font-size:11px; cursor:pointer;
+  flex-shrink:0; transition:all .15s; touch-action:manipulation; }
+.btn-slot-remove:hover { border-color:var(--red); color:var(--red); }
+
+/* Supervisores da coordenação */
+.sup-section-lbl { font-size:10px; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;
+  display:flex; align-items:center; justify-content:space-between; }
+.sup-list { display:flex; flex-direction:column; gap:6px; }
+.sup-slot { background:var(--bg); border:1px solid var(--border);
+  border-radius:7px; padding:8px 12px;
+  display:flex; align-items:center; gap:8px; }
+.sup-slot.filled { border-color:rgba(46,204,113,.3);
+  background:rgba(46,204,113,.04); }
+.sup-slot-nome { font-size:12px; font-weight:700; color:var(--text);
+  flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sup-slot-coord { font-size:10px; color:var(--text3); }
+.pool-empty { font-size:11px; color:var(--text3); text-align:center;
+  padding:10px; font-style:italic; }
+
+/* Auto-sugestão badge */
+.auto-badge { font-size:9px; font-weight:700; background:rgba(52,152,219,.15);
+  color:#3498db; padding:2px 7px; border-radius:10px;
+  letter-spacing:0.4px; flex-shrink:0; }
+
+/* Modal de atribuição (picker) */
+.assign-modal { position:fixed; inset:0; background:rgba(0,0,0,.82);
+  z-index:9700; display:flex; align-items:center;
+  justify-content:center; padding:20px; }
+.assign-box { background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; max-width:480px; width:100%;
+  max-height:85vh; display:flex; flex-direction:column;
+  box-shadow:0 24px 64px rgba(0,0,0,.6); animation:spFadeIn .2s ease; }
+.assign-box-hdr { padding:20px 22px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.assign-box-hdr h3 { font-size:15px; font-weight:800; color:var(--text); margin-bottom:4px; }
+.assign-box-hdr p  { font-size:12px; color:var(--text3); }
+.assign-search { padding:12px 22px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.assign-search input { width:100%; background:var(--bg);
+  border:1px solid var(--border); border-radius:7px;
+  padding:9px 13px; font-size:13px; color:var(--text);
+  outline:none; font-family:inherit; }
+.assign-list { overflow-y:auto; padding:10px 12px; flex:1; }
+.assign-item { display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:8px; cursor:pointer;
+  transition:all .15s; border:1px solid transparent; margin-bottom:4px; }
+.assign-item:hover { background:var(--surface2); border-color:var(--border); }
+.assign-item.auto-suggest { border-color:rgba(52,152,219,.35);
+  background:rgba(52,152,219,.05); }
+.assign-item-icon { font-size:22px; flex-shrink:0; }
+.assign-item-info { flex:1; min-width:0; }
+.assign-item-nome { font-size:13px; font-weight:700; color:var(--text); }
+.assign-item-sub  { font-size:10px; color:var(--text3); margin-top:1px; }
+.assign-empty { text-align:center; padding:30px 20px;
+  color:var(--text3); font-size:12px; }
+.assign-box-ftr { padding:14px 22px; border-top:1px solid var(--border); flex-shrink:0; }
+.btn-assign-cancel { width:100%; padding:11px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px;
+  color:var(--text2); font-size:13px; font-weight:700;
+  cursor:pointer; touch-action:manipulation; }
+
+@media(max-width:480px){
+  .hier-sum-card { min-width:70px; padding:10px 10px; }
+  .hier-sum-num  { font-size:22px; }
+  .coord-card-hdr h3 { font-size:11px; }
+  .assign-box    { max-height:92vh; }
+}
+
 </style>
 </head>
 <body>
@@ -1056,8 +1170,19 @@ input, textarea, select {
 
   <!-- Sub-navegação -->
   <div class="equipas-subtab-bar">
-    <div class="equipas-subtab active" data-subtab="rh-list"   onclick="equipasSubtab('rh-list')">📋 RH Registados</div>
-    <div class="equipas-subtab"        data-subtab="rh-novo"   onclick="equipasSubtab('rh-novo')">➕ Registar Novo RH</div>
+    <div class="equipas-subtab active" data-subtab="rh-list"    onclick="equipasSubtab('rh-list')">📋 RH Registados</div>
+    <div class="equipas-subtab"        data-subtab="hierarquia" onclick="equipasSubtab('hierarquia')">🗂️ Hierarquia</div>
+    <div class="equipas-subtab"        data-subtab="rh-novo"    onclick="equipasSubtab('rh-novo')">➕ Registar Novo RH</div>
+  </div>
+
+  <!-- Sub-painel: Vista hierárquica (FASE D) -->
+  <div id="equipas-sub-hierarquia" class="equipas-subpanel" style="display:none">
+    <div id="hier-summary-bar" class="hier-summary"></div>
+    <div id="hier-grid" class="hier-grid">
+      <div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+        A carregar hierarquia...
+      </div>
+    </div>
   </div>
 
   <!-- Sub-painel: Lista de novos RH -->
@@ -1161,6 +1286,25 @@ input, textarea, select {
     <div class="rh-saved-btns">
       <button class="btn-rh-outro" onclick="rhSavedRegistarOutro()">➕ Registar outro</button>
       <button class="btn-rh-add2r" onclick="rhSavedAdd2R()">⚽ Adicionar à 2ª Ronda →</button>
+    </div>
+  </div>
+</div>
+
+<!-- FASES C+D — Modal: Atribuição de profissional à hierarquia -->
+<div id="assign-modal" class="assign-modal" style="display:none">
+  <div class="assign-box">
+    <div class="assign-box-hdr">
+      <h3 id="assign-modal-title">Atribuir Profissional</h3>
+      <p id="assign-modal-sub"></p>
+    </div>
+    <div class="assign-search">
+      <input id="assign-search-inp" type="text"
+             placeholder="Filtrar por nome ou BI..."
+             oninput="renderAssignList()" autocomplete="off">
+    </div>
+    <div class="assign-list" id="assign-list-content"></div>
+    <div class="assign-box-ftr">
+      <button class="btn-assign-cancel" onclick="closeAssignModal()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2582,8 +2726,9 @@ function equipasSubtab(name) {
   document.querySelectorAll('.equipas-subpanel').forEach(p => p.style.display = 'none');
   document.querySelector('[data-subtab="'+name+'"]').classList.add('active');
   document.getElementById('equipas-sub-'+name).style.display = 'block';
-  if (name === 'rh-list') renderRhNovosList();
-  if (name === 'rh-novo') setTimeout(() => document.getElementById('rh-f-nome').focus(), 100);
+  if (name === 'rh-list')    renderRhNovosList();
+  if (name === 'hierarquia') loadHierarquia();  // FASES C+D
+  if (name === 'rh-novo')    setTimeout(() => document.getElementById('rh-f-nome').focus(), 100);
 }
 
 // ── Renderizar lista de novos RH ─────────────────────────────────────────────
@@ -2820,6 +2965,368 @@ function rhFormMsg(tipo, texto) {
 }
 
 // ─── FIM FASES A+B ───────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASES C + D — VISTA HIERÁRQUICA DAS COORDENAÇÕES
+// Firebase: /alocacoes_2r/ | Pool disponível | Cards de coord | Modal picker
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── Constantes ───────────────────────────────────────────────────────────────
+const COORDENACOES_2R = [
+  'CASA BRANCA, PRAIAS E HUAMBA',
+  'CHINGO 1', 'CHINGO 2', 'CIDADE',
+  'KICOMBO SEDE', 'ZONA ALTA 1',
+  'ZONA ALTA 2 ATUCO E POMBA NOVA',
+];
+
+// Cache em memória das alocações
+let _alocacoesCache = {}; // { [bi_upper]: doc }
+
+// Estado do modal de atribuição
+let _assignContext = null; // { coordenacao, role: 'coord'|'supervisor', targetBi: null }
+
+// ── Firebase: alocações ──────────────────────────────────────────────────────
+async function fbGetAlocacoes() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('alocacoes_2r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetAlocacoes:', e); return []; }
+}
+
+async function fbSaveAlocacao(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(
+      window._FB.docRef('alocacoes_2r/' + (data.bi||data.id).toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+async function fbRemoveAlocacao(bi) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('alocacoes_2r/' + bi.toUpperCase()));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+function updateAlocacoesCache(docs) {
+  _alocacoesCache = {};
+  docs.forEach(doc => {
+    const bi = (doc.bi || doc._id || '').toUpperCase();
+    if (bi) _alocacoesCache[bi] = doc;
+  });
+}
+
+// ── Pool de profissionais disponíveis para 2ª Ronda ──────────────────────────
+// Retorna profissionais SIM da Consolidação + novos RH confirmados
+// filtrados por função e excluindo os já alocados
+function getAvailablePool(funcoes) {
+  const pool = [];
+  const jaAlocados = new Set(Object.keys(_alocacoesCache));
+  const funcoesSet = Array.isArray(funcoes) ? new Set(funcoes) : new Set([funcoes]);
+
+  // Fonte 1: RH_DATA com estado SIM na Consolidação
+  const cs = getMergedConfs();
+  RH_DATA.forEach(r => {
+    const conf = cs[r.bi.toUpperCase()];
+    if (!conf || conf.status !== 'SIM') return;
+    if (!funcoesSet.has(r.funcao)) return;
+    if (jaAlocados.has(r.bi.toUpperCase())) return;
+    pool.push({ ...r, _fonte: 'rh_data' });
+  });
+
+  // Fonte 2: Novos RH confirmados para 2ª Ronda
+  Object.values(_rhNovosCache).forEach(r => {
+    if (!r.confirmado2R) return;
+    if (!funcoesSet.has(r.funcao)) return;
+    if (jaAlocados.has((r.bi||'').toUpperCase())) return;
+    pool.push({ ...r, _fonte: 'rh_novo' });
+  });
+
+  return pool;
+}
+
+// ── Inicializar hierarquia ────────────────────────────────────────────────────
+async function loadHierarquia() {
+  const docs = await fbGetAlocacoes();
+  updateAlocacoesCache(docs);
+  renderHierarquia();
+}
+
+// ── Render principal da hierarquia ───────────────────────────────────────────
+function renderHierarquia() {
+  // Calcular sumário
+  const totalCoords   = COORDENACOES_2R.length;
+  const coordsOk      = COORDENACOES_2R.filter(c => getCoordsAreaDa(c)).length;
+  const totalSups     = Object.values(_alocacoesCache).filter(a => a.status === 'supervisor').length;
+  const totalPool     = getAvailablePool(['Supervisor equipa','Mobilizador','Vacinador','Registador','Sup Mob Social']).length;
+
+  // Sumário
+  const sumEl = document.getElementById('hier-summary-bar');
+  if (sumEl) sumEl.innerHTML =
+    hierSumCard(coordsOk + '/' + totalCoords, 'Coords Definidos', coordsOk === totalCoords ? 'var(--green)' : 'var(--accent2)') +
+    hierSumCard(totalSups, 'Supervisores', 'var(--blue)') +
+    hierSumCard(totalPool, 'Disponíveis', 'var(--text2)') +
+    hierSumCard(Object.keys(_alocacoesCache).length, 'Total Alocados', 'var(--text3)');
+
+  // Cards de coordenação
+  const grid = document.getElementById('hier-grid');
+  if (!grid) return;
+  grid.innerHTML = COORDENACOES_2R.map(coord => renderCoordCard(coord)).join('');
+}
+
+function hierSumCard(num, lbl, cor) {
+  return '<div class="hier-sum-card">' +
+    '<div class="hier-sum-num" style="color:'+cor+'">' + num + '</div>' +
+    '<div class="hier-sum-lbl">' + escH(lbl) + '</div>' +
+    '</div>';
+}
+
+// ── Render de um card de coordenação ─────────────────────────────────────────
+function renderCoordCard(coordenacao) {
+  const coordArea = getCoordsAreaDa(coordenacao);
+  const sups      = getSupsDa(coordenacao);
+  const poolCoord = getAvailablePool(['Coord area/ Comuna'])
+    .filter(r => r.coordenacao === coordenacao);
+  const poolSup   = getAvailablePool(['Supervisor equipa'])
+    .filter(r => r.coordenacao === coordenacao);
+
+  // Header do card
+  const shortCoord = coordenacao.replace('ZONA ALTA ', 'ZA ')
+    .replace('CASA BRANCA, PRAIAS E HUAMBA', 'CASA BRANCA / PRAIAS');
+  const hdr =
+    '<div class="coord-card-hdr">' +
+      '<h3>📍 ' + escH(shortCoord) + '</h3>' +
+      '<span class="coord-card-num">' +
+        sups.length + ' sup' + (sups.length !== 1 ? 's' : '') +
+      '</span>' +
+    '</div>';
+
+  // Slot do Coord área
+  let slotCoord;
+  if (coordArea) {
+    const isSugerido = !coordArea._fromAlocacao;
+    slotCoord =
+      '<div class="slot-coord-area filled">' +
+        '<div class="slot-icon">🏛️</div>' +
+        '<div class="slot-info">' +
+          '<div class="slot-nome">' + escH(coordArea.nome.split(' ').slice(0,3).join(' ')) + '</div>' +
+          '<div class="slot-sub">Coord área/Comuna</div>' +
+        '</div>' +
+        (isSugerido
+          ? '<span class="auto-badge">AUTO</span>'
+            + '<button class="btn-slot-add" onclick="confirmarCoordAuto(\'' + escAttr(coordArea.bi) + '\',\'' + escAttr(coordenacao) + '\')" title="Confirmar atribuição automática">✓ Confirmar</button>'
+          : '<button class="btn-slot-remove" onclick="removerAlocacao(\'' + escAttr(coordArea.bi) + '\')" title="Remover">✕</button>') +
+      '</div>';
+  } else {
+    const temPool = poolCoord.length > 0;
+    slotCoord =
+      '<div class="slot-coord-area">' +
+        '<div class="slot-icon">🏛️</div>' +
+        '<span class="slot-empty-lbl">Coord área/Comuna não definido</span>' +
+        '<button class="btn-slot-add" onclick="openAssignModal(\'' + escAttr(coordenacao) + '\',\'coord\')">' +
+          (temPool ? '+ Atribuir (' + poolCoord.length + ')' : '+ Atribuir') +
+        '</button>' +
+      '</div>';
+  }
+
+  // Lista de supervisores
+  const supsHtml = sups.length > 0
+    ? sups.map(s =>
+        '<div class="sup-slot filled">' +
+          '<span style="font-size:18px">' + (s.sexo === 'F' ? '👩' : '👨') + '</span>' +
+          '<div class="slot-info">' +
+            '<div class="sup-slot-nome">' + escH(s.nome.split(' ').slice(0,3).join(' ')) + '</div>' +
+            '<div class="sup-slot-coord" style="font-size:9px;color:var(--text3)">Supervisor equipa</div>' +
+          '</div>' +
+          '<button class="btn-slot-remove" onclick="removerAlocacao(\'' + escAttr(s.bi) + '\')" title="Remover supervisor">✕</button>' +
+        '</div>'
+      ).join('')
+    : '<div class="pool-empty">Nenhum supervisor atribuído</div>';
+
+  const supsSection =
+    '<div class="sup-section-lbl">' +
+      '<span>Supervisores (' + sups.length + ')</span>' +
+      '<button class="btn-slot-add" onclick="openAssignModal(\'' + escAttr(coordenacao) + '\',\'supervisor\')">' +
+        '+ Adicionar' + (poolSup.length ? ' (' + poolSup.length + ' disponíveis)' : '') +
+      '</button>' +
+    '</div>' +
+    '<div class="sup-list">' + supsHtml + '</div>';
+
+  return '<div class="coord-card">' + hdr +
+    '<div class="coord-card-body">' + slotCoord + supsSection + '</div>' +
+    '</div>';
+}
+
+// ── Helpers: obter dados da coordenação ──────────────────────────────────────
+
+// Retorna o Coord área confirmado ou sugerido automaticamente
+function getCoordsAreaDa(coordenacao) {
+  // 1. Já alocado e confirmado
+  const confirmado = Object.values(_alocacoesCache).find(a =>
+    a.status === 'coord' && a.coordenacao === coordenacao);
+  if (confirmado) return { ...confirmado, _fromAlocacao: true };
+
+  // 2. Auto-sugestão: Coord área disponível na mesma coordenação
+  const cs = getMergedConfs();
+  const sugerido = RH_DATA.find(r =>
+    r.funcao === 'Coord area/ Comuna' &&
+    r.coordenacao === coordenacao &&
+    cs[r.bi.toUpperCase()]?.status === 'SIM' &&
+    !_alocacoesCache[r.bi.toUpperCase()]);
+  if (sugerido) return { ...sugerido, _fromAlocacao: false };
+
+  // 3. Auto-sugestão: novo RH confirmado
+  const novoSug = Object.values(_rhNovosCache).find(r =>
+    r.funcao === 'Coord area/ Comuna' &&
+    r.coordenacao === coordenacao &&
+    r.confirmado2R &&
+    !_alocacoesCache[(r.bi||'').toUpperCase()]);
+  if (novoSug) return { ...novoSug, _fromAlocacao: false };
+
+  return null;
+}
+
+function getSupsDa(coordenacao) {
+  return Object.values(_alocacoesCache)
+    .filter(a => a.status === 'supervisor' && a.coordenacao === coordenacao)
+    .map(a => ({ ...a, sexo: a.sexo || 'M' }));
+}
+
+// ── Confirmar auto-sugestão de Coord área ────────────────────────────────────
+async function confirmarCoordAuto(bi, coordenacao) {
+  const prof = findProfissional(bi);
+  if (!prof) return;
+  await _alocarProfissional(bi, prof.nome, prof.funcao, coordenacao,
+    prof.sexo || 'M', 'coord', prof._fonte || 'rh_data');
+}
+
+// ── Remover alocação ──────────────────────────────────────────────────────────
+async function removerAlocacao(bi) {
+  const a = _alocacoesCache[bi.toUpperCase()];
+  const nome = a ? a.nome : bi;
+  if (!confirm('Remover ' + nome + ' da hierarquia da 2ª Ronda?')) return;
+  const result = await fbRemoveAlocacao(bi);
+  if (result.success) {
+    delete _alocacoesCache[bi.toUpperCase()];
+    renderHierarquia();
+    showToast(nome + ' removido da hierarquia.', 'warn');
+  } else {
+    showToast('Erro: ' + result.error, 'error');
+  }
+}
+
+// ── Internal: alocar um profissional ─────────────────────────────────────────
+async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, fonte) {
+  const now = new Date();
+  const doc = {
+    bi, nome, funcao, coordenacao, sexo: sexo || 'M',
+    fonte: fonte || 'rh_data', status,
+    supervisor_id: null, equipa_id: null, role_na_equipa: null,
+    confirmadoPor: APP_SESSION.bi || '',
+    confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
+    dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' +
+      now.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' }),
+    ronda: RONDA_ID, municipio: MUNICIPIO,
+  };
+  const result = await fbSaveAlocacao(doc);
+  if (result.success) {
+    _alocacoesCache[bi.toUpperCase()] = doc;
+    renderHierarquia();
+    showToast(nome.split(' ')[0] + ' atribuído com sucesso. ✅', 'success');
+  } else {
+    showToast('Erro ao atribuir: ' + result.error, 'error');
+  }
+}
+
+// ── Modal de atribuição (picker) ─────────────────────────────────────────────
+function openAssignModal(coordenacao, role) {
+  _assignContext = { coordenacao, role };
+  const isCoord = role === 'coord';
+  document.getElementById('assign-modal-title').textContent =
+    isCoord ? '🏛️ Atribuir Coord área/Comuna' : '👤 Atribuir Supervisor de Equipa';
+  document.getElementById('assign-modal-sub').textContent =
+    'Coordenação: ' + coordenacao;
+  document.getElementById('assign-search-inp').value = '';
+  renderAssignList();
+  document.getElementById('assign-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('assign-search-inp').focus(), 100);
+}
+
+function closeAssignModal() {
+  document.getElementById('assign-modal').style.display = 'none';
+  _assignContext = null;
+}
+
+function renderAssignList() {
+  if (!_assignContext) return;
+  const { coordenacao, role } = _assignContext;
+  const isCoord = role === 'coord';
+  const funcoes = isCoord ? ['Coord area/ Comuna'] : ['Supervisor equipa'];
+  const q = (document.getElementById('assign-search-inp')?.value || '').toLowerCase();
+
+  // Pool total (não filtra por coordenação — Admin pode atribuir qualquer um)
+  let pool = getAvailablePool(funcoes);
+  if (q) pool = pool.filter(r =>
+    (r.nome||'').toLowerCase().includes(q) ||
+    (r.bi||'').toLowerCase().includes(q));
+
+  // Ordenar: mesma coordenação primeiro (auto-sugestão)
+  pool.sort((a, b) => {
+    const aMatch = a.coordenacao === coordenacao ? -1 : 0;
+    const bMatch = b.coordenacao === coordenacao ? -1 : 0;
+    return aMatch - bMatch || (a.nome||'').localeCompare(b.nome||'');
+  });
+
+  const el = document.getElementById('assign-list-content');
+  if (!el) return;
+
+  if (pool.length === 0) {
+    el.innerHTML = '<div class="assign-empty">' +
+      (q ? 'Nenhum resultado para "' + escH(q) + '"'
+         : 'Nenhum profissional disponível com esta função.<br>Verifique a Consolidação ou registe novos RH.') +
+    '</div>';
+    return;
+  }
+
+  el.innerHTML = pool.map(r => {
+    const isAuto = r.coordenacao === coordenacao;
+    const icon   = r.sexo === 'F' ? '👩' : '👨';
+    const fonte  = r._fonte === 'rh_novo'
+      ? '<span class="rh-novo-badge" style="margin-left:4px">NOVO</span>' : '';
+    return '<div class="assign-item' + (isAuto ? ' auto-suggest' : '') + '" ' +
+      'onclick="selectAssignItem(\'' + escAttr(r.bi) + '\')">' +
+      '<div class="assign-item-icon">' + icon + '</div>' +
+      '<div class="assign-item-info">' +
+        '<div class="assign-item-nome">' + escH(r.nome) + fonte +
+          (isAuto ? ' <span class="auto-badge">✦ Mesma coord.</span>' : '') +
+        '</div>' +
+        '<div class="assign-item-sub">' + escH(r.coordenacao||'—') + ' · ' + escH(r.bi) + '</div>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+}
+
+async function selectAssignItem(bi) {
+  if (!_assignContext) return;
+  const { coordenacao, role } = _assignContext;
+  const prof = findProfissional(bi);
+  if (!prof) return;
+  closeAssignModal();
+  await _alocarProfissional(
+    prof.bi, prof.nome, prof.funcao, coordenacao,
+    prof.sexo || 'M', role, prof._fonte || 'rh_data');
+}
+
+// ── Utilitário: escape para atributos HTML ────────────────────────────────────
+function escAttr(v) {
+  return String(v || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ─── FIM FASES C+D ───────────────────────────────────────────────────────────
 
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
