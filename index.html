@@ -4829,6 +4829,28 @@ RH_DATA.forEach(r => {
 
 function findBI(bi) { const i = biIndex[bi.toUpperCase().trim()]; return i !== undefined ? RH_DATA[i] : null; }
 
+// ── Enriquecer SUPERVISORES_INDEX com realocações para 'Supervisor equipa' ────
+// Pessoas que na 1ª Ronda tinham outra função mas foram realocadas para supervisora
+// devem conseguir aceder ao painel de Supervisor com o seu BI.
+(function _enrichSupervisoresIndex() {
+  const reallocs = getRealloc();
+  Object.entries(reallocs).forEach(([bi, realloc]) => {
+    if (!realloc || !realloc.funcao || realloc.funcao !== 'Supervisor equipa') return;
+    const biUpper = bi.toUpperCase().trim();
+    if (SUPERVISORES_INDEX[biUpper]) return; // já consta como supervisor de origem
+    const base = findBI(bi);
+    if (!base) return; // BI desconhecido — ignorar
+    SUPERVISORES_INDEX[biUpper] = {
+      bi:          base.bi,
+      nome:        base.nome,
+      // Usar coordenação efectiva da 2ª Ronda (pode ter mudado de área)
+      coordenacao: realloc.coordenacao || base.coordenacao || '',
+      sexo:        base.sexo || '',
+      _realocado:  true, // marca de auditoria
+    };
+  });
+})();
+
 function detectType(q) {
   const s = q.trim();
   // Phone: starts with 9, 9 digits
