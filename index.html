@@ -645,6 +645,91 @@ input, textarea, select {
 .btn-clear-execute:hover:not(:disabled) { background: #c0392b; }
 .btn-clear-execute:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASES A + B — MÓDULO DE EQUIPAS 2ª RONDA / REGISTO DE NOVOS RH
+   ═══════════════════════════════════════════════════════════════════════ */
+.equipas-toolbar { display:flex; gap:10px; align-items:center;
+  flex-wrap:wrap; margin-bottom:18px; }
+.equipas-subtab-bar { display:flex; gap:0; border-bottom:2px solid var(--border);
+  margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; }
+.equipas-subtab { padding:10px 18px; font-size:12px; font-weight:700;
+  color:var(--text3); border-bottom:3px solid transparent;
+  cursor:pointer; white-space:nowrap; letter-spacing:0.3px;
+  transition:all 0.2s; margin-bottom:-2px; }
+.equipas-subtab:hover { color:var(--text); }
+.equipas-subtab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+
+/* Formulário de registo */
+.rh-form-card { background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:22px 24px; max-width:580px; }
+.rh-form-card h3 { font-size:14px; font-weight:800; color:var(--text);
+  margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.rh-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:600px){ .rh-form-grid { grid-template-columns:1fr; } }
+.rh-form-full { grid-column:1/-1; }
+.rh-field-lbl { font-size:10px; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:6px; }
+.rh-field-lbl .req { color:var(--red); margin-left:2px; }
+.rh-field-inp { width:100%; background:var(--bg); border:2px solid var(--border);
+  border-radius:8px; padding:11px 14px; font-size:14px; color:var(--text);
+  font-family:inherit; outline:none; transition:border-color 0.2s; }
+.rh-field-inp:focus { border-color:var(--accent2); }
+.rh-field-inp.inp-err { border-color:var(--red); }
+.rh-field-inp option { background:var(--surface); }
+.rh-form-actions { display:flex; gap:10px; margin-top:20px; padding-top:18px;
+  border-top:1px solid var(--border); }
+.btn-rh-save { flex:2; padding:12px; background:var(--accent2); color:#000;
+  border:none; border-radius:8px; font-size:13px; font-weight:800;
+  cursor:pointer; transition:all 0.2s; touch-action:manipulation; }
+.btn-rh-save:hover:not(:disabled) { background:#e09b2a; }
+.btn-rh-save:disabled { opacity:0.4; cursor:not-allowed; }
+.btn-rh-cancel { flex:1; padding:12px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--text2);
+  font-size:13px; font-weight:700; cursor:pointer; touch-action:manipulation; }
+.rh-form-msg { font-size:12px; margin-top:10px; padding:9px 12px;
+  border-radius:6px; display:none; }
+.rh-form-msg.on { display:block; }
+.rh-msg-err { background:rgba(231,76,60,.1); border:1px solid rgba(231,76,60,.3);
+  color:var(--red); }
+.rh-msg-ok  { background:rgba(46,204,113,.1); border:1px solid rgba(46,204,113,.3);
+  color:var(--green); }
+
+/* Lista de novos RH */
+.rh-list-header { display:flex; align-items:center; gap:10px;
+  margin-bottom:14px; flex-wrap:wrap; }
+.rh-list-count { font-size:12px; color:var(--text3); margin-left:auto; }
+.rh-novo-badge { display:inline-block; padding:2px 8px; border-radius:10px;
+  font-size:9px; font-weight:700; background:rgba(52,152,219,.15);
+  color:#3498db; letter-spacing:0.5px; }
+
+/* Modal pós-registo */
+.rh-saved-modal { position:fixed; inset:0; background:rgba(0,0,0,.8);
+  z-index:9700; display:flex; align-items:center;
+  justify-content:center; padding:20px; }
+.rh-saved-box { background:var(--surface); border:1px solid var(--border);
+  border-top:3px solid var(--green); border-radius:14px;
+  max-width:420px; width:100%; padding:26px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6); animation:spFadeIn .2s ease; }
+.rh-saved-box h3 { font-size:16px; font-weight:800; color:var(--green);
+  margin-bottom:6px; }
+.rh-saved-info { background:var(--bg); border-radius:8px; padding:12px 14px;
+  margin:14px 0; font-size:12px; line-height:1.9; color:var(--text2); }
+.rh-saved-info strong { color:var(--text); }
+.rh-saved-btns { display:flex; gap:10px; margin-top:16px; }
+.btn-rh-outro { flex:1; padding:12px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--text2);
+  font-size:13px; font-weight:700; cursor:pointer; touch-action:manipulation; }
+.btn-rh-add2r { flex:2; padding:12px; background:var(--green); color:#fff;
+  border:none; border-radius:8px; font-size:13px; font-weight:800;
+  cursor:pointer; transition:all 0.2s; touch-action:manipulation; }
+.btn-rh-add2r:hover { background:#27ae60; }
+
+@media(max-width:480px){
+  .rh-form-card { padding:16px; }
+  .rh-saved-box { padding:20px 16px; }
+  .rh-saved-btns { flex-direction:column; }
+}
+
 </style>
 </head>
 <body>
@@ -753,6 +838,7 @@ input, textarea, select {
   <div class="tab" data-panel="dashboard">📊 Dashboard</div>
   <div class="tab" data-panel="history">📋 Consolidação</div>
   <div class="tab" data-panel="supervisors">👥 Supervisores</div>
+  <div class="tab" data-panel="equipas">⚽ Equipas 2ª Ronda</div>
   <div class="tab" data-panel="payments">💰 Pagamentos</div>
   <div class="tab" data-panel="audit">⚠️ Auditoria</div>
 </div>
@@ -961,6 +1047,120 @@ input, textarea, select {
       <button class="btn-clear-execute" id="btn-clear-execute" onclick="executeClearAll()" disabled>
         🗑️ Eliminar Tudo
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- FASES A+B — Painel: Equipas 2ª Ronda -->
+<div id="panel-equipas" class="panel">
+
+  <!-- Sub-navegação -->
+  <div class="equipas-subtab-bar">
+    <div class="equipas-subtab active" data-subtab="rh-list"   onclick="equipasSubtab('rh-list')">📋 RH Registados</div>
+    <div class="equipas-subtab"        data-subtab="rh-novo"   onclick="equipasSubtab('rh-novo')">➕ Registar Novo RH</div>
+  </div>
+
+  <!-- Sub-painel: Lista de novos RH -->
+  <div id="equipas-sub-rh-list" class="equipas-subpanel">
+    <div class="rh-list-header">
+      <input id="rh-list-search" class="search-input"
+             style="max-width:280px;font-size:13px;padding:8px 12px"
+             placeholder="Filtrar por nome, BI ou função..."
+             oninput="renderRhNovosList()">
+      <span class="rh-list-count" id="rh-list-count">0 registados</span>
+    </div>
+    <div id="rh-list-content">
+      <div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:13px">
+        A carregar...
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-painel: Formulário de novo RH -->
+  <div id="equipas-sub-rh-novo" class="equipas-subpanel" style="display:none">
+    <div class="rh-form-card">
+      <h3>➕ Registar Novo Profissional — 2ª Ronda</h3>
+      <div class="rh-form-grid">
+
+        <div class="rh-form-full">
+          <label class="rh-field-lbl">Nome Completo <span class="req">*</span></label>
+          <input id="rh-f-nome" class="rh-field-inp" type="text"
+                 placeholder="Nome completo do profissional"
+                 autocomplete="off" autocapitalize="words">
+        </div>
+
+        <div>
+          <label class="rh-field-lbl">Bilhete de Identidade <span class="req">*</span></label>
+          <input id="rh-f-bi" class="rh-field-inp" type="text"
+                 placeholder="Ex: 006185927KS046"
+                 autocomplete="off" autocapitalize="characters"
+                 inputmode="text" style="letter-spacing:1px">
+        </div>
+
+        <div>
+          <label class="rh-field-lbl">Contacto / Telefone</label>
+          <input id="rh-f-tel" class="rh-field-inp" type="tel"
+                 placeholder="9XXXXXXXX" inputmode="numeric">
+        </div>
+
+        <div>
+          <label class="rh-field-lbl">Função <span class="req">*</span></label>
+          <select id="rh-f-funcao" class="rh-field-inp">
+            <option value="">— Seleccionar —</option>
+            <option>Supervisor equipa</option>
+            <option>Mobilizador</option>
+            <option>Vacinador</option>
+            <option>Registador</option>
+            <option>Sup Mob Social</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="rh-field-lbl">Coordenação <span class="req">*</span></label>
+          <select id="rh-f-coord" class="rh-field-inp">
+            <option value="">— Seleccionar —</option>
+            <option>CASA BRANCA, PRAIAS E HUAMBA</option>
+            <option>CHINGO 1</option>
+            <option>CHINGO 2</option>
+            <option>CIDADE</option>
+            <option>KICOMBO SEDE</option>
+            <option>ZONA ALTA 1</option>
+            <option>ZONA ALTA 2 ATUCO E POMBA NOVA</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="rh-field-lbl">Sexo</label>
+          <select id="rh-f-sexo" class="rh-field-inp">
+            <option value="M">Masculino</option>
+            <option value="F">Feminino</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div id="rh-form-msg" class="rh-form-msg"></div>
+
+      <div class="rh-form-actions">
+        <button class="btn-rh-cancel" onclick="rhFormReset()">🔄 Limpar</button>
+        <button class="btn-rh-save" id="btn-rh-save" onclick="saveRhNovo()">
+          💾 Registar Profissional
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-equipas -->
+
+<!-- Modal pós-registo -->
+<div id="rh-saved-modal" class="rh-saved-modal" style="display:none">
+  <div class="rh-saved-box">
+    <h3>✅ Profissional Registado</h3>
+    <p style="font-size:12px;color:var(--text3)">O que pretende fazer a seguir?</p>
+    <div class="rh-saved-info" id="rh-saved-info"></div>
+    <div class="rh-saved-btns">
+      <button class="btn-rh-outro" onclick="rhSavedRegistarOutro()">➕ Registar outro</button>
+      <button class="btn-rh-add2r" onclick="rhSavedAdd2R()">⚽ Adicionar à 2ª Ronda →</button>
     </div>
   </div>
 </div>
@@ -1521,13 +1721,14 @@ async function doAuthAdmin() {
 // ─── Activar o sistema após autenticação ─────────────────────────────────────
 function activateSystem() {
   updateSessionBar();
-  sessionStartWatcher(); // FASE 10: iniciar vigilância de inactividade
+  sessionStartWatcher();
   if (isSupervisorSession()) {
     showSupervisorPanel();
     stopAdminListener();
   } else {
     hideSupervisorPanel();
     startAdminListener();
+    loadRhNovos(); // FASE A: carregar novos RH na sessão Admin
   }
 }
 
@@ -2266,6 +2467,360 @@ function sessionKeepAlive() {
 
 // ─── FIM FASE 10 ──────────────────────────────────────────────────────────────
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE A — INFRAESTRUTURA FIREBASE: NOVOS RH + LOOKUP UNIFICADO
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Cache em memória dos novos RH (actualizada ao carregar o painel)
+let _rhNovosCache = {}; // { [BI_UPPER]: doc }
+let _rhNovoSalvoActual = null; // registo acabado de gravar (para modal pós-registo)
+
+// ── Firebase: ler todos os novos RH ─────────────────────────────────────────
+async function fbGetRhNovos() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('rh_novos_2r'));
+    const docs = [];
+    snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetRhNovos:', e); return []; }
+}
+
+// ── Firebase: gravar novo RH (usa BI como document ID) ───────────────────────
+async function fbSaveRhNovo(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(
+      window._FB.docRef('rh_novos_2r/' + data.bi.toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ── Firebase: actualizar campo(s) de um novo RH ───────────────────────────────
+async function fbUpdateRhNovo(bi, updates) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    const existing = _rhNovosCache[bi.toUpperCase()] || {};
+    await window._FB.setDoc(
+      window._FB.docRef('rh_novos_2r/' + bi.toUpperCase()),
+      { ...existing, ...updates }, { merge: true });
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ── Firebase: eliminar novo RH ───────────────────────────────────────────────
+async function fbDeleteRhNovo(bi) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('rh_novos_2r/' + bi.toUpperCase()));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ── Actualizar cache + SUPERVISORES_INDEX com novos RH ───────────────────────
+function updateRhNovosCache(docs) {
+  _rhNovosCache = {};
+  docs.forEach(doc => {
+    const bi = (doc.bi || '').toUpperCase().trim();
+    if (!bi) return;
+    _rhNovosCache[bi] = doc;
+    // Novos supervisores passam a poder autenticar-se
+    if (doc.funcao === 'Supervisor equipa' && !SUPERVISORES_INDEX[bi]) {
+      SUPERVISORES_INDEX[bi] = {
+        bi:          doc.bi,
+        nome:        doc.nome,
+        coordenacao: doc.coordenacao || '',
+        sexo:        doc.sexo || 'M',
+        _novo:       true,
+      };
+    }
+  });
+}
+
+// ── Lookup unificado: RH_DATA + novos RH ─────────────────────────────────────
+// Usa esta função em vez de findBI() sempre que o profissional pode ser novo
+function findProfissional(id) {
+  if (!id) return null;
+  const bi = id.toUpperCase().trim();
+  const fromData = findBI(bi);
+  if (fromData) return { ...fromData, _fonte: 'rh_data' };
+  if (_rhNovosCache[bi]) return { ..._rhNovosCache[bi], _fonte: 'rh_novo' };
+  return null;
+}
+
+// ── Verificar se BI já existe (RH_DATA ou novos RH) ──────────────────────────
+function biJaExiste(bi) {
+  const upper = bi.toUpperCase().trim();
+  return !!(findBI(upper) || _rhNovosCache[upper]);
+}
+
+// ── Carregar novos RH ao iniciar sessão Admin ─────────────────────────────────
+async function loadRhNovos() {
+  const docs = await fbGetRhNovos();
+  updateRhNovosCache(docs);
+  return docs;
+}
+
+// ─── FIM FASE A ───────────────────────────────────────────────────────────────
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE B — REGISTO E GESTÃO DE NOVOS RH (PAINEL EQUIPAS 2ª RONDA)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── Inicializar o painel Equipas ─────────────────────────────────────────────
+async function renderEquipasTab() {
+  if (!isAdminSession()) return;
+  // Carregar/actualizar cache de novos RH
+  const docs = await fbGetRhNovos();
+  updateRhNovosCache(docs);
+  renderRhNovosList();
+}
+
+// ── Sub-navegação dentro da aba Equipas ──────────────────────────────────────
+function equipasSubtab(name) {
+  document.querySelectorAll('.equipas-subtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.equipas-subpanel').forEach(p => p.style.display = 'none');
+  document.querySelector('[data-subtab="'+name+'"]').classList.add('active');
+  document.getElementById('equipas-sub-'+name).style.display = 'block';
+  if (name === 'rh-list') renderRhNovosList();
+  if (name === 'rh-novo') setTimeout(() => document.getElementById('rh-f-nome').focus(), 100);
+}
+
+// ── Renderizar lista de novos RH ─────────────────────────────────────────────
+function renderRhNovosList() {
+  const q      = (document.getElementById('rh-list-search')?.value || '').toLowerCase();
+  const todos  = Object.values(_rhNovosCache);
+  const filtrados = q
+    ? todos.filter(r => (r.nome||'').toLowerCase().includes(q)
+        || (r.bi||'').toLowerCase().includes(q)
+        || (r.funcao||'').toLowerCase().includes(q)
+        || (r.coordenacao||'').toLowerCase().includes(q))
+    : todos;
+
+  const cnt = document.getElementById('rh-list-count');
+  if (cnt) cnt.textContent = todos.length + ' registado' + (todos.length !== 1 ? 's' : '');
+
+  const el = document.getElementById('rh-list-content');
+  if (!el) return;
+
+  if (todos.length === 0) {
+    el.innerHTML =
+      '<div style="text-align:center;padding:50px 20px;color:var(--text3)">' +
+        '<div style="font-size:36px;margin-bottom:12px">📋</div>' +
+        '<div style="font-weight:700;margin-bottom:6px">Nenhum RH registado ainda</div>' +
+        '<div style="font-size:12px">Use o separador "➕ Registar Novo RH" para adicionar profissionais.</div>' +
+      '</div>';
+    return;
+  }
+
+  if (filtrados.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Nenhum resultado para "'+escH(q)+'"</div>';
+    return;
+  }
+
+  const linhas = filtrados.map((r, i) => {
+    const conf2r = r.confirmado2R
+      ? '<span style="font-size:9px;font-weight:700;background:rgba(46,204,113,.15);color:var(--green);padding:2px 7px;border-radius:10px">✅ 2ª RONDA</span>'
+      : '<span style="font-size:9px;color:var(--text3)">Por confirmar</span>';
+    return '<tr>'+
+      '<td style="color:var(--text3);font-size:11px">'+(i+1)+'</td>'+
+      '<td><span class="rh-novo-badge">NOVO</span></td>'+
+      '<td style="font-weight:700;color:var(--text)">'+ escH(r.nome) +'</td>'+
+      '<td style="font-size:11px"><span class="funcao-badge '+ funcaoBadgeCls(r.funcao) +'">'+ escH(r.funcao) +'</span></td>'+
+      '<td style="font-size:11px;color:var(--text3)">'+ escH(r.coordenacao||'—') +'</td>'+
+      '<td><code style="font-size:11px">'+ escH(r.bi) +'</code></td>'+
+      '<td style="font-size:11px;color:var(--text3)">'+ escH(r.telefone||'—') +'</td>'+
+      '<td>'+ conf2r +'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="btn-row-action" title="Editar" data-bi="'+r.bi+'" onclick="editRhNovo(this.dataset.bi)">✏️</button> '+
+        (r.confirmado2R ? '' :
+          '<button class="btn-row-action" style="color:var(--green)" title="Adicionar à 2ª Ronda" data-bi="'+r.bi+'" onclick="confirmarRhPara2R(this.dataset.bi)">⚽</button> ')+
+        '<button class="btn-del-val" title="Eliminar" data-bi="'+r.bi+'" onclick="deleteRhNovo(this.dataset.bi)">🗑️</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+
+  el.innerHTML =
+    '<div style="overflow-x:auto"><table class="history-table">'+
+    '<thead><tr>'+
+      '<th>#</th><th>Tipo</th><th>Nome Completo</th><th>Função</th>'+
+      '<th>Coordenação</th><th>BI</th><th>Contacto</th>'+
+      '<th>Estado 2ª Ronda</th><th>Acções</th>'+
+    '</tr></thead>'+
+    '<tbody>'+ linhas +'</tbody>'+
+    '</table></div>';
+}
+
+// ── Formulário: validar e gravar ─────────────────────────────────────────────
+async function saveRhNovo() {
+  const nome   = (document.getElementById('rh-f-nome').value  || '').trim();
+  const bi     = (document.getElementById('rh-f-bi').value    || '').toUpperCase().trim();
+  const funcao = (document.getElementById('rh-f-funcao').value|| '').trim();
+  const coord  = (document.getElementById('rh-f-coord').value || '').trim();
+  const tel    = (document.getElementById('rh-f-tel').value   || '').trim();
+  const sexo   = (document.getElementById('rh-f-sexo').value  || 'M');
+  const btn    = document.getElementById('btn-rh-save');
+
+  // Limpar erros anteriores
+  ['rh-f-nome','rh-f-bi','rh-f-funcao','rh-f-coord'].forEach(id => {
+    document.getElementById(id)?.classList.remove('inp-err');
+  });
+  rhFormMsg('', '');
+
+  // Validação
+  let erros = [];
+  if (!nome)   { erros.push('Nome obrigatório.'); document.getElementById('rh-f-nome').classList.add('inp-err'); }
+  if (!bi)     { erros.push('Bilhete de Identidade obrigatório.'); document.getElementById('rh-f-bi').classList.add('inp-err'); }
+  if (!funcao) { erros.push('Função obrigatória.'); document.getElementById('rh-f-funcao').classList.add('inp-err'); }
+  if (!coord)  { erros.push('Coordenação obrigatória.'); document.getElementById('rh-f-coord').classList.add('inp-err'); }
+
+  if (erros.length) { rhFormMsg('err', erros.join(' ')); return; }
+
+  // Verificar duplicidade
+  if (biJaExiste(bi)) {
+    rhFormMsg('err', 'O Bilhete ' + bi + ' já existe no sistema (RH existente ou já registado para a 2ª Ronda).');
+    document.getElementById('rh-f-bi').classList.add('inp-err');
+    return;
+  }
+
+  // Gravar
+  btn.disabled = true; btn.textContent = 'A guardar...';
+
+  const now = new Date();
+  const doc = {
+    bi, nome, funcao, coordenacao: coord,
+    telefone: tel, sexo, ronda: '2R2026',
+    municipio: MUNICIPIO, registadoPor: APP_SESSION.bi || '',
+    registadoEm: window._FB ? window._FB.serverTimestamp() : null,
+    dataRegisto: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
+    confirmado2R: false,
+  };
+
+  const result = await fbSaveRhNovo(doc);
+  btn.disabled = false; btn.textContent = '💾 Registar Profissional';
+
+  if (!result.success) {
+    rhFormMsg('err', 'Erro ao guardar: ' + result.error);
+    return;
+  }
+
+  // Actualizar cache local
+  _rhNovosCache[bi] = doc;
+  if (funcao === 'Supervisor equipa' && !SUPERVISORES_INDEX[bi]) {
+    SUPERVISORES_INDEX[bi] = { bi, nome, coordenacao: coord, sexo, _novo: true };
+  }
+
+  // Guardar para modal e mostrar modal pós-registo
+  _rhNovoSalvoActual = { bi, nome, funcao, coordenacao: coord, telefone: tel };
+  showRhSavedModal();
+  rhFormReset();
+}
+
+// ── Modal pós-registo ────────────────────────────────────────────────────────
+function showRhSavedModal() {
+  const r = _rhNovoSalvoActual;
+  if (!r) return;
+  document.getElementById('rh-saved-info').innerHTML =
+    '<strong>Nome:</strong> ' + escH(r.nome) + '<br>' +
+    '<strong>BI:</strong> ' + escH(r.bi) + '<br>' +
+    '<strong>Função:</strong> ' + escH(r.funcao) + '<br>' +
+    '<strong>Coordenação:</strong> ' + escH(r.coordenacao) +
+    (r.telefone ? '<br><strong>Contacto:</strong> ' + escH(r.telefone) : '');
+  document.getElementById('rh-saved-modal').style.display = 'flex';
+}
+
+function rhSavedRegistarOutro() {
+  document.getElementById('rh-saved-modal').style.display = 'none';
+  _rhNovoSalvoActual = null;
+  equipasSubtab('rh-novo');
+}
+
+async function rhSavedAdd2R() {
+  if (!_rhNovoSalvoActual) return;
+  await confirmarRhPara2R(_rhNovoSalvoActual.bi);
+  document.getElementById('rh-saved-modal').style.display = 'none';
+  _rhNovoSalvoActual = null;
+  equipasSubtab('rh-list');
+}
+
+// ── Confirmar profissional para 2ª Ronda ─────────────────────────────────────
+async function confirmarRhPara2R(bi) {
+  const result = await fbUpdateRhNovo(bi, { confirmado2R: true });
+  if (result.success) {
+    if (_rhNovosCache[bi.toUpperCase()]) _rhNovosCache[bi.toUpperCase()].confirmado2R = true;
+    renderRhNovosList();
+    showToast('Profissional confirmado para a 2ª Ronda. ✅', 'success');
+  } else {
+    showToast('Erro ao confirmar: ' + result.error, 'error');
+  }
+}
+
+// ── Editar novo RH ───────────────────────────────────────────────────────────
+function editRhNovo(bi) {
+  const r = _rhNovosCache[bi.toUpperCase()];
+  if (!r) return;
+  equipasSubtab('rh-novo');
+  setTimeout(() => {
+    document.getElementById('rh-f-nome').value   = r.nome    || '';
+    document.getElementById('rh-f-bi').value     = r.bi      || '';
+    document.getElementById('rh-f-bi').readOnly  = true; // BI não editável após registo
+    document.getElementById('rh-f-bi').style.opacity = '0.6';
+    document.getElementById('rh-f-funcao').value = r.funcao  || '';
+    document.getElementById('rh-f-coord').value  = r.coordenacao || '';
+    document.getElementById('rh-f-tel').value    = r.telefone|| '';
+    document.getElementById('rh-f-sexo').value   = r.sexo    || 'M';
+    document.getElementById('btn-rh-save').textContent = '💾 Actualizar';
+    rhFormMsg('ok', 'A editar o registo de ' + r.nome + '. O BI não pode ser alterado.');
+  }, 80);
+}
+
+// ── Eliminar novo RH ─────────────────────────────────────────────────────────
+async function deleteRhNovo(bi) {
+  const r = _rhNovosCache[bi.toUpperCase()];
+  if (!r) return;
+  if (!confirm('Eliminar o registo de "' + r.nome + '" (BI: ' + bi + ')?\nEsta acção não pode ser desfeita.')) return;
+
+  const result = await fbDeleteRhNovo(bi);
+  if (result.success) {
+    delete _rhNovosCache[bi.toUpperCase()];
+    // Remover do SUPERVISORES_INDEX se for supervisor novo
+    if (r.funcao === 'Supervisor equipa' && SUPERVISORES_INDEX[bi.toUpperCase()]?._novo) {
+      delete SUPERVISORES_INDEX[bi.toUpperCase()];
+    }
+    renderRhNovosList();
+    showToast('Registo de ' + r.nome + ' eliminado.', 'warn');
+  } else {
+    showToast('Erro ao eliminar: ' + result.error, 'error');
+  }
+}
+
+// ── Utilitários do formulário ────────────────────────────────────────────────
+function rhFormReset() {
+  ['rh-f-nome','rh-f-bi','rh-f-tel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.readOnly = false; el.style.opacity = ''; el.classList.remove('inp-err'); }
+  });
+  ['rh-f-funcao','rh-f-coord'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('inp-err'); }
+  });
+  const sx = document.getElementById('rh-f-sexo');
+  if (sx) sx.value = 'M';
+  document.getElementById('btn-rh-save').textContent = '💾 Registar Profissional';
+  rhFormMsg('', '');
+  document.getElementById('rh-f-nome')?.focus();
+}
+
+function rhFormMsg(tipo, texto) {
+  const el = document.getElementById('rh-form-msg');
+  if (!el) return;
+  if (!tipo || !texto) { el.className = 'rh-form-msg'; el.textContent = ''; return; }
+  el.className = 'rh-form-msg on rh-msg-' + tipo;
+  el.textContent = texto;
+}
+
+// ─── FIM FASES A+B ───────────────────────────────────────────────────────────
+
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
 }
@@ -2445,7 +3000,8 @@ function switchTab(name) {
   if (name === 'dashboard')   renderDashboard();
   if (name === 'history')     renderHistory();
   if (name === 'payments')    renderPayments();
-  if (name === 'supervisors') renderSupervisors(); // FASE 8
+  if (name === 'supervisors') renderSupervisors();
+  if (name === 'equipas')     renderEquipasTab(); // FASES A+B
 }
 
 function doSearch() {
