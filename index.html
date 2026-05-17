@@ -2163,24 +2163,28 @@ function hideSupervisorPanel() {
 function supInit() {
   _supCurrentBI     = null;
   _supCurrentEstado = null;
-  _supValidatedThisSession = new Set(); // FASE 6: limpar cache ao iniciar sessão
-  _supTeamsCache    = [];   // FASE SUP-1: limpar cache de equipas
+  _supValidatedThisSession = new Set();
+  _supTeamsCache    = [];
   _supCoordCache    = null;
   supReset();
   supUpdateCounter();
-  // FASE SUP-1: garantir que abre sempre no modo Validar
-  if (document.getElementById('sup-mode-validar')) supSetMode('validar');
-  // Info de sessão no canto superior direito
+  // Garantir modo Validar activo (atribuição directa — DOM já existe)
+  const divValidar = document.getElementById('sup-validate-mode');
+  const divTeams   = document.getElementById('sup-teams-mode');
+  const btnValidar = document.getElementById('sup-mode-validar');
+  const btnTeams   = document.getElementById('sup-mode-teams');
+  if (divValidar) divValidar.style.display = 'block';
+  if (divTeams)   divTeams.style.display   = 'none';
+  if (btnValidar) { btnValidar.classList.add('active'); }
+  if (btnTeams)   { btnTeams.classList.remove('active'); }
+  // Info de sessão
   const info = document.getElementById('sup-session-info');
   if (info) {
     info.innerHTML =
       '<strong>' + escH(APP_SESSION.nome || '') + '</strong>' +
       (APP_SESSION.coordenacao ? '<br><span>' + escH(APP_SESSION.coordenacao) + '</span>' : '');
   }
-  setTimeout(() => {
-    const inp = document.getElementById('sup-bi-input');
-    if (inp) inp.focus();
-  }, 200);
+  setTimeout(() => document.getElementById('sup-bi-input')?.focus(), 200);
 }
 
 function supUpdateCounter() {
@@ -4342,17 +4346,23 @@ let _supCoordCache  = null; // dados do Coord área da sua coordenação
 
 // ── Alternar entre modo Validar e modo Minhas Equipas ────────────────────────
 function supSetMode(mode) {
+  const btnValidar  = document.getElementById('sup-mode-validar');
+  const btnTeams    = document.getElementById('sup-mode-teams');
+  const divValidar  = document.getElementById('sup-validate-mode');
+  const divTeams    = document.getElementById('sup-teams-mode');
+  if (!btnValidar || !divValidar || !divTeams) return;
+
   if (mode === 'validar') {
-    document.getElementById('sup-mode-validar').classList.add('active');
-    document.getElementById('sup-mode-teams').classList.remove('active');
-    document.getElementById('sup-validate-mode').style.display = '';
-    document.getElementById('sup-teams-mode').style.display = 'none';
+    btnValidar.classList.add('active');
+    if (btnTeams) btnTeams.classList.remove('active');
+    divValidar.style.display = 'block';
+    divTeams.style.display   = 'none';
     setTimeout(() => document.getElementById('sup-bi-input')?.focus(), 80);
   } else {
-    document.getElementById('sup-mode-validar').classList.remove('active');
-    document.getElementById('sup-mode-teams').classList.add('active');
-    document.getElementById('sup-validate-mode').style.display = 'none';
-    document.getElementById('sup-teams-mode').style.display = 'block';
+    if (btnTeams) btnTeams.classList.add('active');
+    btnValidar.classList.remove('active');
+    divValidar.style.display = 'none';
+    divTeams.style.display   = 'block';
     supCarregarEquipas();
   }
 }
