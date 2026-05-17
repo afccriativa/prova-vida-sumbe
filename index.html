@@ -1129,6 +1129,23 @@ input, textarea, select {
       <option value="FALECIDO">🕊️ Falecido</option>
       <option value="AUSENTE">🚶 Ausente</option>
     </select>
+    <select class="filter-select" id="hist-funcao">
+      <option value="">Todas as funções</option>
+      <option>Supervisor equipa</option>
+      <option>Vacinador</option>
+      <option>Registador</option>
+      <option>Mobilizador</option>
+      <option>Sup Mob Social</option>
+      <option>Coord area/ Comuna</option>
+      <option>Eq. Tec. Mun. Chefe SP</option>
+      <option>Eq. Tec. Mun. Director</option>
+      <option>Eq. Tec. Mun. Sup PAV</option>
+      <option>Logistico Coord area</option>
+      <option>Logistico Municipal</option>
+      <option>Motorista Municipal</option>
+      <option>Gestor Dados Municipio</option>
+      <option>Adm/ financ Mun</option>
+    </select>
     <select class="filter-select" id="hist-coord"><option value="">Todas as coordenações</option></select>
     <button class="btn btn-secondary" id="btn-export" style="margin-left:auto;padding:8px 14px;font-size:12px">⬇️ CSV</button>
     <button class="btn btn-secondary" onclick="window.print()" style="padding:8px 14px;font-size:12px">🖨️ Imprimir</button>
@@ -4626,8 +4643,9 @@ function sCard(n, label, pct, cls) {
 function renderHistory() {
   const cs = getMergedConfs(); // FASE 7: dados unificados (localStorage + Firebase)
   const reallocs = getRealloc();
-  const hs = document.getElementById('hist-search').value.toLowerCase();
+  const hs  = document.getElementById('hist-search').value.toLowerCase();
   const hst = document.getElementById('hist-status').value;
+  const hfn = document.getElementById('hist-funcao').value;
   const hco = document.getElementById('hist-coord').value;
 
   let rows = Object.entries(cs).map(([bi,conf]) => {
@@ -4659,8 +4677,9 @@ function renderHistory() {
     };
   });
 
-  if (hs) rows = rows.filter(r => r.nome.toLowerCase().includes(hs)||r.bi.toLowerCase().includes(hs)||(r.coordenacao_r2||'').toLowerCase().includes(hs));
+  if (hs)  rows = rows.filter(r => r.nome.toLowerCase().includes(hs)||r.bi.toLowerCase().includes(hs)||(r.coordenacao_r2||'').toLowerCase().includes(hs));
   if (hst) rows = rows.filter(r => r.status === hst);
+  if (hfn) rows = rows.filter(r => r.funcao_r2 === hfn || r.funcao_r1 === hfn);
   if (hco) rows = rows.filter(r => r.coordenacao_r2 === hco || r.coordenacao_r1 === hco);
   rows.sort((a,b) => (a.coordenacao_r2||'').localeCompare(b.coordenacao_r2||'')||a.nome.localeCompare(b.nome));
 
