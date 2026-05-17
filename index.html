@@ -951,6 +951,75 @@ input, textarea, select {
   background:var(--red); color:#fff; border-radius:10px;
   padding:1px 5px; margin-left:5px; vertical-align:middle; }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FASE SUP-1 + SUP-2 — VISTA E IMPRESSÃO DAS EQUIPAS DO SUPERVISOR
+   ═══════════════════════════════════════════════════════════════════════ */
+.sup-mode-bar { display:flex; gap:8px; margin-bottom:14px; }
+.sup-mode-btn { flex:1; padding:11px 12px; background:var(--surface);
+  border:2px solid var(--border); border-radius:9px; cursor:pointer;
+  font-size:12px; font-weight:700; color:var(--text2); transition:all .2s;
+  touch-action:manipulation; text-align:center; }
+.sup-mode-btn:hover { border-color:var(--text3); }
+.sup-mode-btn.active { background:rgba(46,204,113,.08);
+  border-color:var(--green); color:var(--green); }
+.sup-mode-btn.active.mode-teams { background:rgba(52,152,219,.08);
+  border-color:#3498db; color:#3498db; }
+
+#sup-teams-mode { display:none; }
+
+.sup-teams-header { background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 18px; margin-bottom:14px; }
+.sup-teams-header h3 { font-size:13px; font-weight:800; color:var(--text);
+  margin-bottom:5px; }
+.sup-teams-coord-info { font-size:11px; color:var(--text3); line-height:1.6; }
+.sup-teams-coord-info strong { color:var(--text); }
+
+.sup-teams-actions { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.btn-sup-print { flex:1; padding:11px 14px; background:var(--accent2);
+  color:#000; border:none; border-radius:8px; font-size:13px;
+  font-weight:800; cursor:pointer; touch-action:manipulation;
+  transition:all .2s; min-height:44px; }
+.btn-sup-print:hover { background:#e09b2a; }
+.btn-sup-refresh { padding:11px 14px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--text2);
+  font-size:13px; font-weight:700; cursor:pointer; touch-action:manipulation; min-height:44px; }
+
+.sup-team-item { background:var(--surface); border:1px solid var(--border);
+  border-left:4px solid #3498db; border-radius:var(--radius);
+  padding:14px 16px; margin-bottom:10px; }
+.sup-team-item-header { display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.sup-team-item-num { font-size:14px; font-weight:800; color:var(--text); }
+.sup-team-item-status { font-size:10px; font-weight:700; padding:2px 9px; border-radius:10px; }
+.st-completa   { background:rgba(46,204,113,.15); color:var(--green); }
+.st-incompleta { background:rgba(244,168,50,.15); color:var(--accent2); }
+.st-vazia      { background:rgba(150,150,150,.15); color:var(--text3); }
+.sup-team-member { display:flex; align-items:center; gap:10px;
+  padding:7px 4px; font-size:12px; border-bottom:1px dashed var(--border); }
+.sup-team-member:last-child { border-bottom:none; }
+.sup-team-mem-icon { font-size:18px; flex-shrink:0; width:24px; text-align:center; }
+.sup-team-mem-role { font-size:9px; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:0.5px; min-width:36px; }
+.sup-team-mem-name { flex:1; font-weight:700; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sup-team-mem-tel  { font-size:11px; color:var(--accent2); white-space:nowrap; }
+.sup-team-mem-empty { color:var(--text3); font-style:italic; flex:1; }
+
+.sup-teams-empty { background:var(--surface); border:1px dashed var(--border);
+  border-radius:var(--radius); padding:32px 20px; text-align:center; }
+.sup-teams-empty-icon { font-size:42px; margin-bottom:10px; }
+.sup-teams-empty-msg { font-size:13px; color:var(--text); font-weight:700; margin-bottom:6px; }
+.sup-teams-empty-sub { font-size:11px; color:var(--text3); line-height:1.5; }
+
+.sup-teams-loading { text-align:center; padding:30px; color:var(--text3); font-size:13px; }
+
+@media(max-width:480px){
+  .sup-mode-btn { padding:10px 8px; font-size:11px; }
+  .btn-sup-print { font-size:12px; padding:11px 10px; }
+  .sup-team-item { padding:12px 13px; }
+  .sup-team-item-num { font-size:13px; }
+}
+
 </style>
 </head>
 <body>
@@ -2095,8 +2164,12 @@ function supInit() {
   _supCurrentBI     = null;
   _supCurrentEstado = null;
   _supValidatedThisSession = new Set(); // FASE 6: limpar cache ao iniciar sessão
+  _supTeamsCache    = [];   // FASE SUP-1: limpar cache de equipas
+  _supCoordCache    = null;
   supReset();
   supUpdateCounter();
+  // FASE SUP-1: garantir que abre sempre no modo Validar
+  if (document.getElementById('sup-mode-validar')) supSetMode('validar');
   // Info de sessão no canto superior direito
   const info = document.getElementById('sup-session-info');
   if (info) {
@@ -4259,6 +4332,193 @@ function renderAlertasConsistencia() {
 
 // ─── FIM FASE I ───────────────────────────────────────────────────────────────
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE SUP-1 + SUP-2 — VISTA E IMPRESSÃO DAS EQUIPAS DO SUPERVISOR
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Cache local apenas do Supervisor (não interfere com _equipasCache do Admin)
+let _supTeamsCache  = [];  // equipas do supervisor activo
+let _supCoordCache  = null; // dados do Coord área da sua coordenação
+
+// ── Alternar entre modo Validar e modo Minhas Equipas ────────────────────────
+function supSetMode(mode) {
+  if (mode === 'validar') {
+    document.getElementById('sup-mode-validar').classList.add('active');
+    document.getElementById('sup-mode-teams').classList.remove('active');
+    document.getElementById('sup-validate-mode').style.display = '';
+    document.getElementById('sup-teams-mode').style.display = 'none';
+    setTimeout(() => document.getElementById('sup-bi-input')?.focus(), 80);
+  } else {
+    document.getElementById('sup-mode-validar').classList.remove('active');
+    document.getElementById('sup-mode-teams').classList.add('active');
+    document.getElementById('sup-validate-mode').style.display = 'none';
+    document.getElementById('sup-teams-mode').style.display = 'block';
+    supCarregarEquipas();
+  }
+}
+
+// ── Carregar equipas do Supervisor activo a partir do Firebase ───────────────
+async function supCarregarEquipas() {
+  if (!isSupervisorSession() || !APP_SESSION.bi) return;
+  if (!fbReady()) {
+    document.getElementById('sup-teams-content').innerHTML =
+      '<div class="sup-teams-empty">' +
+        '<div class="sup-teams-empty-icon">📡</div>' +
+        '<div class="sup-teams-empty-msg">Sem ligação ao servidor</div>' +
+        '<div class="sup-teams-empty-sub">Verifique a sua ligação à internet e tente novamente.</div>' +
+      '</div>';
+    return;
+  }
+
+  document.getElementById('sup-teams-content').innerHTML =
+    '<div class="sup-teams-loading">⟳ A carregar as suas equipas...</div>';
+
+  const meuBI = APP_SESSION.bi.toUpperCase();
+  const minhaCoord = APP_SESSION.coordenacao || '';
+
+  try {
+    // 1. Buscar todas as equipas e filtrar localmente pelo BI do Supervisor
+    const eqDocs   = await fbGetEquipas();
+    _supTeamsCache = eqDocs
+      .filter(e => (e.supervisor_id||'').toUpperCase() === meuBI)
+      .sort((a,b) => (a.equipa_num||0) - (b.equipa_num||0));
+
+    // 2. Buscar dados do Coord área da sua coordenação (informativo)
+    const alocDocs = await fbGetAlocacoes();
+    _supCoordCache = alocDocs.find(a =>
+      a.status === 'coord' && a.coordenacao === minhaCoord) || null;
+
+    supRenderEquipas();
+  } catch(e) {
+    console.error('[Supervisor] Erro ao carregar equipas:', e);
+    document.getElementById('sup-teams-content').innerHTML =
+      '<div class="sup-teams-empty">' +
+        '<div class="sup-teams-empty-icon">⚠️</div>' +
+        '<div class="sup-teams-empty-msg">Erro ao carregar dados</div>' +
+        '<div class="sup-teams-empty-sub">' + escH(e.message || 'Tente novamente.') + '</div>' +
+      '</div>';
+  }
+}
+
+// ── Renderizar vista das equipas ─────────────────────────────────────────────
+function supRenderEquipas() {
+  // Cabeçalho informativo
+  const minhaCoord = APP_SESSION.coordenacao || '—';
+  const totalEq    = _supTeamsCache.length;
+  const completas  = _supTeamsCache.filter(e => e.status === 'completa').length;
+  const coordInfo  = _supCoordCache
+    ? '<strong>Coord área/Comuna:</strong> ' + escH(_supCoordCache.nome) + '<br>'
+    : '<span style="color:var(--text3)">Coord área/Comuna ainda não definido.</span><br>';
+  document.getElementById('sup-teams-coord-info').innerHTML =
+    coordInfo +
+    '<strong>Coordenação:</strong> ' + escH(minhaCoord) + '<br>' +
+    '<strong>Total de equipas:</strong> ' + totalEq +
+    (totalEq > 0 ? ' &nbsp;·&nbsp; <strong>' + completas + '</strong> completa' + (completas!==1?'s':'') : '');
+
+  const el = document.getElementById('sup-teams-content');
+
+  // Sem equipas
+  if (_supTeamsCache.length === 0) {
+    el.innerHTML =
+      '<div class="sup-teams-empty">' +
+        '<div class="sup-teams-empty-icon">⏳</div>' +
+        '<div class="sup-teams-empty-msg">As suas equipas ainda não foram definidas</div>' +
+        '<div class="sup-teams-empty-sub">Contacte o Administrador para que as equipas que vai supervisionar sejam configuradas.<br>Esta página actualiza automaticamente quando as equipas forem criadas.</div>' +
+      '</div>';
+    return;
+  }
+
+  // Renderizar cada equipa
+  el.innerHTML = _supTeamsCache.map(eq => {
+    const statusCls = { completa:'st-completa', incompleta:'st-incompleta', vazia:'st-vazia' }[eq.status] || 'st-vazia';
+    const statusLbl = { completa:'✅ Completa', incompleta:'⚡ Incompleta', vazia:'⬜ Vazia' }[eq.status] || '⬜';
+
+    const memberRow = (role, icon, label, data) => {
+      if (!data || !data.bi) {
+        return '<div class="sup-team-member">' +
+          '<span class="sup-team-mem-icon">' + icon + '</span>' +
+          '<span class="sup-team-mem-role">' + label + '</span>' +
+          '<span class="sup-team-mem-empty">— por preencher —</span>' +
+        '</div>';
+      }
+      const prof = findProfissional(data.bi);
+      const tel  = prof?.telefone || '';
+      return '<div class="sup-team-member">' +
+        '<span class="sup-team-mem-icon">' + icon + '</span>' +
+        '<span class="sup-team-mem-role">' + label + '</span>' +
+        '<span class="sup-team-mem-name">' + escH(data.nome || '—') + '</span>' +
+        (tel ? '<span class="sup-team-mem-tel">' + escH(tel) + '</span>' : '') +
+      '</div>';
+    };
+
+    return '<div class="sup-team-item">' +
+      '<div class="sup-team-item-header">' +
+        '<span class="sup-team-item-num">Equipa ' + (eq.equipa_num || '?') + '</span>' +
+        '<span class="sup-team-item-status ' + statusCls + '">' + statusLbl + '</span>' +
+      '</div>' +
+      memberRow('mobilizador', '📱', 'MOB', eq.mobilizador) +
+      memberRow('vacinador',   '💉', 'VAC', eq.vacinador) +
+      memberRow('registador',  '📋', 'REG', eq.registador) +
+    '</div>';
+  }).join('');
+}
+
+// ── SUP-2: Imprimir as equipas do Supervisor (formato Campo) ─────────────────
+// Reutiliza buildPrintHTML mas constrói uma estrutura "flat" filtrada
+function supImprimirMinhasEquipas() {
+  if (!_supTeamsCache || _supTeamsCache.length === 0) {
+    showToast('Não tem equipas para imprimir.', 'warn');
+    return;
+  }
+  if (typeof buildPrintHTML !== 'function') {
+    showToast('Função de impressão indisponível.', 'error');
+    return;
+  }
+
+  const meuNome    = APP_SESSION.nome || 'Supervisor';
+  const minhaCoord = APP_SESSION.coordenacao || '';
+  const meuBI      = (APP_SESSION.bi || '').toUpperCase();
+
+  // Construir estrutura "flat" no mesmo formato que getEquipasFlat() devolve
+  const flat = _supTeamsCache.map(eq => {
+    const coordTel = _supCoordCache ? (findProfissional(_supCoordCache.bi)?.telefone || '') : '';
+    const meuTel   = findProfissional(meuBI)?.telefone || '';
+    const mobProf  = eq.mobilizador ? findProfissional(eq.mobilizador.bi) : null;
+    const vacProf  = eq.vacinador   ? findProfissional(eq.vacinador.bi)   : null;
+    const regProf  = eq.registador  ? findProfissional(eq.registador.bi)  : null;
+    return {
+      coordenacao: minhaCoord,
+      coordNome:   _supCoordCache ? _supCoordCache.nome : '—',
+      coordTel:    coordTel,
+      coordBI:     _supCoordCache ? (_supCoordCache.bi || '') : '',
+      supNome:     meuNome,
+      supTel:      meuTel,
+      supBI:       meuBI,
+      numEquipa:   eq.equipa_num || '?',
+      status:      eq.status || 'vazia',
+      mobNome: eq.mobilizador ? eq.mobilizador.nome : '',
+      mobBI:   eq.mobilizador ? eq.mobilizador.bi   : '',
+      mobTel:  mobProf ? (mobProf.telefone || '') : '',
+      vacNome: eq.vacinador ? eq.vacinador.nome : '',
+      vacBI:   eq.vacinador ? eq.vacinador.bi   : '',
+      vacTel:  vacProf ? (vacProf.telefone || '') : '',
+      regNome: eq.registador ? eq.registador.nome : '',
+      regBI:   eq.registador ? eq.registador.bi   : '',
+      regTel:  regProf ? (regProf.telefone || '') : '',
+    };
+  });
+
+  // Abrir janela de impressão com formato Campo (sem BIs)
+  const pw = window.open('', '_blank', 'width=850,height=700');
+  if (!pw) { showToast('Active popups para este site.', 'error'); return; }
+  pw.document.write(buildPrintHTML(flat, 'campo'));
+  pw.document.close();
+  pw.focus();
+  setTimeout(() => pw.print(), 700);
+}
+
+// ─── FIM FASES SUP-1 + SUP-2 ──────────────────────────────────────────────────
+
 function getConfs() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
 }
@@ -5558,6 +5818,19 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="sup-session-info" id="sup-session-info"></div>
   </div>
 
+  <!-- FASE SUP-1: Selector de modo -->
+  <div class="sup-mode-bar">
+    <button id="sup-mode-validar" class="sup-mode-btn active" onclick="supSetMode('validar')">
+      🏥 Validar Disponibilidade
+    </button>
+    <button id="sup-mode-teams" class="sup-mode-btn mode-teams" onclick="supSetMode('teams')">
+      📋 Minhas Equipas
+    </button>
+  </div>
+
+  <!-- MODO: VALIDAR DISPONIBILIDADE -->
+  <div id="sup-validate-mode">
+
   <!-- Pesquisa por BI -->
   <div class="sup-search-box">
     <h2>🔍 Inserir BI do Profissional</h2>
@@ -5621,7 +5894,29 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
 
+  </div><!-- /sup-validate-mode -->
+
+  <!-- FASE SUP-1+2: MODO MINHAS EQUIPAS -->
+  <div id="sup-teams-mode">
+    <div class="sup-teams-header">
+      <h3 id="sup-teams-title">📋 As Minhas Equipas</h3>
+      <div class="sup-teams-coord-info" id="sup-teams-coord-info"></div>
+    </div>
+
+    <div class="sup-teams-actions">
+      <button class="btn-sup-print" onclick="supImprimirMinhasEquipas()">
+        🖨️ Imprimir as Minhas Equipas
+      </button>
+      <button class="btn-sup-refresh" onclick="supCarregarEquipas()" title="Actualizar">
+        🔄
+      </button>
+    </div>
+
+    <div id="sup-teams-content">
+      <div class="sup-teams-loading">⟳ A carregar as suas equipas...</div>
+    </div>
   </div>
+
 </div>
 
 </body>
