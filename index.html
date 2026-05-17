@@ -3299,7 +3299,63 @@ async function loadHierarquia() {
   const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes(), fbGetEquipas()]);
   updateAlocacoesCache(alocDocs);
   updateEquipasCache(eqDocs);
+  await _cleanupOrphans(); // limpar registos cujo supervisor foi removido
   renderHierarquia();
+}
+
+// ── Limpeza de órfãos: membros/equipas cujo supervisor foi eliminado ──────────
+// Resolve o estado corrupto quando um supervisor é removido sem cascata
+async function _cleanupOrphans() {
+  // Conjunto de BIs que são supervisores activos
+  const supervisorBIs = new Set(
+    Object.values(_alocacoesCache)
+      .filter(a => a.status === 'supervisor' || _effectiveStatus(a) === 'supervisor')
+      .map(a => (a.bi || '').toUpperCase())
+  );
+
+  const orphanMemberOps = [];   // promessas de remoção de membros
+  const orphanTeamOps   = [];   // promessas de remoção de equipas
+  const orphanTeamIds   = new Set();
+
+  // 1. Detectar equipas cujo supervisor já não existe
+  for (const eq of Object.values(_equipasCache)) {
+    const supId = (eq.supervisor_id || '').toUpperCase();
+    if (supId && !supervisorBIs.has(supId)) {
+      orphanTeamIds.add(eq.id || eq._id);
+    }
+  }
+
+  // 2. Libertar membros de equipas órfãs
+  for (const id of orphanTeamIds) {
+    const eq = _equipasCache[id];
+    if (!eq) continue;
+    for (const role of ['mobilizador','vacinador','registador']) {
+      if (eq[role]?.bi) {
+        const mBI = eq[role].bi.toUpperCase();
+        if (_alocacoesCache[mBI]) {
+          delete _alocacoesCache[mBI];
+          orphanMemberOps.push(fbRemoveAlocacao(eq[role].bi).catch(() => {}));
+        }
+      }
+    }
+    delete _equipasCache[id];
+    orphanTeamOps.push(fbDeleteEquipa(id).catch(() => {}));
+  }
+
+  // 3. Libertar entradas em alocacoesCache com supervisor_id inválido (membros sem equipa)
+  for (const a of Object.values(_alocacoesCache)) {
+    const supId = (a.supervisor_id || '').toUpperCase();
+    if (supId && !supervisorBIs.has(supId)) {
+      delete _alocacoesCache[(a.bi || '').toUpperCase()];
+      orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
+    }
+  }
+
+  if (orphanMemberOps.length || orphanTeamOps.length) {
+    await Promise.all([...orphanMemberOps, ...orphanTeamOps]);
+    console.log('[Hierarquia] Limpeza de órfãos: ' +
+      orphanTeamOps.length + ' equipa(s) e ' + orphanMemberOps.length + ' membro(s) libertados.');
+  }
 }
 
 // ── Render principal da hierarquia ───────────────────────────────────────────
@@ -3510,14 +3566,50 @@ async function confirmarCoordAuto(bi, coordenacao) {
 
 // ── Remover alocação ──────────────────────────────────────────────────────────
 async function removerAlocacao(bi) {
-  const a = _alocacoesCache[bi.toUpperCase()];
+  const biUpper = bi.toUpperCase();
+  const a = _alocacoesCache[biUpper];
   const nome = a ? a.nome : bi;
-  if (!confirm('Remover ' + nome + ' da hierarquia da 2ª Ronda?')) return;
+  const isSupervisor = a && (a.status === 'supervisor' || _effectiveStatus(a) === 'supervisor');
+
+  // Mensagem de confirmação diferente para supervisores (avisa sobre cascata)
+  let msg = 'Remover ' + nome + ' da hierarquia da 2ª Ronda?';
+  if (isSupervisor) {
+    const supTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === biUpper);
+    const nTeams   = supTeams.length;
+    const nMembers = supTeams.reduce((acc, e) =>
+      acc + ['mobilizador','vacinador','registador'].filter(r => e[r]?.bi).length, 0);
+    if (nTeams > 0) {
+      msg = 'Remover ' + nome + ' da hierarquia?\n\n' +
+        '⚠️ Esta acção irá eliminar ' + nTeams + ' equipa(s) e libertar ' +
+        nMembers + ' membro(s) para o pool disponível.';
+    }
+  }
+  if (!confirm(msg)) return;
+
+  // Se for supervisor: cascade-delete equipas e membros
+  if (isSupervisor) {
+    const supTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === biUpper);
+    for (const eq of supTeams) {
+      // Libertar membros: remover de alocacoes_2r e do cache
+      for (const role of ['mobilizador','vacinador','registador']) {
+        if (eq[role]?.bi) {
+          const mBI = eq[role].bi.toUpperCase();
+          delete _alocacoesCache[mBI];
+          await fbRemoveAlocacao(eq[role].bi).catch(() => {});
+        }
+      }
+      // Eliminar equipa
+      delete _equipasCache[eq.id || eq._id];
+      await fbDeleteEquipa(eq.id || eq._id).catch(() => {});
+    }
+  }
+
+  // Remover o próprio registo
   const result = await fbRemoveAlocacao(bi);
   if (result.success) {
-    delete _alocacoesCache[bi.toUpperCase()];
+    delete _alocacoesCache[biUpper];
     renderHierarquia();
-    showToast(nome + ' removido da hierarquia.', 'warn');
+    showToast(nome + ' removido da hierarquia.' + (isSupervisor ? ' Membros devolvidos ao pool.' : ''), 'warn');
   } else {
     showToast('Erro: ' + result.error, 'error');
   }
