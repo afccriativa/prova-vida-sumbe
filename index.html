@@ -3403,18 +3403,59 @@ function renderCoordCard(coordenacao) {
 
 // ── Helpers: obter dados da coordenação ──────────────────────────────────────
 
-// Retorna o Coord área confirmado ou sugerido automaticamente
-function getCoordsAreaDa(coordenacao) {
-  // 1. Já alocado e confirmado
-  const confirmado = Object.values(_alocacoesCache).find(a =>
-    a.status === 'coord' && a.coordenacao === coordenacao);
-  if (confirmado) return { ...confirmado, _fromAlocacao: true };
+// Status efectivo de um entrada do alocacoesCache, respeitando realocações
+function _effectiveStatus(a) {
+  const r2 = getR2Record(a.bi);
+  if (!r2) return a.status;
+  const funcaoEf = r2.funcao_r2 || a.funcao;
+  return statusPorFuncao(funcaoEf);
+}
 
-  // 2. Auto-sugestão: usa getR2Record para respeitar realocações de função/coord
+// Coordenação efectiva de uma entrada do alocacoesCache, respeitando realocações
+function _effectiveCoord(a) {
+  const r2 = getR2Record(a.bi);
+  if (!r2) return a.coordenacao;
+  return r2.coordenacao_r2 || a.coordenacao;
+}
+
+// Reparar silenciosamente um registo do Firebase com status/função/coordenação desactualizados
+async function _repairAlocacao(a) {
+  const r2       = getR2Record(a.bi) || a;
+  const funcaoEf = r2.funcao_r2       || a.funcao;
+  const coordEf  = r2.coordenacao_r2  || a.coordenacao;
+  const newStatus = statusPorFuncao(funcaoEf);
+  if (a.status === newStatus && a.coordenacao === coordEf && a.funcao === funcaoEf) return;
+  const updated = { ...a, status: newStatus, funcao: funcaoEf, coordenacao: coordEf };
+  const biKey = (a.bi || '').toUpperCase();
+  _alocacoesCache[biKey] = updated; // corrigir cache local imediatamente
+  await fbSaveAlocacao(updated).catch(() => {}); // reparar Firebase em silêncio
+}
+
+// Retorna o Coord área confirmado ou sugerido automaticamente
+// Usa dados efectivos da 2ª Ronda — corrige entradas Firebase desactualizadas
+function getCoordsAreaDa(coordenacao) {
+  // 1. Procurar no alocacoesCache pela coordenação efectiva (inclui registos com status desactualizado)
+  const confirmado = Object.values(_alocacoesCache).find(a => {
+    return _effectiveStatus(a) === 'coord' && _effectiveCoord(a) === coordenacao;
+  });
+  if (confirmado) {
+    // Reparar silenciosamente se os dados gravados estiverem desactualizados
+    if (confirmado.status !== 'coord' || confirmado.coordenacao !== coordenacao) {
+      _repairAlocacao(confirmado);
+    }
+    return { ...confirmado, status: 'coord', coordenacao, _fromAlocacao: true };
+  }
+
+  // 2. Auto-sugestão de RH_DATA: usa getR2Record para respeitar realocações
+  //    Não salta quem está no cache — apenas verifica se o estado efectivo é o certo
   const cs = getMergedConfs();
   const sugerido = RH_DATA.find(r => {
     if (cs[r.bi.toUpperCase()]?.status !== 'SIM') return false;
-    if (_alocacoesCache[r.bi.toUpperCase()]) return false;
+    // Saltar apenas quem já está correctamente alocado (para não duplicar)
+    const cacheEntry = _alocacoesCache[r.bi.toUpperCase()];
+    if (cacheEntry && _effectiveStatus(cacheEntry) === 'coord' && _effectiveCoord(cacheEntry) === coordenacao) return false;
+    // Não saltar quem está no cache com status errado — já foi tratado no passo 1
+    if (cacheEntry) return false;
     const r2       = getR2Record(r.bi) || r;
     const funcaoEf = r2.funcao_r2      || r.funcao;
     const coordEf  = r2.coordenacao_r2 || r.coordenacao;
@@ -3441,10 +3482,20 @@ function getCoordsAreaDa(coordenacao) {
   return null;
 }
 
+// Retorna supervisores confirmados para esta coordenação
+// Usa dados efectivos da 2ª Ronda — corrige entradas Firebase desactualizadas
 function getSupsDa(coordenacao) {
-  return Object.values(_alocacoesCache)
-    .filter(a => a.status === 'supervisor' && a.coordenacao === coordenacao)
-    .map(a => ({ ...a, sexo: a.sexo || 'M' }));
+  const result = [];
+  Object.values(_alocacoesCache).forEach(a => {
+    if (_effectiveStatus(a) === 'supervisor' && _effectiveCoord(a) === coordenacao) {
+      // Reparar silenciosamente se necessário
+      if (a.status !== 'supervisor' || a.coordenacao !== coordenacao) {
+        _repairAlocacao(a);
+      }
+      result.push({ ...a, status: 'supervisor', coordenacao, sexo: a.sexo || 'M' });
+    }
+  });
+  return result;
 }
 
 // ── Confirmar auto-sugestão de Coord área ────────────────────────────────────
