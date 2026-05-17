@@ -3262,7 +3262,8 @@ function updateAlocacoesCache(docs) {
 
 // ── Pool de profissionais disponíveis para 2ª Ronda ──────────────────────────
 // Retorna profissionais SIM da Consolidação + novos RH confirmados
-// filtrados por função e excluindo os já alocados
+// filtrados por função e excluindo os já alocados.
+// USA getR2Record para respeitar realocações de função e coordenação.
 function getAvailablePool(funcoes) {
   const pool = [];
   const jaAlocados = new Set(Object.keys(_alocacoesCache));
@@ -3273,9 +3274,13 @@ function getAvailablePool(funcoes) {
   RH_DATA.forEach(r => {
     const conf = cs[r.bi.toUpperCase()];
     if (!conf || conf.status !== 'SIM') return;
-    if (!funcoesSet.has(r.funcao)) return;
     if (jaAlocados.has(r.bi.toUpperCase())) return;
-    pool.push({ ...r, _fonte: 'rh_data' });
+    // Usar função e coordenação efectivas da 2ª Ronda (respeita realocações)
+    const r2          = getR2Record(r.bi) || r;
+    const funcaoEf    = r2.funcao_r2       || r.funcao;
+    const coordEf     = r2.coordenacao_r2  || r.coordenacao;
+    if (!funcoesSet.has(funcaoEf)) return;
+    pool.push({ ...r, funcao: funcaoEf, coordenacao: coordEf, _fonte: 'rh_data' });
   });
 
   // Fonte 2: Novos RH confirmados para 2ª Ronda
@@ -3405,14 +3410,25 @@ function getCoordsAreaDa(coordenacao) {
     a.status === 'coord' && a.coordenacao === coordenacao);
   if (confirmado) return { ...confirmado, _fromAlocacao: true };
 
-  // 2. Auto-sugestão: Coord área disponível na mesma coordenação
+  // 2. Auto-sugestão: usa getR2Record para respeitar realocações de função/coord
   const cs = getMergedConfs();
-  const sugerido = RH_DATA.find(r =>
-    r.funcao === 'Coord area/ Comuna' &&
-    r.coordenacao === coordenacao &&
-    cs[r.bi.toUpperCase()]?.status === 'SIM' &&
-    !_alocacoesCache[r.bi.toUpperCase()]);
-  if (sugerido) return { ...sugerido, _fromAlocacao: false };
+  const sugerido = RH_DATA.find(r => {
+    if (cs[r.bi.toUpperCase()]?.status !== 'SIM') return false;
+    if (_alocacoesCache[r.bi.toUpperCase()]) return false;
+    const r2       = getR2Record(r.bi) || r;
+    const funcaoEf = r2.funcao_r2      || r.funcao;
+    const coordEf  = r2.coordenacao_r2 || r.coordenacao;
+    return funcaoEf === 'Coord area/ Comuna' && coordEf === coordenacao;
+  });
+  if (sugerido) {
+    const r2 = getR2Record(sugerido.bi) || sugerido;
+    return {
+      ...sugerido,
+      funcao:      r2.funcao_r2       || sugerido.funcao,
+      coordenacao: r2.coordenacao_r2  || sugerido.coordenacao,
+      _fromAlocacao: false
+    };
+  }
 
   // 3. Auto-sugestão: novo RH confirmado
   const novoSug = Object.values(_rhNovosCache).find(r =>
@@ -3435,7 +3451,9 @@ function getSupsDa(coordenacao) {
 async function confirmarCoordAuto(bi, coordenacao) {
   const prof = findProfissional(bi);
   if (!prof) return;
-  await _alocarProfissional(bi, prof.nome, prof.funcao, coordenacao,
+  const r2       = getR2Record(bi) || prof;
+  const funcaoEf = r2.funcao_r2 || prof.funcao;
+  await _alocarProfissional(bi, prof.nome, funcaoEf, coordenacao,
     prof.sexo || 'M', 'coord', prof._fonte || 'rh_data');
 }
 
@@ -3559,7 +3577,10 @@ async function selectAssignItem(bi) {
   if (role === 'member') {
     await _assignMemberToTeam(equipaId, memberRole, prof);
   } else {
-    await _alocarProfissional(prof.bi, prof.nome, prof.funcao, coordenacao, prof.sexo || 'M', role, prof._fonte || 'rh_data');
+    // Usar função efectiva da 2ª Ronda ao alocar (respeita realocações)
+    const r2       = getR2Record(bi) || prof;
+    const funcaoEf = r2.funcao_r2 || prof.funcao;
+    await _alocarProfissional(prof.bi, prof.nome, funcaoEf, coordenacao, prof.sexo || 'M', role, prof._fonte || 'rh_data');
   }
 }
 
@@ -3592,10 +3613,14 @@ async function confirmarExistentePara2R(bi) {
   const prof = findProfissional(bi);
   if (!prof) { showToast('Profissional não encontrado.', 'error'); return; }
   if (_alocacoesCache[bi.toUpperCase()]) { showToast('Já confirmado para a 2ª Ronda.', 'warn'); return; }
-  const status = statusPorFuncao(prof.funcao);
+  // Usar valores efectivos da 2ª Ronda (respeita realocações de função e coordenação)
+  const r2          = getR2Record(bi) || prof;
+  const funcaoEf    = r2.funcao_r2       || prof.funcao;
+  const coordEf     = r2.coordenacao_r2  || prof.coordenacao;
+  const status = statusPorFuncao(funcaoEf);
   await _alocarProfissional(
-    prof.bi, prof.nome, prof.funcao,
-    prof.coordenacao, prof.sexo || 'M',
+    prof.bi, prof.nome, funcaoEf,
+    coordEf, prof.sexo || 'M',
     status, prof._fonte || 'rh_data', true
   );
   // Actualizar cache sem re-render da hierarquia (não está à vista)
