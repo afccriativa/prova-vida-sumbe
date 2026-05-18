@@ -3613,6 +3613,7 @@ async function confirmarRhPara2R(bi) {
       }
     }
     renderRhNovosList();
+    _invalidatePickerCache();
     showToast('Profissional confirmado para a 2ª Ronda. ✅', 'success');
   } else {
     showToast('Erro ao confirmar: ' + result.error, 'error');
@@ -4389,6 +4390,7 @@ async function removerAlocacao(bi) {
   const result = await fbRemoveAlocacao(bi);
   if (result.success) {
     delete _alocacoesCache[biUpper];
+    _invalidatePickerCache();
     renderHierarquia();
     showToast(nome + ' removido da hierarquia.' + (isSupervisor ? ' Membros devolvidos ao pool.' : ''), 'warn');
   } else {
@@ -4425,6 +4427,22 @@ async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, 
 }
 
 // ── Modal de atribuição (picker) ─────────────────────────────────────────────
+// ── Cache temporal do picker (M-04) ─────────────────────────────────────────
+// Evita 3 pedidos Firebase em cada clique + Mob/Vac/Reg se os dados não mudaram.
+// Invalida automaticamente após 30s ou após qualquer operação de escrita.
+let _pickerLastRefresh  = 0;          // timestamp ms da última actualização
+let _pickerDirty        = false;       // true = houve escrita desde o último refresh
+const PICKER_TTL_MS     = 30 * 1000;  // 30 segundos
+
+function _invalidatePickerCache() {
+  _pickerDirty = true;
+}
+
+function _pickerNeedsRefresh() {
+  if (_pickerDirty) return true;
+  return (Date.now() - _pickerLastRefresh) > PICKER_TTL_MS;
+}
+
 async function openAssignModal(coordenacao, role, equipaId, memberRole) {
   _assignContext = { coordenacao, role, equipaId: equipaId || null, memberRole: memberRole || null };
   const isCoord  = role === 'coord';
@@ -4437,39 +4455,58 @@ async function openAssignModal(coordenacao, role, equipaId, memberRole) {
     ? 'Equipa — ' + coordenacao
     : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp').value = '';
-  // Mostrar modal imediatamente com estado de carregamento
-  document.getElementById('assign-list-content').innerHTML =
-    '<div class="assign-empty" style="color:var(--text3)">⟳ A carregar...</div>';
-  document.getElementById('assign-modal').style.display = 'flex';
-  // Actualizar caches em paralelo para garantir dados frescos no picker
-  try {
-    const [alocDocs, novosDocs, eqDocs] = await Promise.all([
-      fbGetAlocacoes(),
-      fbGetRhNovos(),
-      fbGetEquipas(),
-    ]);
-    updateAlocacoesCache(alocDocs);
-    updateRhNovosCache(novosDocs);
-    updateEquipasCache(eqDocs);
-    // Reparar 'alocado' órfãos: equipa inexistente OU slot não tem esta pessoa
-    const activeEqs = new Set(Object.keys(_equipasCache));
-    for (const a of Object.values(_alocacoesCache)) {
-      if (a.status !== 'alocado') continue;
-      const biUpper = (a.bi || '').toUpperCase();
-      let isOrphan = !a.equipa_id || !activeEqs.has(a.equipa_id);
-      if (!isOrphan) {
-        const eq = _equipasCache[a.equipa_id];
-        const slotBi = (eq[a.role_na_equipa]?.bi || '').toUpperCase();
-        if (!a.role_na_equipa || slotBi !== biUpper) isOrphan = true;
-      }
-      if (isOrphan) {
-        delete _alocacoesCache[biUpper];
-        fbRemoveAlocacao(a.bi).catch(() => {});
-      }
-    }
-  } catch(e) {
-    console.warn('[openAssignModal] Erro ao actualizar caches:', e);
+
+  // ── Cache temporal (M-04) ────────────────────────────────────────────────
+  const needsRefresh = _pickerNeedsRefresh();
+  if (needsRefresh) {
+    // Mostrar indicador de carregamento apenas quando realmente vai ao Firebase
+    document.getElementById('assign-list-content').innerHTML =
+      '<div class="assign-empty" style="color:var(--text3)">⟳ A carregar...</div>';
   }
+  document.getElementById('assign-modal').style.display = 'flex';
+
+  if (needsRefresh) {
+    try {
+      const [alocDocs, novosDocs, eqDocs] = await Promise.all([
+        fbGetAlocacoes(),
+        fbGetRhNovos(),
+        fbGetEquipas(),
+      ]);
+      updateAlocacoesCache(alocDocs);
+      updateRhNovosCache(novosDocs);
+      updateEquipasCache(eqDocs);
+
+      // Reparar 'alocado' órfãos: equipa inexistente OU slot não tem esta pessoa
+      const activeEqs = new Set(Object.keys(_equipasCache));
+      for (const a of Object.values(_alocacoesCache)) {
+        if (a.status !== 'alocado') continue;
+        const biUpper = (a.bi || '').toUpperCase();
+        let isOrphan = !a.equipa_id || !activeEqs.has(a.equipa_id);
+        if (!isOrphan) {
+          const eq     = _equipasCache[a.equipa_id];
+          const slotBi = (eq[a.role_na_equipa]?.bi || '').toUpperCase();
+          if (!a.role_na_equipa || slotBi !== biUpper) isOrphan = true;
+        }
+        if (isOrphan) {
+          delete _alocacoesCache[biUpper];
+          fbRemoveAlocacao(a.bi).catch(() => {});
+        }
+      }
+
+      // Marcar cache como fresco
+      _pickerLastRefresh = Date.now();
+      _pickerDirty       = false;
+      console.log('%c[M-04 picker]%c Actualizado do Firebase (TTL reiniciado 30s)',
+        'color:#60a5fa;font-weight:bold', 'color:inherit');
+    } catch(e) {
+      console.warn('[M-04 picker] Erro ao actualizar caches:', e);
+    }
+  } else {
+    console.log('%c[M-04 picker]%c Cache reutilizado (' +
+      Math.round((PICKER_TTL_MS - (Date.now() - _pickerLastRefresh)) / 1000) + 's restantes)',
+      'color:#34d399;font-weight:bold', 'color:inherit');
+  }
+
   renderAssignList();
   setTimeout(() => document.getElementById('assign-search-inp').focus(), 100);
 }
@@ -4665,6 +4702,7 @@ async function criarNovaEquipa(supervisorBI, coordenacao) {
   const result = await _fbSaveEquipaWithRetry(eq);
   if (result.success) {
     _equipasCache[id] = eq;
+    _invalidatePickerCache();
     renderHierarquia();
     showToast('Equipa ' + num + ' criada. ✅', 'success');
   } else {
@@ -4704,6 +4742,7 @@ async function removerEquipa(equipaId) {
     }
   }
   delete _equipasCache[equipaId];
+  _invalidatePickerCache();
   renderHierarquia();
   showToast('Equipa eliminada. Membros devolvidos ao pool.', 'warn');
 }
@@ -4740,6 +4779,7 @@ async function removerMembroEquipa(equipaId, role) {
   await fbRemoveAlocacao(bi).catch(() => {});
   delete _alocacoesCache[(bi||'').toUpperCase()];
   _equipasCache[equipaId] = eq;
+  _invalidatePickerCache();
   renderHierarquia();
   showToast((nome||'').split(' ')[0] + ' removido da equipa.', 'warn');
 }
@@ -4815,6 +4855,7 @@ async function _assignMemberToTeam(equipaId, memberRole, prof) {
   }
 
   _equipasCache[equipaId] = eq;
+  _invalidatePickerCache();
   renderHierarquia();
   showToast(prof.nome.split(' ')[0] + ' adicionado à Equipa ' + eq.equipa_num + '. ✅', 'success');
 }
