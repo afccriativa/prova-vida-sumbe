@@ -3437,19 +3437,33 @@ async function _cleanupOrphans() {
     }
   }
 
-  // 4. Libertar entradas 'alocado' cujo equipa_id já não existe em _equipasCache
-  //    Resolve o caso de membros que ficam "presos" após eliminação de equipa ou supervisor
+  // 4. Libertar entradas 'alocado' cujo equipa_id já não existe OU cujo slot na equipa está vazio
+  //    Resolve a inconsistência: alocacoes_2r diz "estou na Equipa X" mas Equipa X não tem esta pessoa
   const activeEquipaIds = new Set(Object.keys(_equipasCache));
   for (const a of Object.values(_alocacoesCache)) {
     if (a.status !== 'alocado') continue;
-    const eqId = a.equipa_id;
-    if (!eqId) {
-      // alocado sem equipa_id — estado inválido, libertar
-      delete _alocacoesCache[(a.bi || '').toUpperCase()];
-      orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
-    } else if (!activeEquipaIds.has(eqId)) {
-      // a equipa foi eliminada mas o membro não foi libertado
-      delete _alocacoesCache[(a.bi || '').toUpperCase()];
+    const biUpper = (a.bi || '').toUpperCase();
+    let isOrphan = false;
+
+    if (!a.equipa_id) {
+      // 'alocado' sem equipa_id — estado inválido
+      isOrphan = true;
+    } else if (!activeEquipaIds.has(a.equipa_id)) {
+      // equipa foi eliminada mas membro não foi libertado
+      isOrphan = true;
+    } else {
+      // equipa existe — verificar se realmente tem esta pessoa no slot correspondente
+      const eq   = _equipasCache[a.equipa_id];
+      const role = a.role_na_equipa; // 'mobilizador' | 'vacinador' | 'registador'
+      const slotBi = (eq[role]?.bi || '').toUpperCase();
+      if (!role || !eq[role] || slotBi !== biUpper) {
+        // equipa tem o slot vazio ou com outra pessoa
+        isOrphan = true;
+      }
+    }
+
+    if (isOrphan) {
+      delete _alocacoesCache[biUpper];
       orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
     }
   }
@@ -3772,13 +3786,20 @@ async function openAssignModal(coordenacao, role, equipaId, memberRole) {
     updateAlocacoesCache(alocDocs);
     updateRhNovosCache(novosDocs);
     updateEquipasCache(eqDocs);
-    // Reparar entradas 'alocado' cujo equipa_id já não existe — liberta membros presos
+    // Reparar 'alocado' órfãos: equipa inexistente OU slot não tem esta pessoa
     const activeEqs = new Set(Object.keys(_equipasCache));
     for (const a of Object.values(_alocacoesCache)) {
       if (a.status !== 'alocado') continue;
-      if (!a.equipa_id || !activeEqs.has(a.equipa_id)) {
-        delete _alocacoesCache[(a.bi || '').toUpperCase()];
-        fbRemoveAlocacao(a.bi).catch(() => {}); // silencioso
+      const biUpper = (a.bi || '').toUpperCase();
+      let isOrphan = !a.equipa_id || !activeEqs.has(a.equipa_id);
+      if (!isOrphan) {
+        const eq = _equipasCache[a.equipa_id];
+        const slotBi = (eq[a.role_na_equipa]?.bi || '').toUpperCase();
+        if (!a.role_na_equipa || slotBi !== biUpper) isOrphan = true;
+      }
+      if (isOrphan) {
+        delete _alocacoesCache[biUpper];
+        fbRemoveAlocacao(a.bi).catch(() => {});
       }
     }
   } catch(e) {
