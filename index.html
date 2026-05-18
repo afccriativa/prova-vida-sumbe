@@ -3012,7 +3012,10 @@ function equipasSubtab(name) {
   document.querySelectorAll('.equipas-subpanel').forEach(p => p.style.display = 'none');
   document.querySelector('[data-subtab="'+name+'"]').classList.add('active');
   document.getElementById('equipas-sub-'+name).style.display = 'block';
-  if (name === 'rh-list')    renderRhNovosList();
+  if (name === 'rh-list') {
+    // Actualizar cache de equipas para diagnóstico C-01 ser preciso
+    fbGetEquipas().then(docs => { updateEquipasCache(docs); renderRhNovosList(); }).catch(() => renderRhNovosList());
+  }
   if (name === 'hierarquia') loadHierarquia();
   if (name === 'progresso')  loadProgresso();  // FASE G
   if (name === 'rh-novo')    setTimeout(() => document.getElementById('rh-f-nome').focus(), 100);
@@ -3051,9 +3054,63 @@ function renderRhNovosList() {
   }
 
   const linhas = filtrados.map((r, i) => {
-    const conf2r = r.confirmado2R
-      ? '<span style="font-size:9px;font-weight:700;background:rgba(46,204,113,.15);color:var(--green);padding:2px 7px;border-radius:10px">✅ 2ª RONDA</span>'
-      : '<span style="font-size:9px;color:var(--text3)">Por confirmar</span>';
+    const biUpper = (r.bi || '').toUpperCase();
+
+    // ── Diagnóstico de estado real (C-01) ──────────────────────────────────
+    // Verificar se está num slot activo de equipa (fonte de verdade absoluta)
+    let emEquipa = null; // { equipa_num, supervisor_nome, coordenacao }
+    for (const eq of Object.values(_equipasCache)) {
+      for (const role of ['mobilizador','vacinador','registador']) {
+        if ((eq[role]?.bi || '').toUpperCase() === biUpper) {
+          const supEntry = _alocacoesCache[(eq.supervisor_id||'').toUpperCase()];
+          emEquipa = {
+            equipa_num:     eq.equipa_num,
+            supervisor_nome: supEntry ? supEntry.nome.split(' ').slice(0,2).join(' ') : '—',
+            coordenacao:    eq.coordenacao || '—',
+          };
+          break;
+        }
+      }
+      if (emEquipa) break;
+    }
+
+    // Verificar se tem entrada em alocacoes_2r (mesmo que não esteja numa equipa visível)
+    const alocEntry = _alocacoesCache[biUpper];
+    const isOrphan  = !emEquipa && alocEntry && alocEntry.status === 'alocado';
+    const isPorAlocar = !emEquipa && alocEntry && alocEntry.status === 'por_alocar';
+
+    // ── Badge de estado ────────────────────────────────────────────────────
+    let estadoBadge;
+    if (!r.confirmado2R) {
+      estadoBadge = '<span style="font-size:9px;color:var(--text3)">Por confirmar</span>';
+    } else if (emEquipa) {
+      estadoBadge =
+        '<span style="font-size:9px;font-weight:700;background:rgba(96,165,250,.12);color:var(--blue);padding:2px 7px;border-radius:10px" ' +
+        'title="Eq.' + emEquipa.equipa_num + ' · ' + escAttr(emEquipa.coordenacao) + ' · Sup: ' + escAttr(emEquipa.supervisor_nome) + '">' +
+        '🔵 Eq.' + emEquipa.equipa_num + '</span>';
+    } else if (isOrphan) {
+      estadoBadge =
+        '<span style="font-size:9px;font-weight:700;background:rgba(240,82,82,.12);color:#f05252;padding:2px 7px;border-radius:10px" ' +
+        'title="Registo alocado no Firebase mas sem equipa activa — preso. Use \'Devolver ao Pool\'.">' +
+        '⚠️ Preso</span>';
+    } else {
+      estadoBadge =
+        '<span style="font-size:9px;font-weight:700;background:rgba(46,204,113,.15);color:var(--green);padding:2px 7px;border-radius:10px">' +
+        '✅ Disponível</span>';
+    }
+
+    // ── Acções ─────────────────────────────────────────────────────────────
+    // Botão "Devolver ao Pool": aparece se preso (órfão) OU em equipa (para mover)
+    const btnDevolver = (r.confirmado2R && (isOrphan || emEquipa))
+      ? '<button class="btn-row-action" style="color:var(--accent2);font-size:10px" title="Devolver ao pool disponível" ' +
+        'data-bi="' + r.bi + '" onclick="devolverAoPool(this.dataset.bi)">♻️</button> '
+      : '';
+
+    const btnConfirmar = (!r.confirmado2R)
+      ? '<button class="btn-row-action" style="color:var(--green)" title="Confirmar para 2ª Ronda" ' +
+        'data-bi="' + r.bi + '" onclick="confirmarRhPara2R(this.dataset.bi)">⚽</button> '
+      : '';
+
     return '<tr>'+
       '<td style="color:var(--text3);font-size:11px">'+(i+1)+'</td>'+
       '<td><span class="rh-novo-badge">NOVO</span></td>'+
@@ -3062,11 +3119,11 @@ function renderRhNovosList() {
       '<td style="font-size:11px;color:var(--text3)">'+ escH(r.coordenacao||'—') +'</td>'+
       '<td><code style="font-size:11px">'+ escH(r.bi) +'</code></td>'+
       '<td style="font-size:11px;color:var(--text3)">'+ escH(r.telefone||'—') +'</td>'+
-      '<td>'+ conf2r +'</td>'+
+      '<td>'+ estadoBadge +'</td>'+
       '<td style="white-space:nowrap">'+
         '<button class="btn-row-action" title="Editar" data-bi="'+r.bi+'" onclick="editRhNovo(this.dataset.bi)">✏️</button> '+
-        (r.confirmado2R ? '' :
-          '<button class="btn-row-action" style="color:var(--green)" title="Adicionar à 2ª Ronda" data-bi="'+r.bi+'" onclick="confirmarRhPara2R(this.dataset.bi)">⚽</button> ')+
+        btnConfirmar +
+        btnDevolver +
         '<button class="btn-del-val" title="Eliminar" data-bi="'+r.bi+'" onclick="deleteRhNovo(this.dataset.bi)">🗑️</button>'+
       '</td>'+
     '</tr>';
@@ -3195,7 +3252,68 @@ async function rhSavedAdd2R() {
   equipasSubtab('rh-list');
 }
 
-// ── Confirmar profissional para 2ª Ronda ─────────────────────────────────────
+// ── Devolver novo RH ao pool disponível (C-01) ───────────────────────────────
+// Limpa qualquer slot activo + entrada alocacoes_2r, preserva confirmado2R:true
+async function devolverAoPool(bi) {
+  const biUpper = bi.toUpperCase();
+  const r       = _rhNovosCache[biUpper];
+  const nome    = r ? r.nome : bi;
+
+  // Identificar onde está preso (para informar o utilizador)
+  let localizacao = '';
+  for (const eq of Object.values(_equipasCache)) {
+    for (const role of ['mobilizador','vacinador','registador']) {
+      if ((eq[role]?.bi || '').toUpperCase() === biUpper) {
+        localizacao = ' (Eq.' + eq.equipa_num + ' · ' + (eq.coordenacao || '') + ')';
+      }
+    }
+  }
+  if (!localizacao && _alocacoesCache[biUpper]) {
+    localizacao = ' (registo Firebase sem equipa activa)';
+  }
+
+  if (!confirm('Devolver ' + nome + ' ao pool disponível?' + localizacao +
+    '\n\nEsta acção remove-o(a) da equipa actual e torna-o(a) disponível para ser atribuído(a) novamente.\nO registo como novo RH e a confirmação para 2ª Ronda são preservados.')) return;
+
+  const ops = [];
+
+  // 1. Limpar todos os slots de equipa que contenham este BI
+  for (const [eqId, eq] of Object.entries(_equipasCache)) {
+    let touched = false;
+    for (const role of ['mobilizador','vacinador','registador']) {
+      if ((eq[role]?.bi || '').toUpperCase() === biUpper) {
+        eq[role] = null;
+        touched   = true;
+      }
+    }
+    if (touched) {
+      updateEquipaStatus(eq);
+      _equipasCache[eqId] = eq;
+      ops.push(fbSaveEquipa(eq).catch(e => console.warn('[devolverAoPool] fbSaveEquipa falhou:', e)));
+    }
+  }
+
+  // 2. Remover entrada em alocacoes_2r (qualquer status)
+  if (_alocacoesCache[biUpper]) {
+    delete _alocacoesCache[biUpper];
+    ops.push(fbRemoveAlocacao(bi).catch(e => console.warn('[devolverAoPool] fbRemoveAlocacao falhou:', e)));
+  }
+
+  // 3. Executar tudo em paralelo
+  await Promise.all(ops);
+
+  // 4. Re-criar entrada com status 'por_alocar' para garantir visibilidade no pool (Fonte 3)
+  if (r) {
+    await _alocarProfissional(
+      r.bi, r.nome, r.funcao, r.coordenacao, r.sexo || 'M',
+      'por_alocar', 'rh_novo', true /* skipRender */
+    );
+  }
+
+  renderRhNovosList();
+  renderHierarquia();
+  showToast(nome.split(' ')[0] + ' devolvido ao pool disponível. ✅', 'success');
+}
 async function confirmarRhPara2R(bi) {
   const result = await fbUpdateRhNovo(bi, { confirmado2R: true });
   if (result.success) {
