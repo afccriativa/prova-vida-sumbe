@@ -1818,10 +1818,7 @@ async function verifyPin(pin, storedHash) {
   return h === storedHash;
 }
 
-// Retorna o hash do PIN — da constante (se definida) ou do localStorage (se configurado no dispositivo)
-function getAdminPinHash() {
-  return ADMIN_PIN_HASH || localStorage.getItem(PIN_STORAGE_KEY) || '';
-}
+// ─── FIM Utilitários PIN ─────────────────────────────────────────────────────
 
 // ─── Funções de Sessão ────────────────────────────────────────────────────────
 function setSession(perfil, bi, nome, coordenacao) {
@@ -2167,6 +2164,12 @@ async function doAuthAdmin() {
   const storedHash = getAdminPinHash();
   const pinRecord  = _readPinRecord();
 
+  // ── Normalizar: se getAdminPinHash() devolveu '__EXPIRED__', usar hash real do record
+  // para que a verificação no ESTADO 3 funcione correctamente
+  const effectiveHash = (storedHash === '__EXPIRED__' && pinRecord?.hash)
+    ? pinRecord.hash
+    : storedHash;
+
   // ── ESTADO 1: Sem PIN — primeiro acesso ──────────────────────────────────
   if (!pinRecord) {
     if (!pin) {
@@ -2192,8 +2195,6 @@ async function doAuthAdmin() {
   }
 
   // ── ESTADO 2: PIN expirado — renovação obrigatória ────────────────────────
-  // Não permite criar um novo PIN — apenas revalida o existente e renova o TTL.
-  // Isto previne que outra pessoa defina um novo PIN num dispositivo desguardado.
   if (storedHash === '__EXPIRED__') {
     if (!pin) {
       showAuthMsg('admin', 'warn',
@@ -2201,15 +2202,15 @@ async function doAuthAdmin() {
       document.getElementById('auth-admin-pin').focus(); return;
     }
     btn.disabled = true; btn.textContent = 'A renovar...';
-    const pinOk = await verifyPin(pin, pinRecord.hash);
+    const pinOk = await verifyPin(pin, effectiveHash);
     btn.disabled = false; btn.textContent = '✔ Entrar';
     if (!pinOk) {
       showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
       document.getElementById('auth-admin-pin').value = '';
       document.getElementById('auth-admin-pin').focus(); return;
     }
-    // PIN correcto → renovar TTL
-    _savePinRecord(pinRecord.hash);
+    // PIN correcto → renovar TTL com novo formato
+    _savePinRecord(effectiveHash);
     const rec = findBI(bi);
     setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
     closeAuthModal('admin');
@@ -2225,7 +2226,7 @@ async function doAuthAdmin() {
     document.getElementById('auth-admin-pin').focus(); return;
   }
   btn.disabled = true; btn.textContent = 'A verificar...';
-  const pinOk = await verifyPin(pin, storedHash);
+  const pinOk = await verifyPin(pin, effectiveHash);
   btn.disabled = false; btn.textContent = '✔ Entrar';
   if (!pinOk) {
     showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
@@ -2233,7 +2234,7 @@ async function doAuthAdmin() {
     document.getElementById('auth-admin-pin').focus(); return;
   }
   // PIN correcto → rolling window: renovar expiração a cada login
-  _savePinRecord(storedHash);
+  _savePinRecord(effectiveHash);
   const rec = findBI(bi);
   setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
   closeAuthModal('admin');
