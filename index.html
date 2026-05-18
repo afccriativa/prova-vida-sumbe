@@ -40,6 +40,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .header-count { text-align: right; margin-right: 8px; }
 .header-count strong { font-size: 22px; color: var(--accent2); display: block; line-height: 1; }
 .header-count span { font-size: 10px; color: var(--text3); }
+/* ── Countdown (sessão supervisor) ── */
+#hdr-countdown { text-align:right; margin-right:8px; min-width:130px; }
+.cd-phase   { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+.cd-main    { font-size:19px; font-weight:800; line-height:1; }
+.cd-sub     { font-size:9px; color:var(--text3); margin-top:1px; }
+.cd-pulse   { animation: cd-pulse-anim 1s ease-in-out infinite; }
+@keyframes cd-pulse-anim { 0%,100%{opacity:1} 50%{opacity:.6} }
 
 .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; gap: 4px; }
 .tab { padding: 12px 20px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text3); border-bottom: 3px solid transparent; transition: all 0.2s; letter-spacing: 0.3px; user-select: none; }
@@ -1125,10 +1132,11 @@ input, textarea, select {
     <h1>🏥 PROVA DE VIDA — 2ª RONDA PÓLIO | SUMBE 2026</h1>
     <p>Direcção Municipal de Saúde · Campanha nOPV2 · Confirmação de Disponibilidade</p>
   </div>
-  <div class="header-count">
+  <div class="header-count" id="hdr-count-admin">
     <strong id="hdr-total">0</strong>
     <span>verificados</span>
   </div>
+  <div id="hdr-countdown" style="display:none;text-align:right;margin-right:8px;min-width:130px"></div>
   <div class="fb-status-wrap" title="Estado de sincronização Firebase">
     <span id="fb-status" class="fb-status" style="color:var(--text3)">◌</span>
     <span class="fb-status-label" id="fb-status-label">—</span>
@@ -2338,6 +2346,7 @@ async function doLogout() {
     confirmLabel: 'Terminar', cancelLabel: 'Ficar',
   });
   if (!ok) return;
+  stopCountdown();
   sessionStopWatcher();  // FASE 10: parar vigilância
   sessionHideWarning();  // FASE 10: esconder aviso se visível
   stopAdminListener();
@@ -6414,16 +6423,109 @@ function exportCSV() {
   showToast('CSV exportado com '+rows.length+' registos','success');
 }
 
-function updateHeaderCount() {
-  const el = document.getElementById('hdr-total');
+// ── Contagem regressiva para a Campanha (sessão Supervisor) ──────────────────
+const CD_START = new Date('2026-05-22T07:00:00'); // início oficial da campanha
+const CD_END   = new Date('2026-05-24T18:00:00'); // fim da campanha
+let   _cdInterval = null;
+
+function _cdRender() {
+  const el = document.getElementById('hdr-countdown');
   if (!el) return;
-  const wrap = el.closest('.header-count');
-  if (isSupervisorSession()) {
-    if (wrap) wrap.style.visibility = 'hidden'; // preserva layout, esconde número
+  const now  = new Date();
+  const msToStart = CD_START - now;
+  const msToEnd   = CD_END   - now;
+
+  // ── FASE 1: Antes da campanha ─────────────────────────────────────────────
+  if (msToStart > 0) {
+    const total   = Math.floor(msToStart / 1000);
+    const dias    = Math.floor(total / 86400);
+    const horas   = Math.floor((total % 86400) / 3600);
+    const mins    = Math.floor((total % 3600)  / 60);
+    const segs    = total % 60;
+
+    let mainTxt, subTxt;
+    if (dias > 0) {
+      mainTxt = dias + 'd ' + String(horas).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
+      subTxt  = 'Falta' + (dias === 1 ? ' ' : 'm ') + dias + ' dia' + (dias !== 1 ? 's' : '')
+               + ' e ' + horas + 'h para a campanha';
+    } else if (horas > 0) {
+      mainTxt = String(horas).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(segs).padStart(2,'0') + 's';
+      subTxt  = 'Faltam ' + horas + 'h ' + mins + 'm para a campanha';
+    } else {
+      mainTxt = String(mins).padStart(2,'0') + 'm ' + String(segs).padStart(2,'0') + 's';
+      subTxt  = 'A campanha começa em breve!';
+    }
+    el.innerHTML =
+      '<div class="cd-phase" style="color:var(--accent2)">⏳ Pré-campanha</div>' +
+      '<div class="cd-main cd-pulse" style="color:var(--accent2)">' + mainTxt + '</div>' +
+      '<div class="cd-sub">' + subTxt + '</div>';
     return;
   }
-  if (wrap) wrap.style.visibility = '';
-  el.textContent = Object.keys(getMergedConfs()).length;
+
+  // ── FASE 2: Campanha em curso ─────────────────────────────────────────────
+  if (msToEnd > 0) {
+    const total   = Math.floor(msToEnd / 1000);
+    const dias    = Math.floor(total / 86400);
+    const horas   = Math.floor((total % 86400) / 3600);
+    const mins    = Math.floor((total % 3600)  / 60);
+    const segs    = total % 60;
+
+    let mainTxt, subTxt;
+    if (dias > 0) {
+      mainTxt = dias + 'd ' + String(horas).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
+      subTxt  = 'Termina em ' + dias + ' dia' + (dias !== 1 ? 's' : '') + ' e ' + horas + 'h';
+    } else {
+      mainTxt = String(horas).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(segs).padStart(2,'0');
+      subTxt  = 'Fim da campanha hoje às '
+               + CD_END.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    }
+    el.innerHTML =
+      '<div class="cd-phase" style="color:var(--green)">🟢 CAMPANHA ACTIVA</div>' +
+      '<div class="cd-main" style="color:var(--green)">' + mainTxt + '</div>' +
+      '<div class="cd-sub">' + subTxt + '</div>';
+    return;
+  }
+
+  // ── FASE 3: Campanha concluída ────────────────────────────────────────────
+  if (_cdInterval) { clearInterval(_cdInterval); _cdInterval = null; }
+  el.innerHTML =
+    '<div class="cd-phase" style="color:var(--text3)">✅ Campanha concluída</div>' +
+    '<div class="cd-main" style="color:var(--text3);font-size:13px">22–24 Mai 2026</div>' +
+    '<div class="cd-sub">Obrigado pela participação!</div>';
+}
+
+function startCountdown() {
+  _cdRender();
+  if (_cdInterval) clearInterval(_cdInterval);
+  if (new Date() < CD_END) {
+    _cdInterval = setInterval(_cdRender, 1000);
+  }
+}
+
+function stopCountdown() {
+  if (_cdInterval) { clearInterval(_cdInterval); _cdInterval = null; }
+  const el = document.getElementById('hdr-countdown');
+  if (el) el.innerHTML = '';
+}
+
+function updateHeaderCount() {
+  const adminWrap = document.getElementById('hdr-count-admin');
+  const cdWrap    = document.getElementById('hdr-countdown');
+  const el        = document.getElementById('hdr-total');
+  if (!el) return;
+
+  if (isSupervisorSession()) {
+    // Supervisor: esconder contador, mostrar countdown
+    if (adminWrap) adminWrap.style.display = 'none';
+    if (cdWrap)    cdWrap.style.display    = 'block';
+    startCountdown();
+  } else {
+    // Admin: mostrar contador, esconder countdown
+    stopCountdown();
+    if (adminWrap) adminWrap.style.display  = '';
+    if (cdWrap)    cdWrap.style.display     = 'none';
+    el.textContent = Object.keys(getMergedConfs()).length;
+  }
 }
 
 
