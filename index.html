@@ -3437,6 +3437,23 @@ async function _cleanupOrphans() {
     }
   }
 
+  // 4. Libertar entradas 'alocado' cujo equipa_id já não existe em _equipasCache
+  //    Resolve o caso de membros que ficam "presos" após eliminação de equipa ou supervisor
+  const activeEquipaIds = new Set(Object.keys(_equipasCache));
+  for (const a of Object.values(_alocacoesCache)) {
+    if (a.status !== 'alocado') continue;
+    const eqId = a.equipa_id;
+    if (!eqId) {
+      // alocado sem equipa_id — estado inválido, libertar
+      delete _alocacoesCache[(a.bi || '').toUpperCase()];
+      orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
+    } else if (!activeEquipaIds.has(eqId)) {
+      // a equipa foi eliminada mas o membro não foi libertado
+      delete _alocacoesCache[(a.bi || '').toUpperCase()];
+      orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
+    }
+  }
+
   if (orphanMemberOps.length || orphanTeamOps.length) {
     await Promise.all([...orphanMemberOps, ...orphanTeamOps]);
     console.log('[Hierarquia] Limpeza de órfãos: ' +
@@ -3747,12 +3764,23 @@ async function openAssignModal(coordenacao, role, equipaId, memberRole) {
   document.getElementById('assign-modal').style.display = 'flex';
   // Actualizar caches em paralelo para garantir dados frescos no picker
   try {
-    const [alocDocs, novosDocs] = await Promise.all([
+    const [alocDocs, novosDocs, eqDocs] = await Promise.all([
       fbGetAlocacoes(),
       fbGetRhNovos(),
+      fbGetEquipas(),
     ]);
     updateAlocacoesCache(alocDocs);
     updateRhNovosCache(novosDocs);
+    updateEquipasCache(eqDocs);
+    // Reparar entradas 'alocado' cujo equipa_id já não existe — liberta membros presos
+    const activeEqs = new Set(Object.keys(_equipasCache));
+    for (const a of Object.values(_alocacoesCache)) {
+      if (a.status !== 'alocado') continue;
+      if (!a.equipa_id || !activeEqs.has(a.equipa_id)) {
+        delete _alocacoesCache[(a.bi || '').toUpperCase()];
+        fbRemoveAlocacao(a.bi).catch(() => {}); // silencioso
+      }
+    }
   } catch(e) {
     console.warn('[openAssignModal] Erro ao actualizar caches:', e);
   }
