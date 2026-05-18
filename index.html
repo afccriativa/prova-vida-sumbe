@@ -3317,24 +3317,31 @@ function updateAlocacoesCache(docs) {
 }
 
 // ── Pool de profissionais disponíveis para 2ª Ronda ──────────────────────────
-// Três fontes:
-//   1. RH_DATA com SIM na Consolidação (1ª ronda, respeitando realocações)
-//   2. Novos RH em _rhNovosCache com confirmado2R=true
-//   3. Quem está em _alocacoesCache com status='por_alocar' (confirmado mas sem equipa)
-// Exclui quem está definitivamente colocado (coord, supervisor, alocado numa equipa).
+// Fonte de verdade para ocupação de slots: _equipasCache (não _alocacoesCache).
+// _alocacoesCache pode ficar inconsistente; _equipasCache reflecte o estado real das equipas.
 function getAvailablePool(funcoes) {
-  const pool  = [];
-  const seen  = new Set(); // evitar duplicados entre fontes
+  const pool     = [];
+  const seen     = new Set();
   const funcoesSet = Array.isArray(funcoes) ? new Set(funcoes) : new Set([funcoes]);
 
-  // Quem está definitivamente colocado (não pode voltar ao pool)
-  const blocked = new Set(
+  // ── Fonte de verdade absoluta: quem está DE FACTO num slot de equipa ──────
+  const actuallyInTeam = new Set();
+  Object.values(_equipasCache).forEach(eq => {
+    ['mobilizador','vacinador','registador'].forEach(role => {
+      if (eq[role]?.bi) actuallyInTeam.add((eq[role].bi).toUpperCase());
+    });
+  });
+
+  // Liderança (coord/supervisor) — também bloqueados
+  const inLeadership = new Set(
     Object.values(_alocacoesCache)
-      .filter(a => a.status !== 'por_alocar')
+      .filter(a => a.status === 'coord' || a.status === 'supervisor')
       .map(a => (a.bi || '').toUpperCase())
   );
 
-  // FONTE 1: RH_DATA com SIM na Consolidação, respeitando realocações
+  const blocked = new Set([...actuallyInTeam, ...inLeadership]);
+
+  // FONTE 1: RH_DATA com SIM na Consolidação, não bloqueado, função correcta
   const cs = getMergedConfs();
   RH_DATA.forEach(r => {
     const biUpper = r.bi.toUpperCase();
@@ -3349,7 +3356,7 @@ function getAvailablePool(funcoes) {
     pool.push({ ...r, funcao: funcaoEf, coordenacao: coordEf, _fonte: 'rh_data' });
   });
 
-  // FONTE 2: Novos RH confirmados em rh_novos_2r
+  // FONTE 2: Novos RH com confirmado2R=true, não bloqueados
   Object.values(_rhNovosCache).forEach(r => {
     const biUpper = (r.bi || '').toUpperCase();
     if (!biUpper || seen.has(biUpper)) return;
@@ -3360,12 +3367,12 @@ function getAvailablePool(funcoes) {
     pool.push({ ...r, _fonte: 'rh_novo' });
   });
 
-  // FONTE 3: Confirmados via alocacoes_2r com 'por_alocar' não cobertos pelas fontes anteriores
-  // Cobre casos onde confirmado2R não foi definido mas a alocação existe
+  // FONTE 3: por_alocar em alocacoes_2r não cobertos pelas fontes anteriores
   Object.values(_alocacoesCache).forEach(a => {
     const biUpper = (a.bi || '').toUpperCase();
     if (!biUpper || seen.has(biUpper)) return;
     if (a.status !== 'por_alocar') return;
+    if (blocked.has(biUpper)) return;
     if (!funcoesSet.has(a.funcao)) return;
     seen.add(biUpper);
     pool.push({ ...a, _fonte: a.fonte || 'rh_novo' });
