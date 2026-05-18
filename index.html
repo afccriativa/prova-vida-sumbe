@@ -3174,7 +3174,18 @@ async function rhSavedAdd2R() {
 async function confirmarRhPara2R(bi) {
   const result = await fbUpdateRhNovo(bi, { confirmado2R: true });
   if (result.success) {
-    if (_rhNovosCache[bi.toUpperCase()]) _rhNovosCache[bi.toUpperCase()].confirmado2R = true;
+    const r = _rhNovosCache[bi.toUpperCase()];
+    if (r) {
+      r.confirmado2R = true;
+      // Garantir entrada em alocacoes_2r com 'por_alocar' para que
+      // a Fonte 3 do getAvailablePool o detecte sempre, mesmo com cache desactualizado
+      if (!_alocacoesCache[bi.toUpperCase()]) {
+        await _alocarProfissional(
+          r.bi, r.nome, r.funcao, r.coordenacao, r.sexo || 'M',
+          'por_alocar', 'rh_novo', true /* skipRender */
+        );
+      }
+    }
     renderRhNovosList();
     showToast('Profissional confirmado para a 2ª Ronda. ✅', 'success');
   } else {
@@ -3306,40 +3317,58 @@ function updateAlocacoesCache(docs) {
 }
 
 // ── Pool de profissionais disponíveis para 2ª Ronda ──────────────────────────
-// Retorna profissionais SIM da Consolidação + novos RH confirmados
-// filtrados por função e excluindo os já alocados.
-// USA getR2Record para respeitar realocações de função e coordenação.
+// Três fontes:
+//   1. RH_DATA com SIM na Consolidação (1ª ronda, respeitando realocações)
+//   2. Novos RH em _rhNovosCache com confirmado2R=true
+//   3. Quem está em _alocacoesCache com status='por_alocar' (confirmado mas sem equipa)
+// Exclui quem está definitivamente colocado (coord, supervisor, alocado numa equipa).
 function getAvailablePool(funcoes) {
-  const pool = [];
-  // Excluir apenas quem está DEFINITIVAMENTE colocado: coord, supervisor ou alocado numa equipa.
-  // 'por_alocar' significa "confirmado para 2R mas ainda sem equipa" — DEVE aparecer no picker.
-  const jaAlocados = new Set(
+  const pool  = [];
+  const seen  = new Set(); // evitar duplicados entre fontes
+  const funcoesSet = Array.isArray(funcoes) ? new Set(funcoes) : new Set([funcoes]);
+
+  // Quem está definitivamente colocado (não pode voltar ao pool)
+  const blocked = new Set(
     Object.values(_alocacoesCache)
       .filter(a => a.status !== 'por_alocar')
       .map(a => (a.bi || '').toUpperCase())
   );
-  const funcoesSet = Array.isArray(funcoes) ? new Set(funcoes) : new Set([funcoes]);
 
-  // Fonte 1: RH_DATA com estado SIM na Consolidação
+  // FONTE 1: RH_DATA com SIM na Consolidação, respeitando realocações
   const cs = getMergedConfs();
   RH_DATA.forEach(r => {
-    const conf = cs[r.bi.toUpperCase()];
+    const biUpper = r.bi.toUpperCase();
+    const conf    = cs[biUpper];
     if (!conf || conf.status !== 'SIM') return;
-    if (jaAlocados.has(r.bi.toUpperCase())) return;
-    // Usar função e coordenação efectivas da 2ª Ronda (respeita realocações)
-    const r2          = getR2Record(r.bi) || r;
-    const funcaoEf    = r2.funcao_r2       || r.funcao;
-    const coordEf     = r2.coordenacao_r2  || r.coordenacao;
+    if (blocked.has(biUpper)) return;
+    const r2       = getR2Record(r.bi) || r;
+    const funcaoEf = r2.funcao_r2      || r.funcao;
+    const coordEf  = r2.coordenacao_r2 || r.coordenacao;
     if (!funcoesSet.has(funcaoEf)) return;
+    seen.add(biUpper);
     pool.push({ ...r, funcao: funcaoEf, coordenacao: coordEf, _fonte: 'rh_data' });
   });
 
-  // Fonte 2: Novos RH confirmados para 2ª Ronda
+  // FONTE 2: Novos RH confirmados em rh_novos_2r
   Object.values(_rhNovosCache).forEach(r => {
+    const biUpper = (r.bi || '').toUpperCase();
+    if (!biUpper || seen.has(biUpper)) return;
     if (!r.confirmado2R) return;
+    if (blocked.has(biUpper)) return;
     if (!funcoesSet.has(r.funcao)) return;
-    if (jaAlocados.has((r.bi||'').toUpperCase())) return;
+    seen.add(biUpper);
     pool.push({ ...r, _fonte: 'rh_novo' });
+  });
+
+  // FONTE 3: Confirmados via alocacoes_2r com 'por_alocar' não cobertos pelas fontes anteriores
+  // Cobre casos onde confirmado2R não foi definido mas a alocação existe
+  Object.values(_alocacoesCache).forEach(a => {
+    const biUpper = (a.bi || '').toUpperCase();
+    if (!biUpper || seen.has(biUpper)) return;
+    if (a.status !== 'por_alocar') return;
+    if (!funcoesSet.has(a.funcao)) return;
+    seen.add(biUpper);
+    pool.push({ ...a, _fonte: a.fonte || 'rh_novo' });
   });
 
   return pool;
@@ -3700,7 +3729,7 @@ async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, 
 }
 
 // ── Modal de atribuição (picker) ─────────────────────────────────────────────
-function openAssignModal(coordenacao, role, equipaId, memberRole) {
+async function openAssignModal(coordenacao, role, equipaId, memberRole) {
   _assignContext = { coordenacao, role, equipaId: equipaId || null, memberRole: memberRole || null };
   const isCoord  = role === 'coord';
   const isMember = role === 'member';
@@ -3712,8 +3741,22 @@ function openAssignModal(coordenacao, role, equipaId, memberRole) {
     ? 'Equipa — ' + coordenacao
     : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp').value = '';
-  renderAssignList();
+  // Mostrar modal imediatamente com estado de carregamento
+  document.getElementById('assign-list-content').innerHTML =
+    '<div class="assign-empty" style="color:var(--text3)">⟳ A carregar...</div>';
   document.getElementById('assign-modal').style.display = 'flex';
+  // Actualizar caches em paralelo para garantir dados frescos no picker
+  try {
+    const [alocDocs, novosDocs] = await Promise.all([
+      fbGetAlocacoes(),
+      fbGetRhNovos(),
+    ]);
+    updateAlocacoesCache(alocDocs);
+    updateRhNovosCache(novosDocs);
+  } catch(e) {
+    console.warn('[openAssignModal] Erro ao actualizar caches:', e);
+  }
+  renderAssignList();
   setTimeout(() => document.getElementById('assign-search-inp').focus(), 100);
 }
 
