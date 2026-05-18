@@ -2142,6 +2142,7 @@ function _completeSupervisorLogin(bi, sup) {
   activateSystem();
   fbLogSessao(bi, sup.nome, sup.coordenacao, 0);
   APP_SESSION.validacoesCount = 0;
+  updateHeaderCount(); // esconder contador de verificados na sessão supervisor
   showToast('✅ Bem-vindo(a), ' + sup.nome.split(' ')[0] + '!', 'success');
 }
 
@@ -6414,7 +6415,15 @@ function exportCSV() {
 }
 
 function updateHeaderCount() {
-  document.getElementById('hdr-total').textContent = Object.keys(getMergedConfs()).length;
+  const el = document.getElementById('hdr-total');
+  if (!el) return;
+  const wrap = el.closest('.header-count');
+  if (isSupervisorSession()) {
+    if (wrap) wrap.style.visibility = 'hidden'; // preserva layout, esconde número
+    return;
+  }
+  if (wrap) wrap.style.visibility = '';
+  el.textContent = Object.keys(getMergedConfs()).length;
 }
 
 
