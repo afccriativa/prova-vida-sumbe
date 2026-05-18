@@ -1522,6 +1522,35 @@ input, textarea, select {
   </div>
 </div>
 
+
+<!-- Modal de confirmação reutilizável (substitui confirm() nativo — A-03) -->
+<div id="modal-confirm" style="display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+              width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.5)">
+    <div id="mc-header" style="padding:18px 20px 0;display:flex;align-items:flex-start;gap:12px">
+      <span id="mc-icon" style="font-size:22px;flex-shrink:0;line-height:1.2">⚠️</span>
+      <div>
+        <div id="mc-title" style="font-size:14px;font-weight:700;color:var(--text);line-height:1.4"></div>
+        <div id="mc-body"  style="font-size:12px;color:var(--text2);margin-top:5px;line-height:1.55;white-space:pre-line"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:16px 20px 18px;justify-content:flex-end">
+      <button id="mc-btn-cancel"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;
+               padding:8px 18px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer">
+        Cancelar
+      </button>
+      <button id="mc-btn-confirm"
+        style="border:none;border-radius:8px;padding:8px 20px;font-size:13px;
+               font-weight:700;cursor:pointer;transition:opacity .15s">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- FASES C+D — Modal: Atribuição de profissional à hierarquia -->
 <div id="assign-modal" class="assign-modal" style="display:none">
   <div class="assign-box">
@@ -2175,8 +2204,13 @@ function updateSessionBar() {
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
-function doLogout() {
-  if (!confirm('Deseja terminar a sessão e voltar ao ecrã de selecção de perfil?')) return;
+async function doLogout() {
+  const ok = await showConfirmModal({
+    icon: '↩️', title: 'Terminar Sessão',
+    body: 'Deseja terminar a sessão e voltar ao ecrã de selecção de perfil?',
+    confirmLabel: 'Terminar', cancelLabel: 'Ficar',
+  });
+  if (!ok) return;
   sessionStopWatcher();  // FASE 10: parar vigilância
   sessionHideWarning();  // FASE 10: esconder aviso se visível
   stopAdminListener();
@@ -2185,7 +2219,52 @@ function doLogout() {
   showSelectionScreen();
 }
 
-// ─── Utilitários de mensagem nos modais ───────────────────────────────────────
+// ─── Modal de confirmação reutilizável (A-03) ─────────────────────────────────
+// Substitui o confirm() nativo em todas as acções destrutivas.
+// Uso: const ok = await showConfirmModal({ title, body, confirmLabel, danger })
+// danger: true → botão vermelho; false/omit → laranja
+let _confirmResolve = null;
+
+function showConfirmModal({ title = '', body = '', confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', icon = '⚠️', danger = false } = {}) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('mc-icon').textContent   = icon;
+    document.getElementById('mc-title').textContent  = title;
+    document.getElementById('mc-body').textContent   = body;
+    document.getElementById('mc-btn-cancel').textContent  = cancelLabel;
+    document.getElementById('mc-btn-confirm').textContent = confirmLabel;
+    const btnC = document.getElementById('mc-btn-confirm');
+    btnC.style.background = danger ? '#f05252' : 'var(--accent2)';
+    btnC.style.color      = '#fff';
+    const el = document.getElementById('modal-confirm');
+    el.style.display = 'flex';
+    // Focus no botão de cancelar por defeito (mais seguro)
+    setTimeout(() => document.getElementById('mc-btn-cancel').focus(), 60);
+  });
+}
+
+function _confirmClose(result) {
+  document.getElementById('modal-confirm').style.display = 'none';
+  if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+}
+
+// Inicializar listeners do modal (chamado uma vez no DOMContentLoaded)
+function _initConfirmModal() {
+  document.getElementById('mc-btn-confirm').addEventListener('click', () => _confirmClose(true));
+  document.getElementById('mc-btn-cancel').addEventListener('click',  () => _confirmClose(false));
+  // Fechar com Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('modal-confirm').style.display === 'flex') {
+      _confirmClose(false);
+    }
+  });
+  // Fechar ao clicar no backdrop
+  document.getElementById('modal-confirm').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-confirm')) _confirmClose(false);
+  });
+}
+
+// ─── FIM Modal de confirmação ─────────────────────────────────────────────────
 function showAuthMsg(modal, tipo, texto) {
   const el = document.getElementById('auth-' + modal + '-msg');
   if (!el) return;
@@ -3272,8 +3351,12 @@ async function devolverAoPool(bi) {
     localizacao = ' (registo Firebase sem equipa activa)';
   }
 
-  if (!confirm('Devolver ' + nome + ' ao pool disponível?' + localizacao +
-    '\n\nEsta acção remove-o(a) da equipa actual e torna-o(a) disponível para ser atribuído(a) novamente.\nO registo como novo RH e a confirmação para 2ª Ronda são preservados.')) return;
+  const ok = await showConfirmModal({
+    icon: '♻️', title: 'Devolver ao Pool — ' + nome,
+    body: 'Remove-o(a) da equipa actual' + localizacao + ' e torna-o(a) disponível para ser atribuído(a) novamente.\n\nO registo como novo RH e a confirmação para 2ª Ronda são preservados.',
+    confirmLabel: 'Devolver ao Pool',
+  });
+  if (!ok) return;
 
   const ops = [];
 
@@ -3361,7 +3444,12 @@ function editRhNovo(bi) {
 async function deleteRhNovo(bi) {
   const r = _rhNovosCache[bi.toUpperCase()];
   if (!r) return;
-  if (!confirm('Eliminar o registo de "' + r.nome + '" (BI: ' + bi + ')?\nEsta acção não pode ser desfeita.')) return;
+  const ok = await showConfirmModal({
+    icon: '🗑️', title: 'Eliminar registo',
+    body: r.nome + '\nBI: ' + bi + '\n\nEsta acção não pode ser desfeita.',
+    confirmLabel: 'Eliminar', danger: true,
+  });
+  if (!ok) return;
 
   const result = await fbDeleteRhNovo(bi);
   if (result.success) {
@@ -4022,20 +4110,33 @@ async function removerAlocacao(bi) {
   const nome = a ? a.nome : bi;
   const isSupervisor = a && (a.status === 'supervisor' || _effectiveStatus(a) === 'supervisor');
 
-  // Mensagem de confirmação diferente para supervisores (avisa sobre cascata)
-  let msg = 'Remover ' + nome + ' da hierarquia da 2ª Ronda?';
+  // Modal de confirmação contextual
+  const isCoord = a && a.status === 'coord';
+  let modalTitle, modalBody, modalIcon;
   if (isSupervisor) {
     const supTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === biUpper);
     const nTeams   = supTeams.length;
     const nMembers = supTeams.reduce((acc, e) =>
       acc + ['mobilizador','vacinador','registador'].filter(r => e[r]?.bi).length, 0);
-    if (nTeams > 0) {
-      msg = 'Remover ' + nome + ' da hierarquia?\n\n' +
-        '⚠️ Esta acção irá eliminar ' + nTeams + ' equipa(s) e libertar ' +
-        nMembers + ' membro(s) para o pool disponível.';
-    }
+    modalIcon  = '👤';
+    modalTitle = 'Remover Supervisor — ' + nome.split(' ').slice(0,3).join(' ');
+    modalBody  = nTeams > 0
+      ? nTeams + ' equipa(s) e ' + nMembers + ' membro(s) serão libertados para o pool disponível.'
+      : 'O supervisor será removido da hierarquia da 2ª Ronda.';
+  } else if (isCoord) {
+    modalIcon  = '🏛️';
+    modalTitle = 'Remover Coordenadora de Área';
+    modalBody  = nome + ' será removida do slot de Coord área/Comuna.';
+  } else {
+    modalIcon  = '✕';
+    modalTitle = 'Remover da Hierarquia';
+    modalBody  = nome + ' será removido(a) da hierarquia da 2ª Ronda.';
   }
-  if (!confirm(msg)) return;
+  const ok = await showConfirmModal({
+    icon: modalIcon, title: modalTitle, body: modalBody,
+    confirmLabel: 'Remover', danger: isSupervisor,
+  });
+  if (!ok) return;
 
   // Se for supervisor: cascade-delete equipas e membros
   if (isSupervisor) {
@@ -4340,7 +4441,13 @@ async function criarNovaEquipa(supervisorBI, coordenacao) {
 async function removerEquipa(equipaId) {
   const eq = _equipasCache[equipaId];
   if (!eq) return;
-  if (!confirm('Eliminar Equipa ' + eq.equipa_num + ' do Supervisor ' + (eq.supervisor_nome||'') + '?\nOs membros voltam ao pool disponível.')) return;
+  const ok = await showConfirmModal({
+    icon: '🗑️',
+    title: 'Eliminar Equipa ' + eq.equipa_num,
+    body: 'Supervisor: ' + (eq.supervisor_nome || '—') + '\n\nOs membros voltam ao pool disponível.',
+    confirmLabel: 'Eliminar Equipa', danger: true,
+  });
+  if (!ok) return;
   // Remover membros de alocacoes_2r (ignorar falhas individuais — C-01 cleanup trata órfãos)
   const removals = ['mobilizador','vacinador','registador']
     .filter(r => eq[r]?.bi)
@@ -5967,7 +6074,7 @@ function closeReallocModal() {
   reallocCurrentBi = null;
 }
 
-function saveReallocRecord() {
+async function saveReallocRecord() {
   if (!reallocCurrentBi) return;
   const operator = document.getElementById('realloc-operator').value.trim();
   if (!operator) { showToast('Indica o operador responsável.','warn'); return; }
@@ -5979,7 +6086,12 @@ function saveReallocRecord() {
 
   // If nothing was changed, treat as revert
   if (!funcao && !coord && !phone) {
-    if (confirm('Não selecionaste nenhuma alteração. Queres reverter para os dados originais da 1ª Ronda?')) {
+    const ok = await showConfirmModal({
+      icon: '↺', title: 'Reverter para 1ª Ronda',
+      body: 'Não seleccionaste nenhuma alteração.\nQueres reverter para os dados originais da 1ª Ronda?',
+      confirmLabel: 'Reverter',
+    });
+    if (ok) {
       saveRealloc(reallocCurrentBi, null);
       const base = findBI(reallocCurrentBi);
       showToast('↺ Realocação revertida: '+(base?base.nome.split(' ')[0]:''),'warn');
@@ -6003,10 +6115,15 @@ function saveReallocRecord() {
   renderHistory();
 }
 
-function revertReallocRecord() {
+async function revertReallocRecord() {
   if (!reallocCurrentBi) return;
-  if (!confirm('Tens a certeza que queres reverter esta realocação? Os dados voltarão exactamente aos da 1ª Ronda.')) return;
   const base = findBI(reallocCurrentBi);
+  const ok = await showConfirmModal({
+    icon: '↺', title: 'Reverter Realocação',
+    body: (base ? base.nome + '\n\n' : '') + 'Os dados voltarão exactamente aos da 1ª Ronda.',
+    confirmLabel: 'Reverter',
+  });
+  if (!ok) return;
   saveRealloc(reallocCurrentBi, null);
   showToast('↺ Realocação revertida: '+(base?base.nome.split(' ')[0]:''),'warn');
   closeReallocModal();
@@ -6328,6 +6445,9 @@ function showToast(msg, type) {
 document.addEventListener('DOMContentLoaded', () => {
   // FASE 2: Firebase pode já ter inicializado antes do DOMContentLoaded
   if (fbReady()) fbUpdateStatusIndicator('online');
+
+  // Inicializar modal de confirmação (A-03)
+  _initConfirmModal();
 
   // ── Tentar restaurar sessão do separador actual ──────────────────────────
   // sessionStorage sobrevive a refreshes mas apaga ao fechar o separador
