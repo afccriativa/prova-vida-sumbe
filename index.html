@@ -3836,6 +3836,21 @@ async function loadHierarquia() {
 // ── Limpeza de órfãos: membros/equipas cujo supervisor foi eliminado ──────────
 // Resolve o estado corrupto quando um supervisor é removido sem cascata
 async function _cleanupOrphans() {
+  const NOW        = Date.now();
+  const THRESHOLD  = 5 * 60 * 1000; // 5 minutos — protege registos recentes de race condition (M-02)
+
+  // Helper: um registo é suficientemente antigo para ser considerado órfão?
+  // Se confirmedAt não existir, assume que é antigo (compatibilidade com registos anteriores)
+  function isOldEnough(entry) {
+    if (!entry) return true;
+    const ts = entry.confirmedAt?.seconds
+      ? entry.confirmedAt.seconds * 1000          // Firestore Timestamp
+      : entry.confirmedAt
+        ? new Date(entry.confirmedAt).getTime()   // string ISO
+        : 0;                                       // sem data → assumir antigo
+    return (NOW - ts) > THRESHOLD;
+  }
+
   // Conjunto de BIs que são supervisores activos
   const supervisorBIs = new Set(
     Object.values(_alocacoesCache)
@@ -3843,14 +3858,18 @@ async function _cleanupOrphans() {
       .map(a => (a.bi || '').toUpperCase())
   );
 
-  const orphanMemberOps = [];   // promessas de remoção de membros
-  const orphanTeamOps   = [];   // promessas de remoção de equipas
+  const orphanMemberOps = [];
+  const orphanTeamOps   = [];
   const orphanTeamIds   = new Set();
+  let   skippedRecent   = 0; // contador para diagnóstico
 
   // 1. Detectar equipas cujo supervisor já não existe
+  //    Só apagar se o supervisor foi removido há mais de 5 min (evita race condition de latência)
   for (const eq of Object.values(_equipasCache)) {
-    const supId = (eq.supervisor_id || '').toUpperCase();
+    const supId     = (eq.supervisor_id || '').toUpperCase();
+    const supEntry  = supId ? _alocacoesCache[supId] : null;
     if (supId && !supervisorBIs.has(supId)) {
+      if (!isOldEnough(supEntry)) { skippedRecent++; continue; } // muito recente — preservar
       orphanTeamIds.add(eq.id || eq._id);
     }
   }
@@ -3872,51 +3891,56 @@ async function _cleanupOrphans() {
     orphanTeamOps.push(fbDeleteEquipa(id).catch(() => {}));
   }
 
-  // 3. Libertar entradas em alocacoesCache com supervisor_id inválido (membros sem equipa)
+  // 3. Libertar membros com supervisor_id inválido
+  //    Threshold aplicado: só limpa se o membro foi confirmado há mais de 5 min
   for (const a of Object.values(_alocacoesCache)) {
     const supId = (a.supervisor_id || '').toUpperCase();
     if (supId && !supervisorBIs.has(supId)) {
+      if (!isOldEnough(a)) { skippedRecent++; continue; } // muito recente — preservar
       delete _alocacoesCache[(a.bi || '').toUpperCase()];
       orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
     }
   }
 
-  // 4. Libertar entradas 'alocado' cujo equipa_id já não existe OU cujo slot na equipa está vazio
-  //    Resolve a inconsistência: alocacoes_2r diz "estou na Equipa X" mas Equipa X não tem esta pessoa
+  // 4. Libertar 'alocado' cujo equipa_id não existe ou slot está vazio
+  //    Threshold aplicado: só limpa registos com mais de 5 min
   const activeEquipaIds = new Set(Object.keys(_equipasCache));
   for (const a of Object.values(_alocacoesCache)) {
     if (a.status !== 'alocado') continue;
     const biUpper = (a.bi || '').toUpperCase();
-    let isOrphan = false;
+    let isOrphan  = false;
 
     if (!a.equipa_id) {
-      // 'alocado' sem equipa_id — estado inválido
       isOrphan = true;
     } else if (!activeEquipaIds.has(a.equipa_id)) {
-      // equipa foi eliminada mas membro não foi libertado
       isOrphan = true;
     } else {
-      // equipa existe — verificar se realmente tem esta pessoa no slot correspondente
-      const eq   = _equipasCache[a.equipa_id];
-      const role = a.role_na_equipa; // 'mobilizador' | 'vacinador' | 'registador'
+      const eq     = _equipasCache[a.equipa_id];
+      const role   = a.role_na_equipa;
       const slotBi = (eq[role]?.bi || '').toUpperCase();
-      if (!role || !eq[role] || slotBi !== biUpper) {
-        // equipa tem o slot vazio ou com outra pessoa
-        isOrphan = true;
-      }
+      if (!role || !eq[role] || slotBi !== biUpper) isOrphan = true;
     }
 
     if (isOrphan) {
+      if (!isOldEnough(a)) { skippedRecent++; continue; } // muito recente — preservar
       delete _alocacoesCache[biUpper];
       orphanMemberOps.push(fbRemoveAlocacao(a.bi).catch(() => {}));
     }
   }
 
+  // Executar operações Firebase em paralelo
   if (orphanMemberOps.length || orphanTeamOps.length) {
     await Promise.all([...orphanMemberOps, ...orphanTeamOps]);
-    console.log('[Hierarquia] Limpeza de órfãos: ' +
-      orphanTeamOps.length + ' equipa(s) e ' + orphanMemberOps.length + ' membro(s) libertados.');
   }
+
+  // Log de diagnóstico — visível na consola do browser (F12 → Console)
+  console.log(
+    '%c[M-02 _cleanupOrphans]%c ' +
+    orphanTeamOps.length   + ' equipa(s) órfã(s) removida(s) | ' +
+    orphanMemberOps.length + ' membro(s) libertado(s) | ' +
+    skippedRecent          + ' registo(s) recente(s) preservado(s) (threshold 5min)',
+    'color:#f97316;font-weight:bold', 'color:inherit'
+  );
 }
 
 // ── Render principal da hierarquia ───────────────────────────────────────────
