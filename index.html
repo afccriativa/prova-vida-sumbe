@@ -1380,6 +1380,17 @@ input, textarea, select {
       <button class="btn-hier-action" onclick="exportarCSVEquipas()">⬇️ CSV</button>
       <button class="btn-hier-action" onclick="exportarExcelEquipas()">⬇️ Excel</button>
     </div>
+    <!-- Barra de pesquisa na hierarquia -->
+    <div style="padding:10px 0 4px 0;display:flex;align-items:center;gap:8px">
+      <input id="hier-search-inp" type="text" placeholder="🔍  Pesquisar por nome, BI ou coordenação..."
+        oninput="hierSearchUpdate()"
+        style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:8px;
+               padding:9px 14px;color:var(--text);font-size:13px;outline:none"/>
+      <button onclick="document.getElementById('hier-search-inp').value='';hierSearchUpdate()"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;
+               padding:9px 12px;color:var(--text3);cursor:pointer;font-size:12px">✕ Limpar</button>
+    </div>
+    <div id="hier-search-results" style="display:none;padding:4px 0 8px"></div>
     <div id="hier-summary-bar" class="hier-summary"></div>
     <div id="hier-grid" class="hier-grid"></div>
   </div>
@@ -3508,6 +3519,110 @@ function renderHierarquia() {
   const grid = document.getElementById('hier-grid');
   if (!grid) return;
   grid.innerHTML = COORDENACOES_2R.map(coord => renderCoordCard(coord)).join('');
+}
+
+// ── Pesquisa na hierarquia ────────────────────────────────────────────────────
+function hierSearchUpdate() {
+  const q       = (document.getElementById('hier-search-inp')?.value || '').toLowerCase().trim();
+  const resEl   = document.getElementById('hier-search-results');
+  const gridEl  = document.getElementById('hier-grid');
+  const sumEl   = document.getElementById('hier-summary-bar');
+  if (!resEl || !gridEl) return;
+
+  if (!q) {
+    resEl.style.display  = 'none';
+    resEl.innerHTML      = '';
+    gridEl.style.display = '';
+    if (sumEl) sumEl.style.display = '';
+    return;
+  }
+
+  // Esconder grid normal e sumário durante pesquisa
+  gridEl.style.display = 'none';
+  if (sumEl) sumEl.style.display = 'none';
+  resEl.style.display  = 'block';
+
+  // Construir índice de todas as pessoas alocadas
+  const results = [];
+
+  // 1. Coordenadoras de área
+  Object.values(_alocacoesCache).forEach(a => {
+    if (a.status !== 'coord') return;
+    const txt = ((a.nome||'') + ' ' + (a.bi||'') + ' ' + (a.coordenacao||'')).toLowerCase();
+    if (!txt.includes(q)) return;
+    results.push({
+      nome: a.nome, bi: a.bi, funcao: 'Coord área/Comuna',
+      coordenacao: a.coordenacao, onde: '📍 ' + a.coordenacao,
+      tipo: 'coord',
+    });
+  });
+
+  // 2. Supervisores
+  Object.values(_alocacoesCache).forEach(a => {
+    if (a.status !== 'supervisor') return;
+    const txt = ((a.nome||'') + ' ' + (a.bi||'') + ' ' + (a.coordenacao||'')).toLowerCase();
+    if (!txt.includes(q)) return;
+    const eqs = Object.values(_equipasCache).filter(e =>
+      (e.supervisor_id||'').toUpperCase() === (a.bi||'').toUpperCase());
+    results.push({
+      nome: a.nome, bi: a.bi, funcao: 'Supervisor equipa',
+      coordenacao: a.coordenacao,
+      onde: '📍 ' + a.coordenacao + ' · ' + eqs.length + ' equipa(s)',
+      tipo: 'supervisor',
+    });
+  });
+
+  // 3. Membros de equipas
+  Object.values(_equipasCache).forEach(eq => {
+    ['mobilizador','vacinador','registador'].forEach(role => {
+      const m = eq[role];
+      if (!m?.bi) return;
+      const funcaoLabel = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador' }[role];
+      const supEntry    = _alocacoesCache[(eq.supervisor_id||'').toUpperCase()];
+      const supNome     = supEntry ? supEntry.nome.split(' ').slice(0,2).join(' ') : '—';
+      const txt = ((m.nome||'') + ' ' + (m.bi||'') + ' ' + (eq.coordenacao||'')).toLowerCase();
+      if (!txt.includes(q)) return;
+      results.push({
+        nome: m.nome, bi: m.bi || '—', funcao: funcaoLabel,
+        coordenacao: eq.coordenacao,
+        onde: '📍 ' + eq.coordenacao + ' · Sup: ' + supNome + ' · Eq.' + eq.equipa_num,
+        tipo: role,
+      });
+    });
+  });
+
+  if (results.length === 0) {
+    resEl.innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">' +
+      '🔍 Nenhum resultado para "<b>' + escH(q) + '</b>"' +
+      '</div>';
+    return;
+  }
+
+  const typeIcon = { coord:'🏛️', supervisor:'👤', mobilizador:'📱', vacinador:'💉', registador:'📋' };
+  const typeColor = { coord:'var(--accent2)', supervisor:'var(--blue)', mobilizador:'var(--green)', vacinador:'var(--green)', registador:'var(--green)' };
+
+  resEl.innerHTML =
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;padding:0 2px">' +
+      results.length + ' resultado(s) para "<b>' + escH(q) + '</b>"' +
+    '</div>' +
+    results.map(r =>
+      '<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;' +
+              'padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px">' +
+        '<span style="font-size:18px">' + (typeIcon[r.tipo] || '👤') + '</span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:700;font-size:13px;color:var(--text)">' + escH(r.nome) + '</div>' +
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">' +
+            '<span style="background:var(--card);border-radius:4px;padding:1px 6px;margin-right:6px;' +
+                   'color:' + (typeColor[r.tipo]||'var(--text2)') + ';font-weight:600">' +
+              escH(r.funcao) +
+            '</span>' +
+            escH(r.onde) +
+          '</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">BI: ' + escH(r.bi) + '</div>' +
+        '</div>' +
+      '</div>'
+    ).join('');
 }
 
 function hierSumCard(num, lbl, cor) {
