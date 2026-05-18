@@ -2252,8 +2252,58 @@ function activateSystem() {
   } else {
     hideSupervisorPanel();
     startAdminListener();
-    loadRhNovos();                                    // FASE A
-    fbGetAlocacoes().then(docs => updateAlocacoesCache(docs)); // FASE F: pré-carregar cache
+    loadRhNovos()                                              // FASE A
+      .then(() => fbGetAlocacoes())
+      .then(docs => {
+        updateAlocacoesCache(docs);
+        reconciliarNovosRH();                                  // A-02: sincronizar após caches prontos
+      });
+  }
+}
+
+// ── Reconciliação: rh_novos_2r ↔ alocacoes_2r (A-02) ────────────────────────
+// Corre silenciosamente no login Admin.
+// Para cada novo RH com confirmado2R:true sem entrada em alocacoes_2r,
+// cria a entrada com status 'por_alocar' para que apareça no pool.
+// Não altera registos existentes — só cria os que faltam.
+async function reconciliarNovosRH() {
+  if (!isAdminSession()) return;
+  const pendentes = Object.values(_rhNovosCache).filter(r => {
+    if (!r.confirmado2R) return false;                         // não confirmado — ignorar
+    const biUpper = (r.bi || '').toUpperCase();
+    if (!biUpper) return false;
+    const entrada = _alocacoesCache[biUpper];
+    if (!entrada) return true;                                 // sem entrada — precisa reconciliar
+    // Tem entrada mas com status inválido (nem por_alocar, nem coord, nem supervisor, nem alocado)
+    const statusValidos = new Set(['por_alocar','coord','supervisor','alocado']);
+    return !statusValidos.has(entrada.status);
+  });
+
+  if (pendentes.length === 0) return;
+
+  console.log('[A-02] Reconciliação: ' + pendentes.length + ' novo(s) RH sem entrada em alocacoes_2r.');
+
+  for (const r of pendentes) {
+    // Verificar se já está num slot de equipa (não criar por_alocar nesse caso)
+    const biUpper = r.bi.toUpperCase();
+    let emSlot = false;
+    for (const eq of Object.values(_equipasCache)) {
+      for (const role of ['mobilizador','vacinador','registador']) {
+        if ((eq[role]?.bi || '').toUpperCase() === biUpper) { emSlot = true; break; }
+      }
+      if (emSlot) break;
+    }
+    if (emSlot) continue; // já está numa equipa — não sobrescrever
+
+    // Criar entrada 'por_alocar' silenciosamente (skipRender=true)
+    await _alocarProfissional(
+      r.bi, r.nome, r.funcao, r.coordenacao, r.sexo || 'M',
+      'por_alocar', 'rh_novo', true
+    ).catch(e => console.warn('[A-02] Falha ao reconciliar ' + r.bi + ':', e));
+  }
+
+  if (pendentes.length > 0) {
+    console.log('[A-02] Reconciliação concluída: ' + pendentes.length + ' entrada(s) criada(s).');
   }
 }
 
