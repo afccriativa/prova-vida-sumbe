@@ -1746,6 +1746,47 @@ const STORAGE_MODE = 'firebase';
 // localStorage:   persiste para sempre no dispositivo
 const SESSION_STORAGE_KEY = 'pvs_session_2r2026';
 const PIN_STORAGE_KEY      = 'pvs_admin_pin_2r2026';
+const PIN_TTL_MS           = 24 * 60 * 60 * 1000; // 24 horas (A-04)
+
+// ── Helpers de PIN (A-04) ────────────────────────────────────────────────────
+// Estrutura guardada: { hash: "sha256...", expiresAt: timestamp_ms }
+// Retrocompatível: se encontrar string raw (formato antigo), migra automaticamente.
+
+function _readPinRecord() {
+  const raw = localStorage.getItem(PIN_STORAGE_KEY) || '';
+  if (!raw) return null;
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && obj.hash) return obj;           // formato novo
+  } catch(e) {}
+  // Formato antigo (string) → migrar para novo sem expiração definida
+  return { hash: raw, expiresAt: 0 };          // expiresAt:0 → já expirado → força renovação
+}
+
+function _savePinRecord(hash) {
+  const record = { hash, expiresAt: Date.now() + PIN_TTL_MS };
+  try { localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(record)); } catch(e) {}
+}
+
+function _clearPinRecord() {
+  try { localStorage.removeItem(PIN_STORAGE_KEY); } catch(e) {}
+}
+
+function isPinExpired() {
+  const rec = _readPinRecord();
+  if (!rec) return false;       // sem PIN = não expirado (fluxo "primeiro acesso")
+  return Date.now() > rec.expiresAt;
+}
+
+// Retorna o hash do PIN — da constante hardcoded (se definida) ou do localStorage.
+// Retorna '' se o registo estiver expirado (forçará fluxo de renovação em doAuthAdmin).
+function getAdminPinHash() {
+  if (ADMIN_PIN_HASH) return ADMIN_PIN_HASH;  // constante sempre válida
+  const rec = _readPinRecord();
+  if (!rec) return '';
+  if (Date.now() > rec.expiresAt) return '__EXPIRED__';  // sentinel de expiração
+  return rec.hash;
+}
 
 // ─── Sessão do Utilizador Activo ──────────────────────────────────────────────
 // Vive exclusivamente em memória — apaga-se ao recarregar a página (intencional).
@@ -2124,9 +2165,10 @@ async function doAuthAdmin() {
   }
 
   const storedHash = getAdminPinHash();
+  const pinRecord  = _readPinRecord();
 
-  if (!storedHash) {
-    // ── Primeiro acesso: criar PIN ──────────────────────────────────────────
+  // ── ESTADO 1: Sem PIN — primeiro acesso ──────────────────────────────────
+  if (!pinRecord) {
     if (!pin) {
       showAuthMsg('admin', 'warn',
         '🔐 Primeiro acesso. Insira o PIN que deseja criar e clique "Entrar". Mínimo 4 caracteres.');
@@ -2138,18 +2180,46 @@ async function doAuthAdmin() {
     }
     btn.disabled = true; btn.textContent = 'A configurar PIN...';
     const newHash = await hashPin(pin);
-    try { localStorage.setItem(PIN_STORAGE_KEY, newHash); } catch(e) {}
+    _savePinRecord(newHash);
     btn.disabled = false; btn.textContent = '✔ Entrar';
     const rec = findBI(bi);
     setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
     closeAuthModal('admin');
     hideSelectionScreen();
     activateSystem();
-    showToast('🔐 PIN criado e guardado. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
+    showToast('🔐 PIN criado. Válido por 24h. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
     return;
   }
 
-  // ── Acesso normal: verificar PIN ──────────────────────────────────────────
+  // ── ESTADO 2: PIN expirado — renovação obrigatória ────────────────────────
+  // Não permite criar um novo PIN — apenas revalida o existente e renova o TTL.
+  // Isto previne que outra pessoa defina um novo PIN num dispositivo desguardado.
+  if (storedHash === '__EXPIRED__') {
+    if (!pin) {
+      showAuthMsg('admin', 'warn',
+        '🔒 Por segurança, o PIN expirou (>24h). Insira o PIN anterior para renovar o acesso.');
+      document.getElementById('auth-admin-pin').focus(); return;
+    }
+    btn.disabled = true; btn.textContent = 'A renovar...';
+    const pinOk = await verifyPin(pin, pinRecord.hash);
+    btn.disabled = false; btn.textContent = '✔ Entrar';
+    if (!pinOk) {
+      showAuthMsg('admin', 'error', 'PIN incorrecto. Tente novamente.');
+      document.getElementById('auth-admin-pin').value = '';
+      document.getElementById('auth-admin-pin').focus(); return;
+    }
+    // PIN correcto → renovar TTL
+    _savePinRecord(pinRecord.hash);
+    const rec = findBI(bi);
+    setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
+    closeAuthModal('admin');
+    hideSelectionScreen();
+    activateSystem();
+    showToast('🔐 Acesso renovado por 24h. Bem-vindo, ' + (rec ? rec.nome.split(' ')[0] : 'Admin') + '!', 'success');
+    return;
+  }
+
+  // ── ESTADO 3: PIN válido — acesso normal ──────────────────────────────────
   if (!pin) {
     showAuthMsg('admin', 'error', 'Por favor insira o PIN de acesso.');
     document.getElementById('auth-admin-pin').focus(); return;
@@ -2162,7 +2232,8 @@ async function doAuthAdmin() {
     document.getElementById('auth-admin-pin').value = '';
     document.getElementById('auth-admin-pin').focus(); return;
   }
-
+  // PIN correcto → rolling window: renovar expiração a cada login
+  _savePinRecord(storedHash);
   const rec = findBI(bi);
   setSession('admin', bi, rec ? rec.nome : 'Administrador', 'EQUIPA MUNICIPAL');
   closeAuthModal('admin');
