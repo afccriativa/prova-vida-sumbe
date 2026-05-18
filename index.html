@@ -4624,7 +4624,9 @@ async function criarNovaEquipa(supervisorBI, coordenacao) {
   if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const sup = _alocacoesCache[supervisorBI.toUpperCase()] || {};
   const supsTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === supervisorBI.toUpperCase());
-  const num = supsTeams.length + 1;
+  // Usar max do número existente + 1 para evitar duplicados após eliminação de equipas
+  const maxNum = supsTeams.reduce((m, e) => Math.max(m, e.equipa_num || 0), 0);
+  const num    = maxNum + 1;
   const id  = supervisorBI.toUpperCase() + '_E' + Date.now();
   const eq  = {
     id, ronda: RONDA_ID, municipio: MUNICIPIO,
