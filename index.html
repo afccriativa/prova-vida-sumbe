@@ -2298,7 +2298,7 @@ async function reconciliarNovosRH() {
     // Criar entrada 'por_alocar' silenciosamente (skipRender=true)
     await _alocarProfissional(
       r.bi, r.nome, r.funcao, r.coordenacao, r.sexo || 'M',
-      'por_alocar', 'rh_novo', true
+      statusPorFuncao(r.funcao), 'rh_novo', true
     ).catch(e => console.warn('[A-02] Falha ao reconciliar ' + r.bi + ':', e));
   }
 
@@ -3401,6 +3401,7 @@ function validarFormatoBI(bi) {
 
 async function saveRhNovo() {
   if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
+  const nome   = (document.getElementById('rh-f-nome').value  || '').trim();
   const bi     = (document.getElementById('rh-f-bi').value    || '').toUpperCase().trim();
   const funcao = (document.getElementById('rh-f-funcao').value|| '').trim();
   const coord  = (document.getElementById('rh-f-coord').value || '').trim();
@@ -3606,7 +3607,7 @@ async function confirmarRhPara2R(bi) {
       if (!_alocacoesCache[bi.toUpperCase()]) {
         await _alocarProfissional(
           r.bi, r.nome, r.funcao, r.coordenacao, r.sexo || 'M',
-          'por_alocar', 'rh_novo', true /* skipRender */
+          statusPorFuncao(r.funcao), 'rh_novo', true /* skipRender */
         );
       }
     }
