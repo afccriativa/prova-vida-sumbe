@@ -3279,7 +3279,7 @@ function validarFormatoBI(bi) {
 }
 
 async function saveRhNovo() {
-  const nome   = (document.getElementById('rh-f-nome').value  || '').trim();
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const bi     = (document.getElementById('rh-f-bi').value    || '').toUpperCase().trim();
   const funcao = (document.getElementById('rh-f-funcao').value|| '').trim();
   const coord  = (document.getElementById('rh-f-coord').value || '').trim();
@@ -3409,6 +3409,7 @@ async function rhSavedAdd2R() {
 // ── Devolver novo RH ao pool disponível (C-01) ───────────────────────────────
 // Limpa qualquer slot activo + entrada alocacoes_2r, preserva confirmado2R:true
 async function devolverAoPool(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const biUpper = bi.toUpperCase();
   const r       = _rhNovosCache[biUpper];
   const nome    = r ? r.nome : bi;
@@ -3473,6 +3474,7 @@ async function devolverAoPool(bi) {
   showToast(nome.split(' ')[0] + ' devolvido ao pool disponível. ✅', 'success');
 }
 async function confirmarRhPara2R(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const result = await fbUpdateRhNovo(bi, { confirmado2R: true });
   if (result.success) {
     const r = _rhNovosCache[bi.toUpperCase()];
@@ -3517,6 +3519,7 @@ function editRhNovo(bi) {
 
 // ── Eliminar novo RH ─────────────────────────────────────────────────────────
 async function deleteRhNovo(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const r = _rhNovosCache[bi.toUpperCase()];
   if (!r) return;
   const ok = await showConfirmModal({
@@ -4172,6 +4175,7 @@ function getSupsDa(coordenacao) {
 
 // ── Confirmar auto-sugestão de Coord área ────────────────────────────────────
 async function confirmarCoordAuto(bi, coordenacao) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const prof = findProfissional(bi);
   if (!prof) return;
   const r2       = getR2Record(bi) || prof;
@@ -4182,6 +4186,7 @@ async function confirmarCoordAuto(bi, coordenacao) {
 
 // ── Remover alocação ──────────────────────────────────────────────────────────
 async function removerAlocacao(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const biUpper = bi.toUpperCase();
   const a = _alocacoesCache[biUpper];
   const nome = a ? a.nome : bi;
@@ -4246,6 +4251,7 @@ async function removerAlocacao(bi) {
 
 // ── Internal: alocar um profissional ─────────────────────────────────────────
 async function _alocarProfissional(bi, nome, funcao, coordenacao, sexo, status, fonte, skipRender = false) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const now = new Date();
   const doc = {
     bi, nome, funcao, coordenacao, sexo: sexo || 'M',
@@ -4373,6 +4379,7 @@ function renderAssignList() {
 }
 
 async function selectAssignItem(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   if (!_assignContext) return;
   const { coordenacao, role, equipaId, memberRole } = _assignContext;
   const prof = findProfissional(bi);
@@ -4414,6 +4421,7 @@ function statusPorFuncao(funcao) {
 
 // Chamado pelo botão ⚽ na Consolidação
 async function confirmarExistentePara2R(bi) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const prof = findProfissional(bi);
   if (!prof) { showToast('Profissional não encontrado.', 'error'); return; }
   if (_alocacoesCache[bi.toUpperCase()]) { showToast('Já confirmado para a 2ª Ronda.', 'warn'); return; }
@@ -4490,6 +4498,7 @@ async function _fbSaveEquipaWithRetry(eq) {
 
 // ── Criar nova equipa sob um Supervisor ──────────────────────────────────────
 async function criarNovaEquipa(supervisorBI, coordenacao) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const sup = _alocacoesCache[supervisorBI.toUpperCase()] || {};
   const supsTeams = Object.values(_equipasCache).filter(e => e.supervisor_id === supervisorBI.toUpperCase());
   const num = supsTeams.length + 1;
@@ -4516,6 +4525,7 @@ async function criarNovaEquipa(supervisorBI, coordenacao) {
 
 // ── Eliminar equipa e devolver membros ao pool ────────────────────────────────
 async function removerEquipa(equipaId) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const eq = _equipasCache[equipaId];
   if (!eq) return;
   const ok = await showConfirmModal({
@@ -4551,6 +4561,7 @@ async function removerEquipa(equipaId) {
 
 // ── Remover membro de um slot de equipa ──────────────────────────────────────
 async function removerMembroEquipa(equipaId, role) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const eq = _equipasCache[equipaId];
   if (!eq || !eq[role]?.bi) return;
   const bi   = eq[role].bi;
@@ -4586,6 +4597,7 @@ async function removerMembroEquipa(equipaId, role) {
 
 // ── Atribuir membro a um slot de equipa ──────────────────────────────────────
 async function _assignMemberToTeam(equipaId, memberRole, prof) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   const eq = _equipasCache[equipaId];
   if (!eq) return;
 
