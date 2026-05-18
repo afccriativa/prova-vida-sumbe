@@ -4298,6 +4298,18 @@ function updateEquipaStatus(eq) {
   eq.status = filled === 3 ? 'completa' : filled === 0 ? 'vazia' : 'incompleta';
 }
 
+// ── Utilitário: guardar equipa com retry e rollback (C-02) ───────────────────
+// Tenta guardar 1× e faz 1 retry com 1.2s de espera se falhar.
+// Retorna { success, error }. Nunca lança excepção.
+async function _fbSaveEquipaWithRetry(eq) {
+  let result = await fbSaveEquipa(eq);
+  if (!result.success) {
+    await new Promise(res => setTimeout(res, 1200));  // backoff 1.2s
+    result = await fbSaveEquipa(eq);
+  }
+  return result;
+}
+
 // ── Criar nova equipa sob um Supervisor ──────────────────────────────────────
 async function criarNovaEquipa(supervisorBI, coordenacao) {
   const sup = _alocacoesCache[supervisorBI.toUpperCase()] || {};
@@ -4314,7 +4326,7 @@ async function criarNovaEquipa(supervisorBI, coordenacao) {
     createdAt: window._FB ? window._FB.serverTimestamp() : null,
     updatedBy: APP_SESSION.bi || '',
   };
-  const result = await fbSaveEquipa(eq);
+  const result = await _fbSaveEquipaWithRetry(eq);
   if (result.success) {
     _equipasCache[id] = eq;
     renderHierarquia();
@@ -4329,14 +4341,25 @@ async function removerEquipa(equipaId) {
   const eq = _equipasCache[equipaId];
   if (!eq) return;
   if (!confirm('Eliminar Equipa ' + eq.equipa_num + ' do Supervisor ' + (eq.supervisor_nome||'') + '?\nOs membros voltam ao pool disponível.')) return;
-  // Remover membros de /alocacoes_2r/
-  const members = ['mobilizador','vacinador','registador'];
-  const removals = members.filter(r => eq[r]?.bi).map(r => {
-    delete _alocacoesCache[(eq[r].bi||'').toUpperCase()];
-    return fbRemoveAlocacao(eq[r].bi);
-  });
+  // Remover membros de alocacoes_2r (ignorar falhas individuais — C-01 cleanup trata órfãos)
+  const removals = ['mobilizador','vacinador','registador']
+    .filter(r => eq[r]?.bi)
+    .map(r => {
+      delete _alocacoesCache[(eq[r].bi||'').toUpperCase()];
+      return fbRemoveAlocacao(eq[r].bi).catch(() => {});
+    });
   await Promise.all(removals);
-  await fbDeleteEquipa(equipaId);
+  // Eliminar equipa do Firebase com retry
+  const result = await fbDeleteEquipa(equipaId);
+  if (!result.success) {
+    // 1 retry
+    await new Promise(res => setTimeout(res, 1200));
+    const retry = await fbDeleteEquipa(equipaId);
+    if (!retry.success) {
+      showToast('Erro ao eliminar equipa: ' + retry.error, 'error');
+      return;
+    }
+  }
   delete _equipasCache[equipaId];
   renderHierarquia();
   showToast('Equipa eliminada. Membros devolvidos ao pool.', 'warn');
@@ -4348,11 +4371,30 @@ async function removerMembroEquipa(equipaId, role) {
   if (!eq || !eq[role]?.bi) return;
   const bi   = eq[role].bi;
   const nome = eq[role].nome;
-  await fbRemoveAlocacao(bi);
-  delete _alocacoesCache[(bi||'').toUpperCase()];
+
+  // Snapshot para rollback
+  const prevSlot = eq[role];
+  const prevStatus = eq.status;
+
+  // 1. Actualizar cache em memória primeiro (UI responde imediatamente)
   eq[role] = null;
   updateEquipaStatus(eq);
-  await fbSaveEquipa(eq);
+
+  // 2. Guardar equipa no Firebase com retry
+  const eqResult = await _fbSaveEquipaWithRetry(eq);
+  if (!eqResult.success) {
+    // ROLLBACK: reverter cache para estado anterior
+    eq[role]   = prevSlot;
+    eq.status  = prevStatus;
+    _equipasCache[equipaId] = eq;
+    renderHierarquia();
+    showToast('Erro ao gravar: ligação instável. ' + (nome||'').split(' ')[0] + ' não foi removido.', 'error');
+    return;
+  }
+
+  // 3. Só após equipa gravada, remover de alocacoes_2r (ordem garante consistência)
+  await fbRemoveAlocacao(bi).catch(() => {});
+  delete _alocacoesCache[(bi||'').toUpperCase()];
   _equipasCache[equipaId] = eq;
   renderHierarquia();
   showToast((nome||'').split(' ')[0] + ' removido da equipa.', 'warn');
@@ -4363,23 +4405,34 @@ async function _assignMemberToTeam(equipaId, memberRole, prof) {
   const eq = _equipasCache[equipaId];
   if (!eq) return;
 
-  // Limpar qualquer slot anterior desta pessoa (evita duplicados se havia inconsistência)
+  // Snapshots para rollback
+  const prevSlot   = eq[memberRole];
+  const prevStatus = eq.status;
+
+  // Limpar qualquer slot anterior desta pessoa (corrige inconsistências C-01)
   const biUpper = (prof.bi || '').toUpperCase();
   for (const [otherId, otherEq] of Object.entries(_equipasCache)) {
     for (const role of ['mobilizador','vacinador','registador']) {
       if ((otherEq[role]?.bi || '').toUpperCase() === biUpper) {
+        const prevOther       = otherEq[role];
+        const prevStatusOther = otherEq.status;
         otherEq[role] = null;
         updateEquipaStatus(otherEq);
-        await fbSaveEquipa(otherEq).catch(() => {});
+        const r = await _fbSaveEquipaWithRetry(otherEq);
+        if (!r.success) {
+          otherEq[role]  = prevOther;
+          otherEq.status = prevStatusOther;
+        }
         _equipasCache[otherId] = otherEq;
       }
     }
   }
-  // Limpar também alocacoes_2r anterior (se existir)
+  // Limpar alocacoes_2r anterior (se existir)
   if (_alocacoesCache[biUpper]) {
     await fbRemoveAlocacao(prof.bi).catch(() => {});
     delete _alocacoesCache[biUpper];
   }
+
   // Gravar em alocacoes_2r
   const now = new Date();
   const doc = {
@@ -4393,12 +4446,29 @@ async function _assignMemberToTeam(equipaId, memberRole, prof) {
     dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
     ronda: RONDA_ID, municipio: MUNICIPIO,
   };
-  await fbSaveAlocacao(doc);
-  _alocacoesCache[(prof.bi||'').toUpperCase()] = doc;
-  // Actualizar equipa
+  const alocResult = await fbSaveAlocacao(doc);
+  if (!alocResult.success) {
+    showToast('Erro ao gravar alocação: ligação instável. Tente novamente.', 'error');
+    return;
+  }
+  _alocacoesCache[biUpper] = doc;
+
+  // Actualizar slot da equipa em memória e gravar com retry
   eq[memberRole] = { bi: prof.bi, nome: prof.nome };
   updateEquipaStatus(eq);
-  await fbSaveEquipa(eq);
+  const eqResult = await _fbSaveEquipaWithRetry(eq);
+  if (!eqResult.success) {
+    // ROLLBACK: reverter slot e remover alocação já gravada
+    eq[memberRole] = prevSlot;
+    eq.status      = prevStatus;
+    _equipasCache[equipaId] = eq;
+    await fbRemoveAlocacao(prof.bi).catch(() => {});
+    delete _alocacoesCache[biUpper];
+    renderHierarquia();
+    showToast('Erro ao gravar equipa: ligação instável. Operação revertida.', 'error');
+    return;
+  }
+
   _equipasCache[equipaId] = eq;
   renderHierarquia();
   showToast(prof.nome.split(' ')[0] + ' adicionado à Equipa ' + eq.equipa_num + '. ✅', 'success');
