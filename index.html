@@ -675,6 +675,7 @@ input, textarea, select {
   font-family:inherit; outline:none; transition:border-color 0.2s; }
 .rh-field-inp:focus { border-color:var(--accent2); }
 .rh-field-inp.inp-err { border-color:var(--red); }
+.rh-field-inp.inp-ok  { border-color:var(--green); }
 .rh-field-inp option { background:var(--surface); }
 .rh-form-actions { display:flex; gap:10px; margin-top:20px; padding-top:18px;
   border-top:1px solid var(--border); }
@@ -1450,7 +1451,9 @@ input, textarea, select {
           <input id="rh-f-bi" class="rh-field-inp" type="text"
                  placeholder="Ex: 006185927KS046"
                  autocomplete="off" autocapitalize="characters"
-                 inputmode="text" style="letter-spacing:1px">
+                 inputmode="text" style="letter-spacing:1px"
+                 oninput="biInlineValidate(this)">
+          <div id="rh-bi-hint" style="font-size:10px;margin-top:4px;min-height:14px;transition:color .15s"></div>
         </div>
 
         <div>
@@ -3005,6 +3008,16 @@ async function fbSaveRhNovo(data) {
   } catch(e) { return { success: false, error: e.message }; }
 }
 
+// ── Verificar unicidade de BI no Firebase (A-05) ─────────────────────────────
+// Consulta o servidor directamente — mais fiável que o cache local em cenários multi-dispositivo
+async function fbCheckBiExists(bi) {
+  if (!fbReady()) return false; // sem Firebase, confiar no cache local
+  try {
+    const snap = await window._FB.getDoc(window._FB.docRef('rh_novos_2r/' + bi.toUpperCase()));
+    return snap.exists();
+  } catch(e) { return false; } // em caso de erro, não bloquear o utilizador
+}
+
 // ── Firebase: actualizar campo(s) de um novo RH ───────────────────────────────
 async function fbUpdateRhNovo(bi, updates) {
   if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
@@ -3223,6 +3236,48 @@ function renderRhNovosList() {
 // ── Formulário: validar e gravar ─────────────────────────────────────────────
 let _editingRhBI = null; // BI do registo em edição (null = modo criação)
 
+// ── Validação inline do BI enquanto o utilizador escreve ─────────────────────
+function biInlineValidate(input) {
+  const bi    = (input.value || '').toUpperCase().replace(/\s/g, '');
+  const hint  = document.getElementById('rh-bi-hint');
+  if (!hint) return;
+  input.value = bi; // forçar maiúsculas em tempo real
+
+  if (!bi) { hint.textContent = ''; input.classList.remove('inp-err','inp-ok'); return; }
+
+  const val = validarFormatoBI(bi);
+  if (!val.ok) {
+    hint.textContent = val.msg;
+    hint.style.color = 'var(--red, #f05252)';
+    input.classList.add('inp-err'); input.classList.remove('inp-ok');
+  } else {
+    // Verificar duplicidade no cache local (rápido, sem Firebase)
+    const dup = biJaExiste(bi);
+    if (dup && !_editingRhBI) {
+      hint.textContent = '⚠️ BI já existe no sistema.';
+      hint.style.color = 'var(--accent2, #f97316)';
+      input.classList.add('inp-err'); input.classList.remove('inp-ok');
+    } else {
+      hint.textContent = '✓ Formato válido';
+      hint.style.color = 'var(--green, #34d399)';
+      input.classList.remove('inp-err'); input.classList.add('inp-ok');
+    }
+  }
+}
+// Formato aceite: 9 dígitos + 2 letras maiúsculas + 3 dígitos (ex: 006185927KS046)
+// Também aceita formatos mais curtos/antigos com tolerância (ex: sem leading zeros)
+const BI_REGEX = /^[0-9]{6,9}[A-Z]{2}[0-9]{3}$/;
+
+function validarFormatoBI(bi) {
+  const clean = bi.toUpperCase().replace(/\s/g, '');
+  if (!clean) return { ok: false, msg: 'Bilhete de Identidade obrigatório.' };
+  if (clean.length < 11 || clean.length > 14)
+    return { ok: false, msg: 'BI deve ter entre 11 e 14 caracteres (ex: 006185927KS046).' };
+  if (!BI_REGEX.test(clean))
+    return { ok: false, msg: 'Formato de BI inválido. Esperado: dígitos + 2 letras + 3 dígitos (ex: 006185927KS046).' };
+  return { ok: true };
+}
+
 async function saveRhNovo() {
   const nome   = (document.getElementById('rh-f-nome').value  || '').trim();
   const bi     = (document.getElementById('rh-f-bi').value    || '').toUpperCase().trim();
@@ -3239,20 +3294,43 @@ async function saveRhNovo() {
   });
   rhFormMsg('', '');
 
-  // Validação
-  let erros = [];
-  if (!nome)   { erros.push('Nome obrigatório.'); document.getElementById('rh-f-nome').classList.add('inp-err'); }
-  if (!bi)     { erros.push('Bilhete de Identidade obrigatório.'); document.getElementById('rh-f-bi').classList.add('inp-err'); }
-  if (!funcao) { erros.push('Função obrigatória.'); document.getElementById('rh-f-funcao').classList.add('inp-err'); }
+  // ── Validação base ────────────────────────────────────────────────────────
+  const erros = [];
+  if (!nome)   { erros.push('Nome obrigatório.');    document.getElementById('rh-f-nome').classList.add('inp-err'); }
+  if (!funcao) { erros.push('Função obrigatória.');  document.getElementById('rh-f-funcao').classList.add('inp-err'); }
   if (!coord)  { erros.push('Coordenação obrigatória.'); document.getElementById('rh-f-coord').classList.add('inp-err'); }
+
+  // ── Validação de formato do BI (A-05) ─────────────────────────────────────
+  const biVal = validarFormatoBI(bi);
+  if (!biVal.ok) {
+    erros.push(biVal.msg);
+    document.getElementById('rh-f-bi').classList.add('inp-err');
+  }
+
   if (erros.length) { rhFormMsg('err', erros.join(' ')); return; }
 
-  // Verificar duplicidade apenas em modo criação
-  // Em modo edição o BI já existe por definição — é o próprio registo
-  if (!modoEdicao && biJaExiste(bi)) {
-    rhFormMsg('err', 'O Bilhete ' + bi + ' já existe no sistema (RH existente ou já registado para a 2ª Ronda).');
-    document.getElementById('rh-f-bi').classList.add('inp-err');
-    return;
+  // ── Verificação de duplicidade (A-05) ─────────────────────────────────────
+  // Modo criação: verificar cache local E Firebase (cobre cenário multi-dispositivo)
+  if (!modoEdicao) {
+    // Verificação rápida no cache local
+    if (biJaExiste(bi)) {
+      rhFormMsg('err', 'O Bilhete ' + bi + ' já existe no sistema (RH existente ou já registado para a 2ª Ronda).');
+      document.getElementById('rh-f-bi').classList.add('inp-err');
+      return;
+    }
+    // Verificação atómica no Firebase (cobre dois admins a registar o mesmo BI em simultâneo)
+    btn.disabled = true;
+    btn.textContent = '🔍 A verificar BI...';
+    const existeNoFirebase = await fbCheckBiExists(bi);
+    btn.disabled = false;
+    btn.textContent = '💾 Registar Profissional';
+    if (existeNoFirebase) {
+      // Actualizar cache local para ficar sincronizado
+      await loadRhNovos();
+      rhFormMsg('err', 'O Bilhete ' + bi + ' já foi registado por outro operador. Actualiza a lista e verifica.');
+      document.getElementById('rh-f-bi').classList.add('inp-err');
+      return;
+    }
   }
 
   btn.disabled = true;
@@ -3261,9 +3339,9 @@ async function saveRhNovo() {
   const now      = new Date();
   const existing = modoEdicao ? (_rhNovosCache[bi] || {}) : {};
   const doc = {
-    ...existing,          // preservar campos existentes (confirmado2R, registadoEm, etc.)
+    ...existing,
     bi, nome, funcao, coordenacao: coord,
-    telefone: tel, sexo, ronda: '2R2026',
+    telefone: tel, sexo, ronda: RONDA_ID,
     municipio: MUNICIPIO,
     registadoPor: existing.registadoPor || APP_SESSION.bi || '',
     registadoEm:  existing.registadoEm  || (window._FB ? window._FB.serverTimestamp() : null),
@@ -3286,18 +3364,15 @@ async function saveRhNovo() {
   if (funcao === 'Supervisor equipa') {
     SUPERVISORES_INDEX[bi] = { bi, nome, coordenacao: coord, sexo, _novo: true };
   } else if (existing.funcao === 'Supervisor equipa' && funcao !== 'Supervisor equipa') {
-    // Mudou de Supervisor para outra função — remover do índice
     if (SUPERVISORES_INDEX[bi]?._novo) delete SUPERVISORES_INDEX[bi];
   }
 
   if (modoEdicao) {
-    // Modo edição: confirmar e voltar à lista
     _editingRhBI = null;
     rhFormReset();
     equipasSubtab('rh-list');
     showToast('Registo de ' + nome.split(' ')[0] + ' actualizado com sucesso. ✅', 'success');
   } else {
-    // Modo criação: modal pós-registo
     _rhNovoSalvoActual = { bi, nome, funcao, coordenacao: coord, telefone: tel };
     showRhSavedModal();
     rhFormReset();
@@ -3470,7 +3545,7 @@ function rhFormReset() {
   _editingRhBI = null; // sair do modo edição
   ['rh-f-nome','rh-f-bi','rh-f-tel'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.value = ''; el.readOnly = false; el.style.opacity = ''; el.classList.remove('inp-err'); }
+    if (el) { el.value = ''; el.readOnly = false; el.style.opacity = ''; el.classList.remove('inp-err','inp-ok'); }
   });
   ['rh-f-funcao','rh-f-coord'].forEach(id => {
     const el = document.getElementById(id);
@@ -3478,6 +3553,8 @@ function rhFormReset() {
   });
   const sx = document.getElementById('rh-f-sexo');
   if (sx) sx.value = 'M';
+  const hint = document.getElementById('rh-bi-hint');
+  if (hint) hint.textContent = '';
   document.getElementById('btn-rh-save').textContent = '💾 Registar Profissional';
   rhFormMsg('', '');
   document.getElementById('rh-f-nome')?.focus();
