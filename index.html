@@ -314,7 +314,50 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .sp-card-admin { border-color: rgba(244,168,50,0.2); }
 .sp-card-admin:hover { border-color: var(--accent2); box-shadow: 0 8px 32px rgba(244,168,50,0.08); transform: translateY(-4px); }
 .sp-card-admin .sp-card-btn { background: transparent; color: var(--accent2); border: 2px solid var(--accent2); padding: 9px 20px; }
+.sp-card-coord { border-color: rgba(18,65,161,0.25); grid-column: 1 / -1; }
+.sp-card-coord:hover { border-color: #1241a1; box-shadow: 0 8px 32px rgba(18,65,161,0.15); transform: translateY(-4px); }
+.sp-card-coord .sp-card-btn { background: #1241a1; color: #fff; }
 .sp-footer { text-align: center; margin-top: 22px; font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
+/* ── Painel Coordenador ───────────────────────────────────────────────────── */
+#coord-panel { display:none; }
+.coord-info-bar { background:var(--surface2); border-bottom:1px solid var(--border); padding:10px 24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.coord-badge { font-size:10px; font-weight:800; letter-spacing:.6px; color:#6b9dff; background:rgba(18,65,161,.15); padding:4px 10px; border-radius:12px; }
+.coord-info-bar .coord-bar-name { flex:1; font-size:13px; color:var(--text); }
+.coord-info-bar .coord-bar-name strong { font-weight:800; }
+.coord-info-bar .coord-bar-name span { color:var(--text3); font-size:11px; }
+.coord-content { padding:20px 24px; max-width:960px; margin:0 auto; }
+.coord-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+@media(max-width:600px){ .coord-summary{ grid-template-columns:repeat(2,1fr); } }
+.coord-stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+.coord-stat-card .stat-num { font-size:28px; font-weight:900; color:var(--text); }
+.coord-stat-card .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
+.coord-stat-card.stat-complete .stat-num { color:var(--green); }
+.coord-stat-card.stat-incomplete .stat-num { color:#e74c3c; }
+.coord-progress-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+.coord-progress-bar-outer { height:8px; background:var(--surface2); border-radius:4px; margin-top:8px; overflow:hidden; }
+.coord-progress-bar-inner { height:100%; background:var(--green); border-radius:4px; transition:width .4s ease; }
+.coord-section-title { font-size:11px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; }
+.coord-sup-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+.coord-sup-header { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none; transition:background .15s; }
+.coord-sup-header:hover { background:var(--surface2); }
+.coord-sup-name { font-weight:700; font-size:13px; flex:1; }
+.coord-sup-pills { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.coord-sup-pill { font-size:10px; font-weight:700; padding:3px 8px; border-radius:12px; }
+.coord-sup-pill.pill-ok  { background:rgba(46,204,113,.15); color:var(--green); }
+.coord-sup-pill.pill-warn{ background:rgba(231,76,60,.12);  color:#e74c3c; }
+.coord-sup-pill.pill-neutral{ background:var(--surface2); color:var(--text2); }
+.coord-sup-toggle { font-size:11px; color:var(--text3); min-width:14px; text-align:center; }
+.coord-sup-body { display:none; padding:0 16px 12px; border-top:1px solid var(--border); }
+.coord-sup-body.open { display:block; }
+.coord-equipa-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--surface2); flex-wrap:wrap; }
+.coord-equipa-row:last-child { border-bottom:none; }
+.coord-equipa-num { font-size:11px; font-weight:700; color:var(--text3); min-width:68px; }
+.coord-slot { font-size:11px; padding:3px 8px; border-radius:6px; }
+.coord-slot.slot-ok   { background:rgba(46,204,113,.12); color:var(--green); }
+.coord-slot.slot-miss { background:rgba(231,76,60,.1);   color:#e74c3c; font-style:italic; }
+.coord-empty-msg { font-size:12px; color:var(--text3); padding:14px 0; text-align:center; }
+.coord-loading { font-size:13px; color:var(--text3); padding:24px; text-align:center; }
+.sb-coord-area { background:rgba(18,65,161,.15); color:#6b9dff; }
 
 /* Modais de autenticação */
 .auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -1071,6 +1114,12 @@ input, textarea, select {
         <p>Acesso total à consolidação, gestão e auditoria do sistema</p>
         <div class="sp-card-btn">Acesso Administrativo →</div>
       </div>
+      <div class="sp-card sp-card-coord" onclick="selectPerfil('coordenador')">
+        <div class="sp-card-icon">📍</div>
+        <h2>Coordenador de Área</h2>
+        <p>Monitorizar o estado das equipas e supervisores da sua coordenação</p>
+        <div class="sp-card-btn">Entrar como Coordenador →</div>
+      </div>
     </div>
     <div class="sp-footer">Ibisner Solutions · Direcção Municipal de Saúde do Sumbe · 2026</div>
   </div>
@@ -1095,6 +1144,29 @@ input, textarea, select {
     <div class="auth-box-ftr">
       <button class="btn-auth-cancel" onclick="closeAuthModal('sup')">Cancelar</button>
       <button class="btn-auth-enter" onclick="doAuthSupervisor()">✔ Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Autenticação Coordenador de Área (por BI) -->
+<div id="modal-auth-coord" class="auth-modal" style="display:none">
+  <div class="auth-box">
+    <div class="auth-box-hdr">
+      <h2>📍 Acesso Coordenador de Área</h2>
+      <p>Insira o número do seu Bilhete de Identidade para continuar</p>
+    </div>
+    <div class="auth-box-body">
+      <label class="auth-lbl" for="auth-coord-bi">Número do Bilhete de Identidade</label>
+      <input id="auth-coord-bi" class="auth-inp" type="text"
+             placeholder="Ex: 006185927KS046"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             autocapitalize="characters" inputmode="text" enterkeyhint="go"
+             onkeydown="if(event.key==='Enter') doAuthCoordenador()">
+      <div id="auth-coord-msg" class="auth-msg msg-error"></div>
+    </div>
+    <div class="auth-box-ftr">
+      <button class="btn-auth-cancel" onclick="closeAuthModal('coord')">Cancelar</button>
+      <button class="btn-auth-enter" onclick="doAuthCoordenador()">✔ Entrar</button>
     </div>
   </div>
 </div>
@@ -1858,9 +1930,10 @@ function clearSession() {
   try { sessionStorage.removeItem(SESSION_STORAGE_KEY); } catch(e) {}
 }
 
-function isAdminSession()      { return APP_SESSION.perfil === 'admin'; }
-function isSupervisorSession() { return APP_SESSION.perfil === 'supervisor'; }
-function isAuthenticated()     { return APP_SESSION.perfil !== null; }
+function isAdminSession()       { return APP_SESSION.perfil === 'admin'; }
+function isSupervisorSession()  { return APP_SESSION.perfil === 'supervisor'; }
+function isCoordenadorSession() { return APP_SESSION.perfil === 'coordenador'; }
+function isAuthenticated()      { return APP_SESSION.perfil !== null; }
 
 // ─── Funções de Validação de Identidade ───────────────────────────────────────
 function isSupervisorAuthorized(bi) {
@@ -2167,6 +2240,14 @@ function selectPerfil(tipo) {
     document.getElementById('auth-sup-bi').classList.remove('inp-err');
     setTimeout(() => document.getElementById('auth-sup-bi').focus(), 100);
 
+  } else if (tipo === 'coordenador') {
+    const modal = document.getElementById('modal-auth-coord');
+    modal.style.display = 'flex';
+    document.getElementById('auth-coord-bi').value = '';
+    resetAuthMsg('coord');
+    document.getElementById('auth-coord-bi').classList.remove('inp-err');
+    setTimeout(() => document.getElementById('auth-coord-bi').focus(), 100);
+
   } else if (tipo === 'admin') {
     const modal = document.getElementById('modal-auth-admin');
     modal.style.display = 'flex';
@@ -2262,6 +2343,47 @@ function _completeSupervisorLogin(bi, sup) {
   APP_SESSION.validacoesCount = 0;
   updateHeaderCount(); // esconder contador de verificados na sessão supervisor
   showToast('✅ Bem-vindo(a), ' + sup.nome.split(' ')[0] + '!', 'success');
+}
+
+// ─── Autenticação: Coordenador de Área ───────────────────────────────────────
+async function doAuthCoordenador() {
+  const biRaw = document.getElementById('auth-coord-bi').value;
+  const bi    = biRaw.toUpperCase().trim();
+  const input = document.getElementById('auth-coord-bi');
+  const btn   = document.querySelector('#modal-auth-coord .btn-auth-enter');
+
+  if (!bi) {
+    showAuthMsg('coord', 'error', 'Por favor insira o número do Bilhete de Identidade.');
+    input.focus(); return;
+  }
+
+  if (!fbReady()) {
+    showAuthMsg('coord', 'error', 'Firebase indisponível. Verifique a ligação e tente novamente.');
+    input.classList.add('inp-err'); input.focus(); return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ A verificar...'; }
+  try {
+    const alocDocs = await fbGetAlocacoes();
+    const coordDoc = alocDocs.find(doc =>
+      (doc.bi || '').toUpperCase() === bi && doc.status === 'coord'
+    );
+    if (coordDoc) {
+      setSession('coordenador', bi, coordDoc.nome || bi, coordDoc.coordenacao || '');
+      closeAuthModal('coord');
+      hideSelectionScreen();
+      activateSystem();
+      showToast('📍 Bem-vindo(a), ' + (coordDoc.nome || '').split(' ')[0] + '!', 'success');
+    } else {
+      showAuthMsg('coord', 'error', 'Acesso negado. BI não reconhecido como Coordenador de Área desta campanha.');
+      input.classList.add('inp-err'); input.focus();
+    }
+  } catch(e) {
+    showAuthMsg('coord', 'error', 'Erro ao verificar credenciais. Tente novamente.');
+    console.error('[Auth Coord]', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✔ Entrar'; }
+  }
 }
 
 // ─── Autenticação: Administrador ──────────────────────────────────────────────
@@ -2370,6 +2492,9 @@ function activateSystem() {
   if (isSupervisorSession()) {
     showSupervisorPanel();
     stopAdminListener();
+  } else if (isCoordenadorSession()) {
+    showCoordPanel();
+    stopAdminListener();
   } else {
     hideSupervisorPanel();
     startAdminListener();
@@ -2442,6 +2567,9 @@ function updateSessionBar() {
   if (APP_SESSION.perfil === 'admin') {
     badge.className   = 'sb-badge sb-admin';
     badge.textContent = '⚙️ ADMINISTRADOR';
+  } else if (APP_SESSION.perfil === 'coordenador') {
+    badge.className   = 'sb-badge sb-coord-area';
+    badge.textContent = '📍 COORDENADOR';
   } else {
     badge.className   = 'sb-badge sb-supervisor';
     badge.textContent = '🏥 SUPERVISOR';
@@ -2552,6 +2680,164 @@ function hideSupervisorPanel() {
   const tabs = document.querySelector('.tabs');
   if (tabs) tabs.style.removeProperty('display');
   document.querySelectorAll('.panel').forEach(p => p.style.removeProperty('display'));
+}
+
+// ─── Painel Coordenador de Área ───────────────────────────────────────────────
+function showCoordPanel() {
+  const tabs = document.querySelector('.tabs');
+  if (tabs) tabs.style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  document.getElementById('supervisor-panel').style.display = 'none';
+  document.getElementById('coord-panel').style.display = 'block';
+  coordInit();
+}
+
+function hideCoordPanel() {
+  document.getElementById('coord-panel').style.display = 'none';
+  const tabs = document.querySelector('.tabs');
+  if (tabs) tabs.style.removeProperty('display');
+  document.querySelectorAll('.panel').forEach(p => p.style.removeProperty('display'));
+}
+
+function coordInit() {
+  const infoEl = document.getElementById('coord-bar-info');
+  if (infoEl) {
+    infoEl.innerHTML =
+      '<strong>' + escH(APP_SESSION.nome || '') + '</strong>' +
+      (APP_SESSION.coordenacao ? ' · <span>' + escH(APP_SESSION.coordenacao) + '</span>' : '');
+  }
+  updateHeaderCount(); // activar countdown no header
+  renderCoordPanel();
+}
+
+async function renderCoordPanel() {
+  const listEl     = document.getElementById('coord-sup-list');
+  const summaryEl  = document.getElementById('coord-summary-cards');
+  const progressEl = document.getElementById('coord-progress-wrap');
+  if (listEl) listEl.innerHTML = '<div class="coord-loading">⟳ A carregar dados da coordenação...</div>';
+
+  if (!fbReady()) {
+    if (listEl) listEl.innerHTML = '<div class="coord-empty-msg">⚠️ Firebase indisponível. Verifique a ligação.</div>';
+    return;
+  }
+
+  try {
+    const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes(), fbGetEquipas()]);
+    updateAlocacoesCache(alocDocs);
+    updateEquipasCache(eqDocs);
+
+    const myCoord = (APP_SESSION.coordenacao || '').toUpperCase().trim();
+    const SLOTS   = ['mobilizador', 'vacinador', 'registador'];
+    const LABELS  = { mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador' };
+
+    // Supervisores desta coordenação
+    const supervisors = alocDocs.filter(doc =>
+      (doc.coordenacao || '').toUpperCase().trim() === myCoord && doc.status === 'supervisor'
+    );
+
+    // Por cada supervisor, obter equipas e calcular completude
+    const supData = supervisors.map(sup => {
+      const supBI  = (sup.bi || '').toUpperCase();
+      const teams  = eqDocs
+        .filter(eq => (eq.supervisor_id || '').toUpperCase() === supBI)
+        .map(eq => {
+          const missing = SLOTS.filter(s => !eq[s] || !eq[s].bi);
+          return { num: eq.equipa_num, missing, complete: missing.length === 0 };
+        })
+        .sort((a, b) => (a.num || 0) - (b.num || 0));
+      const completeCount = teams.filter(t => t.complete).length;
+      return { bi: supBI, nome: sup.nome || supBI, teams, completeCount };
+    }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+
+    // Totais para os cards de resumo
+    const totalSups       = supData.length;
+    const totalTeams      = supData.reduce((s, x) => s + x.teams.length, 0);
+    const totalComplete   = supData.reduce((s, x) => s + x.completeCount, 0);
+    const totalIncomplete = totalTeams - totalComplete;
+    const pct = totalTeams > 0 ? Math.round((totalComplete / totalTeams) * 100) : 0;
+
+    // ── Cards de resumo ────────────────────────────────────────────────────────
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        `<div class="coord-stat-card"><div class="stat-num">${totalSups}</div><div class="stat-label">Supervisores</div></div>` +
+        `<div class="coord-stat-card"><div class="stat-num">${totalTeams}</div><div class="stat-label">Equipas</div></div>` +
+        `<div class="coord-stat-card stat-complete"><div class="stat-num">${totalComplete}</div><div class="stat-label">Completas ✓</div></div>` +
+        `<div class="coord-stat-card stat-incomplete"><div class="stat-num">${totalIncomplete}</div><div class="stat-label">Incompletas</div></div>`;
+    }
+
+    // ── Barra de progresso ─────────────────────────────────────────────────────
+    if (progressEl) {
+      const cor = pct === 100 ? 'var(--green)' : pct >= 75 ? 'var(--accent2)' : 'var(--text)';
+      progressEl.innerHTML =
+        `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">` +
+        `<span>Progresso geral da coordenação</span>` +
+        `<span style="font-weight:800;color:${cor}">${pct}% ${pct===100?'✓':''}</span></div>` +
+        `<div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:${pct}%"></div></div>`;
+    }
+
+    // ── Lista de supervisores ──────────────────────────────────────────────────
+    if (!listEl) return;
+    if (supData.length === 0) {
+      listEl.innerHTML = '<div class="coord-empty-msg">Nenhum supervisor atribuído a esta coordenação no Firebase.</div>';
+      return;
+    }
+
+    let html = '';
+    supData.forEach(sup => {
+      const hasIssues  = sup.teams.length === 0 || sup.teams.some(t => !t.complete);
+      const openClass  = hasIssues ? 'open' : '';
+      const incCount   = sup.teams.length - sup.completeCount;
+
+      html += `<div class="coord-sup-card">`;
+      // Header clicável
+      html += `<div class="coord-sup-header" onclick="` +
+        `var b=this.nextElementSibling;b.classList.toggle('open');` +
+        `this.querySelector('.coord-sup-toggle').textContent=b.classList.contains('open')?'▲':'▼'">`;
+      html += `<span style="font-size:15px;margin-right:2px">👤</span>`;
+      html += `<span class="coord-sup-name">${escH(sup.nome)}</span>`;
+      html += `<div class="coord-sup-pills">`;
+      html += `<span class="coord-sup-pill pill-neutral">${sup.teams.length} equipa${sup.teams.length!==1?'s':''}</span>`;
+      if (sup.completeCount > 0)
+        html += `<span class="coord-sup-pill pill-ok">${sup.completeCount} completa${sup.completeCount!==1?'s':''} ✓</span>`;
+      if (incCount > 0)
+        html += `<span class="coord-sup-pill pill-warn">${incCount} incompleta${incCount!==1?'s':''}</span>`;
+      if (sup.teams.length === 0)
+        html += `<span class="coord-sup-pill pill-warn">sem equipas</span>`;
+      html += `</div>`;
+      html += `<span class="coord-sup-toggle">${openClass?'▲':'▼'}</span>`;
+      html += `</div>`; // /header
+
+      // Corpo
+      html += `<div class="coord-sup-body ${openClass}">`;
+      if (sup.teams.length === 0) {
+        html += `<div class="coord-empty-msg" style="padding:10px 0">Nenhuma equipa atribuída a este supervisor.</div>`;
+      } else {
+        sup.teams.forEach(team => {
+          html += `<div class="coord-equipa-row">`;
+          html += `<span class="coord-equipa-num">Equipa ${team.num != null ? team.num : '—'}</span>`;
+          SLOTS.forEach(slot => {
+            if (team.missing.includes(slot))
+              html += `<span class="coord-slot slot-miss">✗ ${LABELS[slot]}</span>`;
+            else
+              html += `<span class="coord-slot slot-ok">✓ ${LABELS[slot]}</span>`;
+          });
+          html += `</div>`;
+        });
+      }
+      html += `</div>`; // /body
+      html += `</div>`; // /card
+    });
+    listEl.innerHTML = html;
+
+  } catch(e) {
+    console.error('[Coord Panel]', e);
+    if (listEl) listEl.innerHTML = '<div class="coord-empty-msg">Erro ao carregar dados. Tente actualizar.</div>';
+  }
+}
+
+async function coordRefresh() {
+  showToast('🔄 A actualizar...', 'info');
+  await renderCoordPanel();
 }
 
 // ─── Inicializar painel ───────────────────────────────────────────────────────
@@ -6624,8 +6910,8 @@ function updateHeaderCount() {
   const el        = document.getElementById('hdr-total');
   if (!el) return;
 
-  if (isSupervisorSession()) {
-    // Supervisor: esconder contador, mostrar countdown
+  if (isSupervisorSession() || isCoordenadorSession()) {
+    // Supervisor / Coordenador: esconder contador, mostrar countdown
     if (adminWrap) adminWrap.style.display = 'none';
     if (cdWrap)    cdWrap.style.display    = 'block';
     startCountdown();
@@ -7431,7 +7717,45 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 
-</div>
+</div><!-- /supervisor-panel -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAINEL COORDENADOR DE ÁREA — leitura apenas
+     ═══════════════════════════════════════════════════════════ -->
+<div id="coord-panel" style="display:none">
+
+  <div class="coord-info-bar">
+    <span class="coord-badge">📍 COORDENADOR DE ÁREA</span>
+    <div class="coord-bar-name" id="coord-bar-info"></div>
+  </div>
+
+  <div class="coord-content">
+
+    <div class="coord-summary" id="coord-summary-cards">
+      <div class="coord-stat-card"><div class="stat-num">—</div><div class="stat-label">Supervisores</div></div>
+      <div class="coord-stat-card"><div class="stat-num">—</div><div class="stat-label">Equipas</div></div>
+      <div class="coord-stat-card stat-complete"><div class="stat-num">—</div><div class="stat-label">Completas ✓</div></div>
+      <div class="coord-stat-card stat-incomplete"><div class="stat-num">—</div><div class="stat-label">Incompletas</div></div>
+    </div>
+
+    <div class="coord-progress-wrap" id="coord-progress-wrap">
+      <div style="font-size:12px;color:var(--text2)">Progresso geral da coordenação</div>
+      <div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:0%"></div></div>
+    </div>
+
+    <div class="coord-section-title">Supervisores e Equipas</div>
+    <div id="coord-sup-list">
+      <div class="coord-loading">⟳ A carregar dados da coordenação...</div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="coordRefresh()" style="font-size:12px;padding:8px 14px;">🔄 Actualizar</button>
+      <button class="btn btn-secondary" onclick="window.print()" style="font-size:12px;padding:8px 14px;">🖨️ Imprimir</button>
+    </div>
+
+  </div>
+
+</div><!-- /coord-panel -->
 
 </body>
 </html>
