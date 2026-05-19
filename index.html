@@ -252,7 +252,37 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   .history-table td { color: #000 !important; }
   .sbadge { background: none !important; color: #000 !important; font-weight: bold; border: 1px solid #333; }
   .print-header { display: block !important; margin-bottom: 16px; }
+  /* Painel coordenador — esconder ecrã, mostrar versão impressa */
+  #coord-panel .coord-info-bar,
+  #coord-panel .coord-summary,
+  #coord-panel .coord-progress-wrap,
+  #coord-panel .coord-section-title,
+  #coord-panel #coord-sup-list,
+  #coord-panel > .coord-content > div:last-child { display: none !important; }
+  #coord-panel .coord-content { padding: 0; }
+  #coord-print-view { display: block !important; }
+  .cpr-header { margin-bottom: 14px; border-bottom: 2px solid #1241a1; padding-bottom: 10px; }
+  .cpr-header h2 { font-size: 13pt; font-weight: 900; color: #1241a1; margin: 0 0 3px; }
+  .cpr-header p { font-size: 9pt; color: #555; margin: 0; }
+  .cpr-summary-row { display: flex; gap: 16px; margin-bottom: 14px; font-size: 9pt; }
+  .cpr-summary-row span { border: 1px solid #ccc; border-radius: 4px; padding: 3px 10px; }
+  .cpr-sup-block { margin-bottom: 18px; page-break-inside: avoid; }
+  .cpr-sup-title { font-size: 10pt; font-weight: 800; background: #1241a1; color: #fff;
+    padding: 5px 10px; border-radius: 4px 4px 0 0; margin-bottom: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cpr-sup-title span { font-size: 8pt; font-weight: 400; opacity: .85; }
+  .cpr-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  .cpr-table th { background: #f0f4ff; color: #1241a1; font-weight: 800; text-align: left;
+    padding: 5px 8px; border: 1px solid #ccc; font-size: 8pt; letter-spacing: .3px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cpr-table td { padding: 5px 8px; border: 1px solid #ddd; vertical-align: top; }
+  .cpr-table tr:nth-child(even) td { background: #fafafa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cpr-eq-num { font-weight: 700; color: #333; white-space: nowrap; }
+  .cpr-nome { }
+  .cpr-vago { color: #aaa; font-style: italic; }
 }
+#coord-print-view { display: none; }
 .print-header { display: none; }
 
 @media (max-width: 640px) {
@@ -2741,8 +2771,13 @@ async function renderCoordPanel() {
       const teams  = eqDocs
         .filter(eq => (eq.supervisor_id || '').toUpperCase() === supBI)
         .map(eq => {
-          const missing = SLOTS.filter(s => !eq[s] || !eq[s].bi);
-          return { num: eq.equipa_num, missing, complete: missing.length === 0 };
+          const membros = {
+            mobilizador: eq.mobilizador?.nome || null,
+            vacinador:   eq.vacinador?.nome   || null,
+            registador:  eq.registador?.nome  || null,
+          };
+          const missing = SLOTS.filter(s => !membros[s]);
+          return { num: eq.equipa_num, membros, missing, complete: missing.length === 0 };
         })
         .sort((a, b) => (a.num || 0) - (b.num || 0));
       const completeCount = teams.filter(t => t.complete).length;
@@ -2775,7 +2810,7 @@ async function renderCoordPanel() {
         `<div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:${pct}%"></div></div>`;
     }
 
-    // ── Lista de supervisores ──────────────────────────────────────────────────
+    // ── Lista de supervisores (ecrã) ──────────────────────────────────────────
     if (!listEl) return;
     if (supData.length === 0) {
       listEl.innerHTML = '<div class="coord-empty-msg">Nenhum supervisor atribuído a esta coordenação no Firebase.</div>';
@@ -2807,7 +2842,7 @@ async function renderCoordPanel() {
       html += `<span class="coord-sup-toggle">${openClass?'▲':'▼'}</span>`;
       html += `</div>`; // /header
 
-      // Corpo
+      // Corpo — com nomes dos membros
       html += `<div class="coord-sup-body ${openClass}">`;
       if (sup.teams.length === 0) {
         html += `<div class="coord-empty-msg" style="padding:10px 0">Nenhuma equipa atribuída a este supervisor.</div>`;
@@ -2816,10 +2851,11 @@ async function renderCoordPanel() {
           html += `<div class="coord-equipa-row">`;
           html += `<span class="coord-equipa-num">Equipa ${team.num != null ? team.num : '—'}</span>`;
           SLOTS.forEach(slot => {
-            if (team.missing.includes(slot))
-              html += `<span class="coord-slot slot-miss">✗ ${LABELS[slot]}</span>`;
+            const nome = team.membros[slot];
+            if (nome)
+              html += `<span class="coord-slot slot-ok" title="${escH(nome)}">✓ ${LABELS[slot]}: <em style="font-style:normal;font-weight:600">${escH(nome.split(' ').slice(0,2).join(' '))}</em></span>`;
             else
-              html += `<span class="coord-slot slot-ok">✓ ${LABELS[slot]}</span>`;
+              html += `<span class="coord-slot slot-miss">✗ ${LABELS[slot]}</span>`;
           });
           html += `</div>`;
         });
@@ -2828,6 +2864,63 @@ async function renderCoordPanel() {
       html += `</div>`; // /card
     });
     listEl.innerHTML = html;
+
+    // ── Vista de impressão — 3 colunas por supervisor ─────────────────────────
+    const printEl = document.getElementById('coord-print-view');
+    if (!printEl) return;
+
+    const now      = new Date();
+    const dataStr  = now.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const horaStr  = now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+
+    let ph = '';
+    // Cabeçalho
+    ph += `<div class="cpr-header">`;
+    ph += `<h2>📍 PROVA DE VIDA — 2ª RONDA PÓLIO | SUMBE 2026</h2>`;
+    ph += `<p>Coordenador(a): <strong>${escH(APP_SESSION.nome||'')}</strong> &nbsp;·&nbsp; Coordenação: <strong>${escH(APP_SESSION.coordenacao||'')}</strong> &nbsp;·&nbsp; Impresso em ${dataStr} às ${horaStr}</p>`;
+    ph += `</div>`;
+
+    // Resumo
+    ph += `<div class="cpr-summary-row">`;
+    ph += `<span>${totalSups} Supervisor${totalSups!==1?'es':''}</span>`;
+    ph += `<span>${totalTeams} Equipa${totalTeams!==1?'s':''}</span>`;
+    ph += `<span style="color:#1a7a3c">${totalComplete} Completa${totalComplete!==1?'s':''} ✓</span>`;
+    if (totalIncomplete > 0)
+      ph += `<span style="color:#c0392b">${totalIncomplete} Incompleta${totalIncomplete!==1?'s':''}</span>`;
+    ph += `</div>`;
+
+    // Por supervisor
+    supData.forEach(sup => {
+      const incC = sup.teams.length - sup.completeCount;
+      ph += `<div class="cpr-sup-block">`;
+      ph += `<div class="cpr-sup-title">`;
+      ph += `👤 ${escH(sup.nome)}`;
+      ph += `<span>${sup.teams.length} equipa${sup.teams.length!==1?'s':''} · ${sup.completeCount} completa${sup.completeCount!==1?'s':''} ✓${incC>0?' · '+incC+' incompleta'+(incC!==1?'s':''):''}`;
+      ph += `</span></div>`;
+
+      ph += `<table class="cpr-table"><thead><tr>`;
+      ph += `<th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th>`;
+      ph += `</tr></thead><tbody>`;
+
+      if (sup.teams.length === 0) {
+        ph += `<tr><td colspan="4" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
+      } else {
+        sup.teams.forEach(team => {
+          ph += `<tr>`;
+          ph += `<td class="cpr-eq-num">Eq. ${team.num != null ? team.num : '—'}</td>`;
+          SLOTS.forEach(slot => {
+            const nome = team.membros[slot];
+            ph += nome
+              ? `<td class="cpr-nome">${escH(nome)}</td>`
+              : `<td class="cpr-vago">— Vago —</td>`;
+          });
+          ph += `</tr>`;
+        });
+      }
+      ph += `</tbody></table></div>`;
+    });
+
+    printEl.innerHTML = ph;
 
   } catch(e) {
     console.error('[Coord Panel]', e);
@@ -7752,6 +7845,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <button class="btn btn-secondary" onclick="coordRefresh()" style="font-size:12px;padding:8px 14px;">🔄 Actualizar</button>
       <button class="btn btn-secondary" onclick="window.print()" style="font-size:12px;padding:8px 14px;">🖨️ Imprimir</button>
     </div>
+
+    <!-- Vista de impressão (oculta no ecrã, visível no print) -->
+    <div id="coord-print-view"></div>
 
   </div>
 
