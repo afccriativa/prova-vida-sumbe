@@ -1929,8 +1929,9 @@ async function _migrarBI_oneTime(biAntigo, biNovo) {
   const NEW = biNovo.toUpperCase();
   const { getDoc, setDoc, deleteDoc, getDocs, docRef, colRef } = window._FB;
   const log = [];
+  let algumaMudanca = false;
 
-  // Colecções com BI como ID de documento
+  // ── 1. Colecções com BI como ID de documento ─────────────────────────────
   for (const col of ['validacoes', 'sessoes', 'alocacoes_2r', 'rh_novos_2r']) {
     try {
       const snap = await getDoc(docRef(`${col}/${OLD}`));
@@ -1941,13 +1942,22 @@ async function _migrarBI_oneTime(biAntigo, biNovo) {
         await setDoc(docRef(`${col}/${NEW}`), data);
         await deleteDoc(docRef(`${col}/${OLD}`));
         log.push(`✅ ${col}: migrado`);
+        algumaMudanca = true;
+
+        // Actualizar cache em memória para alocacoes_2r
+        if (col === 'alocacoes_2r') {
+          if (_alocacoesCache[OLD]) {
+            _alocacoesCache[NEW] = { ..._alocacoesCache[OLD], bi: NEW };
+            delete _alocacoesCache[OLD];
+          }
+        }
       }
     } catch(e) {
       log.push(`❌ ${col}: ${e.message}`);
     }
   }
 
-  // equipas_2r: supervisor_id e slots de membros
+  // ── 2. equipas_2r: supervisor_id e slots ─────────────────────────────────
   try {
     const snaps = await getDocs(colRef('equipas_2r'));
     let n = 0;
@@ -1962,14 +1972,24 @@ async function _migrarBI_oneTime(biAntigo, biNovo) {
           eq[slot] = { ...eq[slot], bi: NEW }; changed = true;
         }
       }
-      if (changed) { await setDoc(docRef(`equipas_2r/${ds.id}`), eq); n++; }
+      if (changed) {
+        await setDoc(docRef(`equipas_2r/${ds.id}`), eq);
+        // Actualizar cache em memória
+        if (_equipasCache[ds.id]) {
+          _equipasCache[ds.id] = { ..._equipasCache[ds.id], ...eq };
+        }
+        n++;
+      }
     }
-    if (n > 0) log.push(`✅ equipas_2r: ${n} equipa(s) actualizadas`);
+    if (n > 0) {
+      log.push(`✅ equipas_2r: ${n} equipa(s) actualizadas`);
+      algumaMudanca = true;
+    }
   } catch(e) {
     log.push(`❌ equipas_2r: ${e.message}`);
   }
 
-  // localStorage — realocações
+  // ── 3. localStorage — realocações ────────────────────────────────────────
   try {
     const KEY = 'realocacoes_2ronda_sumbe_2026';
     const raw = localStorage.getItem(KEY);
@@ -1980,9 +2000,28 @@ async function _migrarBI_oneTime(biAntigo, biNovo) {
         delete obj[OLD];
         localStorage.setItem(KEY, JSON.stringify(obj));
         log.push(`✅ localStorage realocacoes: migrado`);
+        algumaMudanca = true;
       }
     }
   } catch(e) { /* localStorage indisponível */ }
+
+  // ── 4. Actualizar SUPERVISORES_INDEX em memória ───────────────────────────
+  if (SUPERVISORES_INDEX[OLD] && !SUPERVISORES_INDEX[NEW]) {
+    SUPERVISORES_INDEX[NEW] = { ...SUPERVISORES_INDEX[OLD], bi: NEW };
+    delete SUPERVISORES_INDEX[OLD];
+    log.push(`✅ SUPERVISORES_INDEX: actualizado`);
+    algumaMudanca = true;
+  }
+
+  // ── 5. Recarregar hierarquia se estiver visível ───────────────────────────
+  if (algumaMudanca) {
+    try { if (typeof _invalidatePickerCache === 'function') _invalidatePickerCache(); } catch(e) {}
+    const hierarquiaVisivel = document.getElementById('equipas-sub-hierarquia')?.style.display !== 'none';
+    if (hierarquiaVisivel && typeof loadHierarquia === 'function') {
+      setTimeout(() => loadHierarquia(), 400);
+      log.push(`🔄 Hierarquia recarregada`);
+    }
+  }
 
   if (log.length) {
     console.log(`[Migração BI] ${OLD} → ${NEW}`);
