@@ -332,7 +332,79 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .sp-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .sp-prompt { font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 20px; }
 .sp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 520px) { .sp-cards { grid-template-columns: 1fr; } }
+/* ── Cards mobile: layout horizontal compacto (≤ 520px) ── */
+@media (max-width: 520px) {
+  /* Container: scroll permitido, alinhado ao topo */
+  .screen-perfil { align-items: flex-start; overflow-y: auto; padding: 16px 14px; }
+
+  /* Header: compacto */
+  .sp-header { gap: 10px; margin-bottom: 4px; }
+  .sp-divider { margin: 12px 0; }
+  .sp-prompt { font-size: 11px; letter-spacing: .7px; margin-bottom: 12px; }
+
+  /* Grid: coluna única, gap reduzido */
+  .sp-cards { grid-template-columns: 1fr; gap: 9px; }
+
+  /* Card: layout horizontal via CSS Grid */
+  .sp-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    text-align: left;
+    padding: 13px 14px;
+    gap: 0 12px;
+    border-radius: 12px;
+  }
+  .sp-card:active { transform: scale(0.975); opacity: 0.88; transition: transform .1s, opacity .1s; }
+
+  /* Ícone: coluna 1, ocupa as 2 linhas, círculo colorido */
+  .sp-card-icon {
+    grid-column: 1; grid-row: 1 / 3;
+    font-size: 22px; margin-bottom: 0;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; align-self: center;
+  }
+  .sp-card-sup   .sp-card-icon { background: rgba(46,204,113,.15); }
+  .sp-card-admin .sp-card-icon { background: rgba(244,168,50,.13); }
+  .sp-card-coord .sp-card-icon { background: rgba(18,65,161,.15);  }
+
+  /* Título: coluna 2, linha 1 */
+  .sp-card h2 {
+    grid-column: 2; grid-row: 1;
+    font-size: 13px; margin-bottom: 2px; line-height: 1.2;
+  }
+
+  /* Descrição: coluna 2, linha 2 */
+  .sp-card p {
+    grid-column: 2; grid-row: 2;
+    font-size: 10px; margin-bottom: 0;
+    min-height: unset; line-height: 1.35;
+  }
+
+  /* Botão: coluna 3, ocupa as 2 linhas */
+  .sp-card-btn {
+    grid-column: 3; grid-row: 1 / 3;
+    align-self: center; padding: 9px 13px;
+    font-size: 11px; font-weight: 800;
+    white-space: nowrap; border-radius: 8px; line-height: 1.2;
+  }
+  /* Admin: botão sólido no mobile (outline é fraco ao toque) */
+  .sp-card-admin .sp-card-btn {
+    background: var(--accent2); color: #fff;
+    border: none; padding: 9px 13px;
+  }
+  /* Coordenador: sem grid-column span (já é 1 col) */
+  .sp-card-coord { grid-column: unset; }
+
+  .sp-footer { margin-top: 12px; font-size: 9px; }
+}
+
+/* Remover hover "stuck" em dispositivos touch */
+@media (hover: none) {
+  .sp-card:hover { transform: none !important; box-shadow: none !important; }
+}
 .sp-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 28px 22px 22px; cursor: pointer; transition: all 0.25s ease; text-align: center; }
 .sp-card-icon { font-size: 40px; margin-bottom: 12px; }
 .sp-card h2 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
@@ -388,6 +460,21 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .coord-empty-msg { font-size:12px; color:var(--text3); padding:14px 0; text-align:center; }
 .coord-loading { font-size:13px; color:var(--text3); padding:24px; text-align:center; }
 .sb-coord-area { background:rgba(18,65,161,.15); color:#6b9dff; }
+/* Faixa de alerta de vagas */
+.coord-vagas-alert-bar { display:flex; align-items:center; gap:10px; background:rgba(231,76,60,.08);
+  border:1px solid rgba(231,76,60,.25); border-radius:10px; padding:12px 16px; margin-bottom:16px;
+  cursor:pointer; transition:background .15s; }
+.coord-vagas-alert-bar:hover { background:rgba(231,76,60,.14); }
+.coord-vagas-alert-icon { font-size:18px; flex-shrink:0; }
+.coord-vagas-alert-text { flex:1; }
+.coord-vagas-alert-text strong { font-size:13px; color:#e74c3c; font-weight:800; }
+.coord-vagas-alert-text span { font-size:11px; color:var(--text3); display:block; margin-top:2px; }
+.coord-vagas-alert-link { font-size:12px; font-weight:700; color:#e74c3c; white-space:nowrap; }
+/* Modal vagas — linhas da tabela */
+.modal-vagas-row td { padding:9px 14px; border-bottom:1px solid var(--border); color:var(--text); }
+.modal-vagas-row:last-child td { border-bottom:none; }
+.modal-vagas-row:nth-child(even) td { background:var(--surface2); }
+.mvr-funcao { font-weight:700; color:#e74c3c; }
 /* Pré-visualização ecrã (filtro) */
 .cfp-sup-block { margin-bottom:18px; }
 .cfp-sup-hdr { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 10px;
@@ -590,12 +677,9 @@ input, textarea, select {
   .search-row { flex-direction: column; }
   .search-input { font-size: 16px; padding: 14px 16px; }
 
-  /* Ecrã de selecção: cards generosos */
+  /* Ecrã de selecção: ajuste intermédio (tablets pequenos) */
   .sp-header-text h1 { font-size: 12px; }
   .sp-header-text p { font-size: 10px; }
-  .sp-card { padding: 24px 18px 20px; }
-  .sp-card-icon { font-size: 36px; }
-  .sp-card h2 { font-size: 15px; }
 
   /* Modais auth: ocupar largura disponível */
   .auth-box { max-width: 100%; }
@@ -661,10 +745,7 @@ input, textarea, select {
   .sup-estado-btn { padding: 20px 6px; min-height: 84px; font-size: 12px; }
   .sup-estado-btn .bico { font-size: 28px; margin-bottom: 4px; }
 
-  .sp-cards { gap: 10px; }
-  .sp-card { padding: 22px 16px 18px; }
-  .sp-footer { font-size: 9px; margin-top: 16px; }
-}
+  /* sp-card gerido pelo breakpoint 520px */ }
 
 /* ── Phones muito pequenos (360px e abaixo) ── */
 @media (max-width: 360px) {
@@ -677,8 +758,8 @@ input, textarea, select {
   .sup-counter-num { font-size: 28px; }
   .sup-estado-btn { font-size: 11px; padding: 18px 4px; }
   .sup-estado-btn .bico { font-size: 26px; }
-  .sp-card h2 { font-size: 14px; }
-  .sp-card p { font-size: 10px; min-height: 30px; }
+  .sp-card h2 { font-size: 12px; }
+  .sp-card p { font-size: 10px; }
 }
 
 /* ── Safe area para phones com notch (iPhone X+, Android com câmara) ── */
@@ -2803,12 +2884,30 @@ async function renderCoordPanel() {
     const pct = totalTeams > 0 ? Math.round((totalComplete / totalTeams) * 100) : 0;
 
     // ── Cards de resumo ────────────────────────────────────────────────────────
+    // Calcular vagas totais em falta
+    const vagasList = [];
+    supData.forEach(sup => {
+      sup.teams.forEach(t => {
+        t.missing.forEach(slot => {
+          vagasList.push({ supervisor: sup.nome, equipa: t.num, slot });
+        });
+      });
+    });
+    const totalVagas = vagasList.length;
+    _coordVagasList = vagasList;
+
+    const SLOT_LABEL = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador' };
+
     if (summaryEl) {
+      const vagasSubtxt = totalIncomplete > 0
+        ? `<div style="font-size:10px;color:#e74c3c;margin-top:3px;font-weight:700">${totalVagas} vaga${totalVagas!==1?'s':''} em falta</div>`
+        : '';
       summaryEl.innerHTML =
         `<div class="coord-stat-card"><div class="stat-num">${totalSups}</div><div class="stat-label">Supervisores</div></div>` +
         `<div class="coord-stat-card"><div class="stat-num">${totalTeams}</div><div class="stat-label">Equipas</div></div>` +
         `<div class="coord-stat-card stat-complete"><div class="stat-num">${totalComplete}</div><div class="stat-label">Completas ✓</div></div>` +
-        `<div class="coord-stat-card stat-incomplete"><div class="stat-num">${totalIncomplete}</div><div class="stat-label">Incompletas</div></div>`;
+        `<div class="coord-stat-card stat-incomplete" style="cursor:${totalIncomplete>0?'pointer':'default'}" onclick="${totalIncomplete>0?'showCoordVagasModal()':''}">` +
+        `<div class="stat-num">${totalIncomplete}</div><div class="stat-label">Incompletas</div>${vagasSubtxt}</div>`;
     }
 
     // ── Barra de progresso ─────────────────────────────────────────────────────
@@ -2819,6 +2918,27 @@ async function renderCoordPanel() {
         `<span>Progresso geral da coordenação</span>` +
         `<span style="font-weight:800;color:${cor}">${pct}% ${pct===100?'✓':''}</span></div>` +
         `<div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:${pct}%"></div></div>`;
+    }
+
+    // ── Faixa de alerta de vagas ───────────────────────────────────────────────
+    const alertEl = document.getElementById('coord-vagas-alert');
+    if (alertEl) {
+      if (totalVagas > 0) {
+        const supsComVagas = supData.filter(s => s.teams.some(t => t.missing.length > 0)).length;
+        alertEl.innerHTML =
+          `<div class="coord-vagas-alert-bar" onclick="showCoordVagasModal()">` +
+          `<span class="coord-vagas-alert-icon">⚠️</span>` +
+          `<div class="coord-vagas-alert-text">` +
+          `<strong>${totalVagas} vaga${totalVagas!==1?'s':''} em aberto em ${totalIncomplete} equipa${totalIncomplete!==1?'s':''}</strong>` +
+          `<span>${supsComVagas} supervisor${supsComVagas!==1?'es com equipas incompletas':'com equipa incompleta'} · Clique para ver o detalhe</span>` +
+          `</div>` +
+          `<span class="coord-vagas-alert-link">Ver detalhes →</span>` +
+          `</div>`;
+        alertEl.style.display = 'block';
+      } else {
+        alertEl.style.display = 'none';
+        alertEl.innerHTML = '';
+      }
     }
 
     // ── Lista de supervisores (ecrã) ──────────────────────────────────────────
@@ -2950,6 +3070,58 @@ async function coordRefresh() {
 
 // ─── Filtrar para Imprimir ────────────────────────────────────────────────────
 let _coordSupData = [];
+let _coordVagasList = []; // lista flat de vagas para o modal
+
+function hideCoordVagasModal() {
+  const m = document.getElementById('modal-coord-vagas');
+  if (m) m.style.display = 'none';
+}
+
+function showCoordVagasModal() {
+  if (_coordVagasList.length === 0) return;
+  const SLOT_PT = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador' };
+
+  // Subtítulo
+  const subt = document.getElementById('modal-vagas-subtitulo');
+  if (subt) {
+    const supsComVagas = [...new Set(_coordVagasList.map(v => v.supervisor))].length;
+    subt.textContent = `Coordenação: ${APP_SESSION.coordenacao || ''} · ${_coordVagasList.length} posição${_coordVagasList.length!==1?'es':''} por preencher`;
+  }
+
+  // Tabela
+  const tbody = document.getElementById('modal-vagas-body');
+  if (tbody) {
+    // Agrupar por supervisor → equipa → função
+    const ordenado = [..._coordVagasList].sort((a, b) => {
+      const ns = a.supervisor.localeCompare(b.supervisor, 'pt');
+      if (ns !== 0) return ns;
+      return (a.equipa || 0) - (b.equipa || 0);
+    });
+
+    let html = '';
+    let lastSup = null;
+    ordenado.forEach(v => {
+      const supLabel = v.supervisor !== lastSup ? escH(v.supervisor) : '<span style="color:var(--text3)">↳</span>';
+      lastSup = v.supervisor;
+      html += `<tr class="modal-vagas-row">` +
+        `<td>${supLabel}</td>` +
+        `<td>Eq. ${v.equipa != null ? v.equipa : '—'}</td>` +
+        `<td class="mvr-funcao">✗ ${SLOT_PT[v.slot] || v.slot}</td>` +
+        `</tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  // Rodapé
+  const rodape = document.getElementById('modal-vagas-rodape');
+  if (rodape) {
+    const equipasAfectadas = [...new Set(_coordVagasList.map(v => `${v.supervisor}|${v.equipa}`))].length;
+    rodape.textContent = `Total: ${_coordVagasList.length} vaga${_coordVagasList.length!==1?'s':''} em ${equipasAfectadas} equipa${equipasAfectadas!==1?'s':''}`;
+  }
+
+  const m = document.getElementById('modal-coord-vagas');
+  if (m) m.style.display = 'flex';
+}
 
 function _coordPopulateSupSelect() {
   const sel = document.getElementById('cfr-sup-select');
@@ -8026,6 +8198,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:0%"></div></div>
     </div>
 
+    <!-- Faixa de alerta de vagas (só aparece se houver vagas) -->
+    <div id="coord-vagas-alert" style="display:none"></div>
+
     <div class="coord-section-title">Supervisores e Equipas</div>
     <div id="coord-sup-list">
       <div class="coord-loading">⟳ A carregar dados da coordenação...</div>
@@ -8090,6 +8265,32 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Vista de impressão (oculta no ecrã, visível no print) -->
     <div id="coord-print-view"></div>
 
+  </div>
+
+  <!-- Modal: Vagas em Aberto -->
+  <div id="modal-coord-vagas" class="auth-modal" style="display:none">
+    <div class="auth-box" style="max-width:640px;width:100%">
+      <div class="auth-box-hdr" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0">
+        <h2 style="color:#e74c3c">⚠️ Vagas em Aberto</h2>
+        <p id="modal-vagas-subtitulo" style="color:var(--text3);font-size:12px;margin-top:4px"></p>
+      </div>
+      <div class="auth-box-body" style="padding:0;max-height:55vh;overflow-y:auto">
+        <table id="modal-vagas-table" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="position:sticky;top:0;background:var(--surface2);z-index:1">
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--text3);letter-spacing:.4px;border-bottom:1px solid var(--border)">SUPERVISOR</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--text3);letter-spacing:.4px;border-bottom:1px solid var(--border)">EQUIPA</th>
+              <th style="text-align:left;padding:10px 14px;font-size:11px;color:var(--text3);letter-spacing:.4px;border-bottom:1px solid var(--border)">FUNÇÃO EM FALTA</th>
+            </tr>
+          </thead>
+          <tbody id="modal-vagas-body"></tbody>
+        </table>
+      </div>
+      <div class="auth-box-ftr" style="border-top:1px solid var(--border);padding-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span id="modal-vagas-rodape" style="font-size:12px;color:var(--text3)"></span>
+        <button class="btn-auth-cancel" onclick="hideCoordVagasModal()">Fechar</button>
+      </div>
+    </div>
   </div>
 
 </div><!-- /coord-panel -->
