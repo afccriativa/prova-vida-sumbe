@@ -1594,6 +1594,8 @@ input, textarea, select {
       <span class="hier-toolbar-lbl" style="margin-left:8px">Exportar:</span>
       <button class="btn-hier-action" onclick="exportarCSVEquipas()">⬇️ CSV</button>
       <button class="btn-hier-action" onclick="exportarExcelEquipas()">⬇️ Excel</button>
+      <span class="hier-toolbar-lbl" style="margin-left:8px">Formação:</span>
+      <button class="btn-hier-action" onclick="exportarListaFormacaoMob(event)" title="Exportar lista de presença para formação de Mobilizadores (modelo oficial)">📋 Lista MOB</button>
       <span class="hier-toolbar-lbl" style="margin-left:8px">Cards:</span>
       <button class="btn-hier-action" onclick="hierExpandAll()" title="Expandir todas as coordenações">⊞ Expandir tudo</button>
       <button class="btn-hier-action" onclick="hierCollapseAll()" title="Colapsar todas as coordenações">⊟ Colapsar tudo</button>
@@ -6276,6 +6278,117 @@ async function exportarExcelEquipas() {
   X.writeFile(wb, 'Equipas_2R_Sumbe_' + new Date().toISOString().slice(0,10) + '.xlsx');
   showToast('Excel exportado — 3 folhas.', 'success');
   if (btn) { btn.disabled = false; btn.textContent = '⬇️ Excel'; }
+}
+
+// ── Lista de Presença Formação — Mobilizadores (modelo oficial DNSP) ──────────
+async function exportarListaFormacaoMob(evt) {
+  const flat = getEquipasFlat();
+  if (flat.length === 0) { showToast('Sem dados de equipas. Carregue a hierarquia primeiro.', 'warn'); return; }
+
+  const btn = evt?.currentTarget || evt?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ A gerar...'; }
+
+  try { await loadSheetJS(); } catch(e) {
+    showToast('Erro ao carregar motor Excel. Verifique a ligação.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Lista MOB'; }
+    return;
+  }
+  const X = window.XLSX;
+
+  // ── 1. Agrupar mobilizadores por coordenação ──────────────────────────────
+  // Cada equipa = 1 slot de mobilizador (preenchido ou em branco)
+  const porCoord = {}; // { coordenacao: [{ nome, telefone }] }
+  flat.forEach(eq => {
+    const coord = eq.coordenacao || '(Sem coordenação)';
+    if (!porCoord[coord]) porCoord[coord] = [];
+    porCoord[coord].push({ nome: eq.mobNome || '', telefone: eq.mobTel || '' });
+  });
+
+  // ── 2. Ordenar coordenações: menos mobilizadores preenchidos primeiro ──────
+  const coordsOrdenadas = Object.keys(porCoord).sort((a, b) => {
+    const ca = porCoord[a].filter(m => m.nome).length;
+    const cb = porCoord[b].filter(m => m.nome).length;
+    return ca - cb;
+  });
+
+  // ── 3. Linhas de dados: por coordenação, nomes primeiro (alfabético), vazios no fim ──
+  const linhas = [];
+  coordsOrdenadas.forEach(coord => {
+    const membros = [...porCoord[coord]].sort((a, b) => {
+      if (a.nome && !b.nome) return -1;
+      if (!a.nome && b.nome) return 1;
+      return a.nome.localeCompare(b.nome, 'pt');
+    });
+    membros.forEach(m => linhas.push({ nome: m.nome, coord, telefone: m.telefone }));
+  });
+
+  // ── 4. Construir AOA fiel ao modelo ──────────────────────────────────────
+  const aoa = [
+    [],   // row 1
+    [],   // row 2
+    [],   // row 3
+    ['REPÚBLICA DE ANGOLA',                                                    '', '', '', ''], // 4
+    ['DIREÇÃO NACIONAL DE SAÚDE PÚBLICA',                                      '', '', '', ''], // 5
+    ['GOVERNO DA PROVÍNCIA DO CUANZA SUL',                                     '', '', '', ''], // 6
+    ['ADMINISTRAÇÃO MUNICIPAL DO SUMBE',                                       '', '', '', ''], // 7
+    ['DIRECÇÃO DE SAÚDE',                                                      '', '', '', ''], // 8
+    ['CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2)',           '', '', '', ''], // 9
+    [],   // row 10
+    ['22 a 24 de Maio 2026',                                                   '', '', '', ''], // 11
+    ['LISTA DE PRESENÇA - FORMAÇÃO',                                           '', '', '', ''], // 12
+    [],   // row 13
+    ['Formador:_______________________________________________', '', '', 'Data:__________/_____________/2026', ''], // 14
+    [],   // row 15
+    ['Nº', 'NOME COMPLETO', 'FUNÇÃO', 'COORDENAÇÃO', 'CONTACTO'],             // 16 — cabeçalho
+  ];
+
+  linhas.forEach((l, i) => aoa.push([i + 1, l.nome, 'MOBILIZADOR', l.coord, l.telefone]));
+
+  // Rodapé — fiel ao modelo
+  const fR = aoa.length; // índice 0-based da 1ª linha do rodapé
+  aoa.push([]); // linha vazia antes do rodapé
+  aoa.push(['DIRECÇÃO MUNICIPAL DA SAÚDE, AOS _______ DE ______________________ DE 2026', '', '', '', '']);
+  aoa.push([]);
+  aoa.push(['A CHAFE DE SECÇÃO DE SAÚDE PÚBLICA', '', '', '', '']);
+  aoa.push(['__________________________________________', '', '', '', '']);
+  aoa.push(['MARIA JÚLIA DOMINGOS DA SILVA', '', '', '', '']);
+  aoa.push(['Msc. Em Saúde Pública', '', '', '', '']);
+
+  const ws = X.utils.aoa_to_sheet(aoa);
+
+  // ── 5. Merges ─────────────────────────────────────────────────────────────
+  // Cabeçalho institucional: A:E em cada linha (0-indexed rows 3–8, 10–11)
+  const merges = [];
+  [3, 4, 5, 6, 7, 8, 10, 11].forEach(r => merges.push({ s:{r,c:0}, e:{r,c:4} }));
+  merges.push({ s:{r:13,c:0}, e:{r:13,c:2} }); // Formador: A14:C14
+  merges.push({ s:{r:13,c:3}, e:{r:13,c:4} }); // Data: D14:E14
+  // Rodapé
+  [1, 2, 3, 4, 5, 6].forEach(off => merges.push({ s:{r:fR+off,c:0}, e:{r:fR+off,c:4} }));
+  ws['!merges'] = merges;
+
+  // ── 6. Larguras das colunas ───────────────────────────────────────────────
+  ws['!cols'] = [
+    { wch: 6.5 },  // A: Nº
+    { wch: 45   },  // B: NOME COMPLETO
+    { wch: 14   },  // C: FUNÇÃO
+    { wch: 36   },  // D: COORDENAÇÃO
+    { wch: 22   },  // E: CONTACTO
+  ];
+
+  // ── 7. Alturas de linhas para o cabeçalho ─────────────────────────────────
+  ws['!rows'] = Array.from({ length: 16 }, (_, i) => {
+    const hpx = [14,14,14,14,14,15,15,15,30,13,20,19,19,19,14,22][i];
+    return { hpx };
+  });
+
+  // ── 8. Escrever ficheiro ──────────────────────────────────────────────────
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, ws, 'FORMAÇÃO MOB');
+  X.writeFile(wb, 'Lista_Formacao_Mobilizadores_' + new Date().toISOString().slice(0,10) + '.xlsx');
+
+  const totalPreenchidos = linhas.filter(l => l.nome).length;
+  showToast(`Lista exportada — ${totalPreenchidos} mobilizadores / ${linhas.length} slots.`, 'success');
+  if (btn) { btn.disabled = false; btn.textContent = '📋 Lista MOB'; }
 }
 
 // ─── FIM FASES G+H ───────────────────────────────────────────────────────────
