@@ -388,6 +388,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .coord-empty-msg { font-size:12px; color:var(--text3); padding:14px 0; text-align:center; }
 .coord-loading { font-size:13px; color:var(--text3); padding:24px; text-align:center; }
 .sb-coord-area { background:rgba(18,65,161,.15); color:#6b9dff; }
+/* Pré-visualização ecrã (filtro) */
+.cfp-sup-block { margin-bottom:18px; }
+.cfp-sup-hdr { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 10px;
+  background:var(--surface2); border-radius:8px 8px 0 0; font-size:13px; border:1px solid var(--border); border-bottom:none; }
+.cfp-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:4px; }
+.cfp-table th { background:var(--surface2); color:var(--text3); font-weight:800; text-align:left;
+  padding:6px 10px; border:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:.3px; }
+.cfp-table td { padding:6px 10px; border:1px solid var(--border); color:var(--text); }
+.cfp-table tr:hover td { background:var(--surface2); }
+.cfp-eq-num { font-weight:700; color:var(--text3); white-space:nowrap; }
+.cfp-vago { color:var(--text3); font-style:italic; }
 
 /* Modais de autenticação */
 .auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -2922,6 +2933,10 @@ async function renderCoordPanel() {
 
     printEl.innerHTML = ph;
 
+    // Guardar dados para o filtro de impressão
+    _coordSupData = supData;
+    _coordPopulateSupSelect();
+
   } catch(e) {
     console.error('[Coord Panel]', e);
     if (listEl) listEl.innerHTML = '<div class="coord-empty-msg">Erro ao carregar dados. Tente actualizar.</div>';
@@ -2931,6 +2946,181 @@ async function renderCoordPanel() {
 async function coordRefresh() {
   showToast('🔄 A actualizar...', 'info');
   await renderCoordPanel();
+}
+
+// ─── Filtrar para Imprimir ────────────────────────────────────────────────────
+let _coordSupData = [];
+
+function _coordPopulateSupSelect() {
+  const sel = document.getElementById('cfr-sup-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Todos os supervisores</option>';
+  _coordSupData.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.bi;
+    opt.textContent = s.nome;
+    sel.appendChild(opt);
+  });
+}
+
+function coordToggleFilterPanel() {
+  const panel = document.getElementById('coord-filter-panel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (open) {
+    const prev = document.getElementById('coord-filter-preview');
+    if (prev) prev.style.display = 'none';
+  }
+}
+
+function coordFilterTipoChange() {
+  const tipo = document.querySelector('input[name="coord-filter-tipo"]:checked')?.value;
+  const supArea  = document.getElementById('cfr-sup-area');
+  const funcArea = document.getElementById('cfr-func-area');
+  if (supArea)  supArea.style.display  = tipo === 'supervisor' ? 'block' : 'none';
+  if (funcArea) funcArea.style.display = tipo === 'funcao'     ? 'block' : 'none';
+}
+
+function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
+  const LABELS  = { mobilizador:'Mobilizadores', vacinador:'Vacinadores', registador:'Registadores' };
+  const SLOTS   = ['mobilizador','vacinador','registador'];
+  const now     = new Date();
+  const dataStr = now.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const horaStr = now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+  const coord   = escH(APP_SESSION.coordenacao || '');
+
+  let h = '';
+
+  if (paraImprimir) {
+    h += `<div class="cpr-header">`;
+    h += `<h2>📍 PROVA DE VIDA — 2ª RONDA PÓLIO | SUMBE 2026</h2>`;
+    h += `<p>Coordenador(a): <strong>${escH(APP_SESSION.nome||'')}</strong> &nbsp;·&nbsp; Coordenação: <strong>${coord}</strong> &nbsp;·&nbsp; ${dataStr} ${horaStr}</p>`;
+    h += `</div>`;
+  }
+
+  // ── Modo: Por Supervisor ──────────────────────────────────────────────────
+  if (tipo === 'supervisor') {
+    const lista = supBI ? _coordSupData.filter(s => s.bi === supBI) : _coordSupData;
+    if (lista.length === 0) return '<div class="coord-empty-msg">Nenhum supervisor encontrado.</div>';
+
+    lista.forEach(sup => {
+      const incC = sup.teams.length - sup.completeCount;
+      if (paraImprimir) {
+        h += `<div class="cpr-sup-block">`;
+        h += `<div class="cpr-sup-title">👤 ${escH(sup.nome)}<span>${sup.teams.length} equipa${sup.teams.length!==1?'s':''} · ${sup.completeCount} ✓${incC>0?' · '+incC+' incompleta'+(incC!==1?'s':''):''}</span></div>`;
+        h += `<table class="cpr-table"><thead><tr><th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th></tr></thead><tbody>`;
+        if (sup.teams.length === 0) {
+          h += `<tr><td colspan="4" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
+        } else {
+          sup.teams.forEach(t => {
+            h += `<tr><td class="cpr-eq-num">Eq. ${t.num??'—'}</td>`;
+            SLOTS.forEach(s => h += t.membros[s] ? `<td>${escH(t.membros[s])}</td>` : `<td class="cpr-vago">— Vago —</td>`);
+            h += `</tr>`;
+          });
+        }
+        h += `</tbody></table></div>`;
+      } else {
+        // Pré-visualização ecrã
+        h += `<div class="cfp-sup-block">`;
+        h += `<div class="cfp-sup-hdr">👤 <strong>${escH(sup.nome)}</strong>`;
+        h += ` <span class="coord-sup-pill pill-neutral" style="margin-left:8px">${sup.teams.length} equipa${sup.teams.length!==1?'s':''}</span>`;
+        if (sup.completeCount > 0) h += ` <span class="coord-sup-pill pill-ok">${sup.completeCount} completa${sup.completeCount!==1?'s':''} ✓</span>`;
+        if (incC > 0) h += ` <span class="coord-sup-pill pill-warn">${incC} incompleta${incC!==1?'s':''}</span>`;
+        h += `</div>`;
+        if (sup.teams.length === 0) {
+          h += `<div class="coord-empty-msg">Nenhuma equipa atribuída.</div>`;
+        } else {
+          h += `<table class="cfp-table"><thead><tr><th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th></tr></thead><tbody>`;
+          sup.teams.forEach(t => {
+            h += `<tr><td class="cfp-eq-num">Eq. ${t.num??'—'}</td>`;
+            SLOTS.forEach(s => h += t.membros[s]
+              ? `<td>${escH(t.membros[s])}</td>`
+              : `<td class="cfp-vago">— Vago —</td>`);
+            h += `</tr>`;
+          });
+          h += `</tbody></table>`;
+        }
+        h += `</div>`;
+      }
+    });
+    return h;
+  }
+
+  // ── Modo: Por Função ──────────────────────────────────────────────────────
+  if (tipo === 'funcao') {
+    if (funcoes.length === 0) return '<div class="coord-empty-msg">Seleccione pelo menos uma função.</div>';
+
+    funcoes.forEach(slot => {
+      // Recolher todas as pessoas desta função em toda a coordenação
+      const pessoas = [];
+      _coordSupData.forEach(sup => {
+        sup.teams.forEach(t => {
+          if (t.membros[slot]) {
+            pessoas.push({ nome: t.membros[slot], supervisor: sup.nome, equipa: t.num });
+          }
+        });
+      });
+      pessoas.sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+
+      if (paraImprimir) {
+        h += `<div class="cpr-sup-block">`;
+        h += `<div class="cpr-sup-title">${LABELS[slot].toUpperCase()} <span>${pessoas.length} pessoa${pessoas.length!==1?'s':''}</span></div>`;
+        h += `<table class="cpr-table"><thead><tr><th>Nº</th><th>Nome</th><th>Supervisor</th><th>Equipa</th></tr></thead><tbody>`;
+        if (pessoas.length === 0) {
+          h += `<tr><td colspan="4" class="cpr-vago">Nenhum membro encontrado.</td></tr>`;
+        } else {
+          pessoas.forEach((p, i) => {
+            h += `<tr><td class="cpr-eq-num">${i+1}</td><td>${escH(p.nome)}</td><td>${escH(p.supervisor)}</td><td>Eq. ${p.equipa??'—'}</td></tr>`;
+          });
+        }
+        h += `</tbody></table></div>`;
+      } else {
+        h += `<div class="cfp-sup-block">`;
+        h += `<div class="cfp-sup-hdr"><strong>${LABELS[slot]}</strong> <span class="coord-sup-pill pill-neutral" style="margin-left:8px">${pessoas.length} pessoa${pessoas.length!==1?'s':''}</span></div>`;
+        if (pessoas.length === 0) {
+          h += `<div class="coord-empty-msg">Nenhum membro encontrado.</div>`;
+        } else {
+          h += `<table class="cfp-table"><thead><tr><th>Nº</th><th>Nome</th><th>Supervisor</th><th>Equipa</th></tr></thead><tbody>`;
+          pessoas.forEach((p, i) => {
+            h += `<tr><td class="cfp-eq-num">${i+1}</td><td>${escH(p.nome)}</td><td>${escH(p.supervisor)}</td><td>Eq. ${p.equipa??'—'}</td></tr>`;
+          });
+          h += `</tbody></table>`;
+        }
+        h += `</div>`;
+      }
+    });
+    return h;
+  }
+  return '';
+}
+
+function _coordGetFilters() {
+  const tipo  = document.querySelector('input[name="coord-filter-tipo"]:checked')?.value || 'supervisor';
+  const supBI = document.getElementById('cfr-sup-select')?.value || '';
+  const funcoes = ['mobilizador','vacinador','registador'].filter(s => {
+    const map = { mobilizador:'cfr-mob', vacinador:'cfr-vac', registador:'cfr-reg' };
+    return document.getElementById(map[s])?.checked;
+  });
+  return { tipo, supBI, funcoes };
+}
+
+function coordFilterVisualizar() {
+  if (_coordSupData.length === 0) { showToast('Sem dados. Clique em Actualizar primeiro.','warn'); return; }
+  const { tipo, supBI, funcoes } = _coordGetFilters();
+  const prev = document.getElementById('coord-filter-preview');
+  if (!prev) return;
+  prev.innerHTML = _buildCoordFilterHTML(tipo, supBI, funcoes, false);
+  prev.style.display = 'block';
+  prev.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function coordFilterImprimir() {
+  if (_coordSupData.length === 0) { showToast('Sem dados. Clique em Actualizar primeiro.','warn'); return; }
+  const { tipo, supBI, funcoes } = _coordGetFilters();
+  const printEl = document.getElementById('coord-print-view');
+  if (printEl) printEl.innerHTML = _buildCoordFilterHTML(tipo, supBI, funcoes, true);
+  window.print();
 }
 
 // ─── Inicializar painel ───────────────────────────────────────────────────────
@@ -7843,8 +8033,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-secondary" onclick="coordRefresh()" style="font-size:12px;padding:8px 14px;">🔄 Actualizar</button>
-      <button class="btn btn-secondary" onclick="window.print()" style="font-size:12px;padding:8px 14px;">🖨️ Imprimir</button>
+      <button class="btn btn-secondary" onclick="coordToggleFilterPanel()" id="btn-coord-filter" style="font-size:12px;padding:8px 14px;border-color:var(--accent);color:var(--accent);">🔍 Filtrar para Imprimir</button>
     </div>
+
+    <!-- Painel de filtro -->
+    <div id="coord-filter-panel" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px">🔍 Filtrar Relatório</div>
+
+      <!-- Tipo de filtro -->
+      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">
+          <input type="radio" name="coord-filter-tipo" value="supervisor" id="cfr-tipo-sup" onchange="coordFilterTipoChange()" checked>
+          Por Supervisor
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">
+          <input type="radio" name="coord-filter-tipo" value="funcao" id="cfr-tipo-func" onchange="coordFilterTipoChange()">
+          Por Função
+        </label>
+      </div>
+
+      <!-- Área: Por Supervisor -->
+      <div id="cfr-sup-area" style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--text3);font-weight:700;display:block;margin-bottom:6px">SUPERVISOR</label>
+        <select id="cfr-sup-select" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:13px;">
+          <option value="">Todos os supervisores</option>
+        </select>
+      </div>
+
+      <!-- Área: Por Função -->
+      <div id="cfr-func-area" style="display:none;margin-bottom:12px">
+        <label style="font-size:11px;color:var(--text3);font-weight:700;display:block;margin-bottom:8px">FUNÇÕES A INCLUIR</label>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text)">
+            <input type="checkbox" id="cfr-mob" checked> Mobilizadores
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text)">
+            <input type="checkbox" id="cfr-vac" checked> Vacinadores
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text)">
+            <input type="checkbox" id="cfr-reg" checked> Registadores
+          </label>
+        </div>
+      </div>
+
+      <!-- Botões de acção -->
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px">
+        <button class="btn btn-secondary" onclick="coordFilterVisualizar()" style="font-size:12px;padding:8px 14px;">👁 Visualizar</button>
+        <button class="btn" onclick="coordFilterImprimir()" style="font-size:12px;padding:8px 14px;background:var(--accent);color:#fff;border:none;">🖨️ Imprimir</button>
+        <button class="btn btn-secondary" onclick="coordToggleFilterPanel()" style="font-size:12px;padding:8px 14px;margin-left:auto;">✕ Fechar</button>
+      </div>
+    </div>
+
+    <!-- Área de pré-visualização -->
+    <div id="coord-filter-preview" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto;"></div>
 
     <!-- Vista de impressão (oculta no ecrã, visível no print) -->
     <div id="coord-print-view"></div>
