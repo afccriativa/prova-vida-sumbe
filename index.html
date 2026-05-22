@@ -276,6 +276,17 @@ body {
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
+/* ── Dashboard: barras de progresso proporcionais por coordenação ──────── */
+.coord-bar-wrap  { width: 100%; min-width: 80px; }
+.coord-bar-track { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-bottom: 3px; }
+.coord-bar-fill  { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.coord-bar-fill.bar-green { background: var(--success); }
+.coord-bar-fill.bar-amber { background: var(--accent2); }
+.coord-bar-fill.bar-red   { background: var(--error);   }
+.coord-bar-pct   { font-size: var(--fs-xs); color: var(--text3); }
+/* Dashboard: títulos de secção */
+.dash-section-title { font-size: var(--fs-xs); font-weight: 800; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin: var(--sp-5) 0 var(--sp-3); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+
 .ac-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #111e2d; border: 1px solid var(--accent2); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 500; max-height: 340px; overflow-y: auto; }
 .ac-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(42,61,85,0.4); }
 .ac-item:last-child { border-bottom: none; }
@@ -3007,6 +3018,101 @@ function _initConfirmModal() {
 }
 
 // ─── FIM Modal de confirmação ─────────────────────────────────────────────────
+
+// ─── Focus Trap — acessibilidade em modais ────────────────────────────────────
+// Quando um modal abre, o foco fica preso dentro dele (Tab/Shift+Tab).
+// Ao fechar, o foco volta ao elemento que despoletou a abertura.
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function _trapFocus(modalEl, triggerEl) {
+  if (!modalEl) return;
+  const getFocusable = () => [...modalEl.querySelectorAll(FOCUSABLE)];
+  const handler = e => {
+    if (e.key !== 'Tab') return;
+    const els = getFocusable();
+    if (!els.length) return;
+    const first = els[0], last = els[els.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first || !modalEl.contains(document.activeElement)) {
+        e.preventDefault(); last.focus();
+      }
+    } else {
+      if (document.activeElement === last || !modalEl.contains(document.activeElement)) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  };
+  modalEl._trapHandler   = handler;
+  modalEl._trapTrigger   = triggerEl || null;
+  modalEl.addEventListener('keydown', handler);
+  // Foco inicial no primeiro elemento focável
+  requestAnimationFrame(() => {
+    const els = getFocusable();
+    if (els.length) els[0].focus();
+  });
+}
+
+function _releaseFocus(modalEl) {
+  if (!modalEl) return;
+  if (modalEl._trapHandler) {
+    modalEl.removeEventListener('keydown', modalEl._trapHandler);
+    delete modalEl._trapHandler;
+  }
+  if (modalEl._trapTrigger) {
+    try { modalEl._trapTrigger.focus(); } catch(e) {}
+    delete modalEl._trapTrigger;
+  }
+}
+
+// Escape global: fecha o modal mais "alto" (z-index) que estiver aberto
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  // Ordem de prioridade por z-index
+  const modals = [
+    { id: 'modal-coord-vagas',  close: () => hideCoordVagasModal()   },
+    { id: 'del-modal',          close: () => document.getElementById('del-modal')?.querySelector('.btn-del-cancel2')?.click() },
+    { id: 'clear-modal',        close: () => document.getElementById('clear-modal')?.querySelector('.btn-clear-cancel')?.click() },
+    { id: 'rh-saved-modal',     close: () => document.getElementById('rh-saved-modal')?.querySelector('button')?.click() },
+    { id: 'pay-modal',          close: () => document.getElementById('pay-modal')?.querySelector('.pay-modal-close')?.click() },
+    { id: 'modal-auth-sup',     close: () => closeAuthModal('sup')   },
+    { id: 'modal-auth-coord',   close: () => closeAuthModal('coord') },
+    { id: 'modal-auth-admin',   close: () => closeAuthModal('admin') },
+  ];
+  for (const m of modals) {
+    const el = document.getElementById(m.id);
+    if (el && el.style.display !== 'none') { m.close(); break; }
+  }
+});
+
+// ─── Aplicar focus trap ao abrir modais de autenticação ───────────────────────
+const _origSelectPerfil = selectPerfil;
+function selectPerfil(tipo) {
+  _origSelectPerfil(tipo);
+  requestAnimationFrame(() => {
+    const ids = { supervisor: 'modal-auth-sup', coordenador: 'modal-auth-coord', admin: 'modal-auth-admin' };
+    const el = ids[tipo] ? document.getElementById(ids[tipo]) : null;
+    if (el && el.style.display !== 'none') _trapFocus(el);
+  });
+}
+
+const _origCloseAuthModal = closeAuthModal;
+function closeAuthModal(which) {
+  const el = document.getElementById('modal-auth-' + which);
+  _releaseFocus(el);
+  _origCloseAuthModal(which);
+}
+
+// Focus trap no modal de vagas do coordenador
+const _origShowCoordVagasModal = showCoordVagasModal;
+function showCoordVagasModal() {
+  _origShowCoordVagasModal();
+  requestAnimationFrame(() => _trapFocus(document.getElementById('modal-coord-vagas')));
+}
+const _origHideCoordVagasModal = hideCoordVagasModal;
+function hideCoordVagasModal() {
+  _releaseFocus(document.getElementById('modal-coord-vagas'));
+  _origHideCoordVagasModal();
+}
 function showAuthMsg(modal, tipo, texto) {
   const el = document.getElementById('auth-' + modal + '-msg');
   if (!el) return;
@@ -7635,13 +7741,14 @@ function saveRecord() {
 }
 
 function renderDashboard() {
-  const cs = getMergedConfs(); // FASE 7: dados unificados (localStorage + Firebase)
-  const total = RH_DATA.length;
+  const cs = getMergedConfs();
+  const total    = RH_DATA.length;
   const verified = Object.keys(cs).length;
-  const pending = total - verified;
-  const counts = {SIM:0,'NÃO':0,'SEM CONTACTO':0,'NÃO ATENDE':0,'NÚMERO INVÁLIDO':0,FALECIDO:0,AUSENTE:0};
+  const pending  = total - verified;
+  const counts   = {SIM:0,'NÃO':0,'SEM CONTACTO':0,'NÃO ATENDE':0,'NÚMERO INVÁLIDO':0,FALECIDO:0,AUSENTE:0};
   Object.values(cs).forEach(c => { if (counts[c.status]!==undefined) counts[c.status]++; });
-  const pctV = total > 0 ? Math.round(verified/total*100) : 0;
+  const pctV     = total > 0 ? Math.round(verified/total*100) : 0;
+  const pctSIM   = verified ? Math.round(counts.SIM/verified*100) : 0;
 
   const coordData = {};
   RH_DATA.forEach(r => {
@@ -7652,41 +7759,58 @@ function renderDashboard() {
     if (cf) { if(cf.status==='SIM') coordData[c].sim++; else if(cf.status==='NÃO') coordData[c].nao++; else coordData[c].out++; }
   });
 
+  // Barras de progresso proporcionais por coordenação
   const coordRows = Object.entries(coordData).sort((a,b)=>b[1].total-a[1].total).map(([name,d]) => {
-    const done = d.sim+d.nao+d.out;
-    const pct = Math.round(done/d.total*100);
-    return '<tr><td>'+escH(name)+'</td>'+
-      '<td class="num">'+d.total+'</td>'+
-      '<td class="num c-green">'+d.sim+'</td>'+
-      '<td class="num c-red">'+d.nao+'</td>'+
-      '<td class="num c-orange">'+d.out+'</td>'+
-      '<td><div style="height:6px;background:var(--green);border-radius:4px;width:'+Math.min(pct,100)+'px;max-width:100px;display:inline-block"></div> <span style="font-size:11px;color:var(--text3)">'+pct+'%</span></td></tr>';
+    const done = d.sim + d.nao + d.out;
+    const pct  = d.total > 0 ? Math.round(done/d.total*100) : 0;
+    const pctSim = d.total > 0 ? Math.round(d.sim/d.total*100) : 0;
+    const barCls = pct >= 80 ? 'bar-green' : pct >= 50 ? 'bar-amber' : 'bar-red';
+    return '<tr>' +
+      '<td>' + escH(name) + '</td>' +
+      '<td class="num">' + d.total + '</td>' +
+      '<td class="num c-green">' + d.sim + '</td>' +
+      '<td class="num c-red">' + d.nao + '</td>' +
+      '<td class="num c-orange">' + d.out + '</td>' +
+      '<td><div class="coord-bar-wrap">' +
+        '<div class="coord-bar-track"><div class="coord-bar-fill ' + barCls + '" style="width:' + pct + '%"></div></div>' +
+        '<span class="coord-bar-pct">' + pctSim + '% SIM · ' + pct + '% verificado</span>' +
+      '</div></td>' +
+    '</tr>';
   }).join('');
 
   document.getElementById('dashboard-content').innerHTML =
-    '<div class="progress-section"><h3>📈 Progresso Geral da Verificação</h3>'+
-    '<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pctV+'%"></div></div>'+
-    '<div class="progress-label"><span>'+verified+' verificados de '+total+' profissionais</span><span>'+pctV+'% concluído</span></div></div>'+
+    // Barra de progresso geral
+    '<div class="progress-section"><h3>📈 Progresso Geral da Verificação</h3>' +
+    '<div class="progress-bar-wrap"><div class="progress-bar" style="width:' + pctV + '%"></div></div>' +
+    '<div class="progress-label"><span>' + verified + ' verificados de ' + total + ' profissionais</span><span>' + pctV + '% concluído</span></div></div>' +
 
-    '<div class="dashboard-grid">'+
-    sCard(total,'Total RH','','c-text')+
-    sCard(verified,'Verificados',pctV+'%','c-teal')+
-    sCard(pending,'Por Verificar','','c-text3')+
-    sCard(counts.SIM,'Disponíveis',(verified?Math.round(counts.SIM/verified*100):0)+'%','c-green')+
-    sCard(counts['NÃO'],'Indisponíveis','','c-red')+
-    sCard(counts['SEM CONTACTO'],'Sem Contacto','','c-orange')+
-    sCard(counts['NÃO ATENDE'],'Não Atende','','c-orange')+
-    sCard(counts['NÚMERO INVÁLIDO'],'Nº Inválido','','c-text3')+
-    sCard(counts.FALECIDO,'Falecidos','','c-text3')+
-    sCard(counts.AUSENTE,'Ausentes','','c-blue')+
-    '</div>'+
+    // Secção 1: Visão geral
+    '<div class="dash-section-title">Visão Geral</div>' +
+    '<div class="dashboard-grid">' +
+    sCard(total,    'Total RH',     '',        'c-text')  +
+    sCard(verified, 'Verificados',  pctV+'%',  'c-teal')  +
+    sCard(pending,  'Por Verificar','',        'c-text3') +
+    '</div>' +
 
-    '<div class="audit-card"><h3>📍 Detalhe por Coordenação</h3>'+
-    '<div style="overflow-x:auto"><table class="coord-table">'+
-    '<thead><tr><th>Coordenação</th><th>Total</th><th>SIM ✅</th><th>NÃO ❌</th><th>Outros</th><th>Progresso</th></tr></thead>'+
-    '<tbody>'+coordRows+'</tbody></table></div></div>';
+    // Secção 2: Resultados
+    '<div class="dash-section-title">Resultados da Verificação</div>' +
+    '<div class="dashboard-grid">' +
+    sCard(counts.SIM,                'Disponíveis',   pctSIM+'%', 'c-green')  +
+    sCard(counts['NÃO'],             'Indisponíveis', '',         'c-red')    +
+    sCard(counts['SEM CONTACTO'],    'Sem Contacto',  '',         'c-orange') +
+    sCard(counts['NÃO ATENDE'],      'Não Atende',    '',         'c-orange') +
+    sCard(counts['NÚMERO INVÁLIDO'], 'Nº Inválido',   '',         'c-text3')  +
+    sCard(counts.FALECIDO,           'Falecidos',     '',         'c-text3')  +
+    sCard(counts.AUSENTE,            'Ausentes',      '',         'c-blue')   +
+    '</div>' +
 
-  // Secção de presenças em campo (assíncrona, injec após render)
+    // Tabela por coordenação
+    '<div class="audit-card"><h3>📍 Detalhe por Coordenação</h3>' +
+    '<div style="overflow-x:auto"><table class="coord-table">' +
+    '<thead><tr><th>Coordenação</th><th>Total</th><th>SIM ✅</th><th>NÃO ❌</th><th>Outros</th><th style="min-width:140px">Progresso</th></tr></thead>' +
+    '<tbody>' + coordRows + '</tbody></table></div></div>';
+
+  // Presenças em campo (assíncrono)
   _renderDashboardPresencas();
 }
 
@@ -7756,14 +7880,16 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
     .sort((a, b) => b[1].total - a[1].total)
     .map(([coord, d]) => {
       const pctC = d.total > 0 ? Math.round((d.presentes / d.total) * 100) : 0;
-      const barW = Math.min(pctC, 100);
+      const barCls = pctC >= 80 ? 'bar-green' : pctC >= 50 ? 'bar-amber' : 'bar-red';
       return `<tr>
         <td>${escH(coord)}</td>
         <td style="text-align:center;font-weight:700;color:var(--green)">${d.presentes}</td>
         <td style="text-align:center;font-weight:700;color:#e74c3c">${d.ausentes}</td>
         <td style="text-align:center;color:var(--text3)">${d.total - d.presentes - d.ausentes}</td>
-        <td><div style="height:6px;background:var(--green);border-radius:4px;width:${barW}px;max-width:100px;display:inline-block"></div>
-            <span style="font-size:11px;color:var(--text3);margin-left:4px">${pctC}%</span></td>
+        <td><div class="coord-bar-wrap">
+          <div class="coord-bar-track"><div class="coord-bar-fill ${barCls}" style="width:${pctC}%"></div></div>
+          <span class="coord-bar-pct">${pctC}%</span>
+        </div></td>
       </tr>`;
     }).join('');
 
