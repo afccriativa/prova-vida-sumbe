@@ -258,6 +258,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   #coord-panel .coord-progress-wrap,
   #coord-panel .coord-section-title,
   #coord-panel #coord-sup-list,
+  #coord-panel #coord-vagas-alert,
+  #coord-panel #coord-filter-panel,
+  #coord-panel #coord-filter-preview,
   #coord-panel > .coord-content > div:last-child { display: none !important; }
   #coord-panel .coord-content { padding: 0; }
   #coord-print-view { display: block !important; }
@@ -332,6 +335,23 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .sp-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .sp-prompt { font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 20px; }
 .sp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* ── Cards de selecção de perfil — regras base (desktop) ── */
+.sp-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 28px 22px 22px; cursor: pointer; transition: all 0.25s ease; text-align: center; }
+.sp-card-icon { font-size: 40px; margin-bottom: 12px; }
+.sp-card h2 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.sp-card p { font-size: 11px; color: var(--text3); line-height: 1.6; margin-bottom: 20px; min-height: 34px; }
+.sp-card-btn { padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; display: inline-block; transition: all 0.2s; }
+.sp-card-sup { border-color: rgba(46,204,113,0.25); }
+.sp-card-sup:hover { border-color: var(--green); box-shadow: 0 8px 32px rgba(46,204,113,0.12); transform: translateY(-4px); }
+.sp-card-sup .sp-card-btn { background: var(--green); color: #fff; }
+.sp-card-admin { border-color: rgba(244,168,50,0.2); }
+.sp-card-admin:hover { border-color: var(--accent2); box-shadow: 0 8px 32px rgba(244,168,50,0.08); transform: translateY(-4px); }
+.sp-card-admin .sp-card-btn { background: transparent; color: var(--accent2); border: 2px solid var(--accent2); padding: 9px 20px; }
+.sp-card-coord { border-color: rgba(18,65,161,0.25); grid-column: 1 / -1; }
+.sp-card-coord:hover { border-color: #1241a1; box-shadow: 0 8px 32px rgba(18,65,161,0.15); transform: translateY(-4px); }
+.sp-card-coord .sp-card-btn { background: #1241a1; color: #fff; }
+.sp-footer { text-align: center; margin-top: 22px; font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
+
 /* ── Cards mobile: layout horizontal compacto (≤ 520px) ── */
 @media (max-width: 520px) {
   /* Container: scroll permitido, alinhado ao topo */
@@ -405,21 +425,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 @media (hover: none) {
   .sp-card:hover { transform: none !important; box-shadow: none !important; }
 }
-.sp-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 28px 22px 22px; cursor: pointer; transition: all 0.25s ease; text-align: center; }
-.sp-card-icon { font-size: 40px; margin-bottom: 12px; }
-.sp-card h2 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
-.sp-card p { font-size: 11px; color: var(--text3); line-height: 1.6; margin-bottom: 20px; min-height: 34px; }
-.sp-card-btn { padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; display: inline-block; transition: all 0.2s; }
-.sp-card-sup { border-color: rgba(46,204,113,0.25); }
-.sp-card-sup:hover { border-color: var(--green); box-shadow: 0 8px 32px rgba(46,204,113,0.12); transform: translateY(-4px); }
-.sp-card-sup .sp-card-btn { background: var(--green); color: #fff; }
-.sp-card-admin { border-color: rgba(244,168,50,0.2); }
-.sp-card-admin:hover { border-color: var(--accent2); box-shadow: 0 8px 32px rgba(244,168,50,0.08); transform: translateY(-4px); }
-.sp-card-admin .sp-card-btn { background: transparent; color: var(--accent2); border: 2px solid var(--accent2); padding: 9px 20px; }
-.sp-card-coord { border-color: rgba(18,65,161,0.25); grid-column: 1 / -1; }
-.sp-card-coord:hover { border-color: #1241a1; box-shadow: 0 8px 32px rgba(18,65,161,0.15); transform: translateY(-4px); }
-.sp-card-coord .sp-card-btn { background: #1241a1; color: #fff; }
-.sp-footer { text-align: center; margin-top: 22px; font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
 /* ── Painel Coordenador ───────────────────────────────────────────────────── */
 #coord-panel { display:none; }
 .coord-info-bar { background:var(--surface2); border-bottom:1px solid var(--border); padding:10px 24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -1997,7 +2002,7 @@ function getAdminPinHash() {
 // Vive exclusivamente em memória — apaga-se ao recarregar a página (intencional).
 // Em Fases futuras este objecto será persistido no Firebase durante a sessão.
 const APP_SESSION = {
-  perfil:           null,   // 'supervisor' | 'admin' | null
+  perfil:           null,   // 'supervisor' | 'admin' | 'coordenador' | null
   bi:               null,   // BI do utilizador autenticado
   nome:             null,   // Nome completo
   coordenacao:      null,   // Coordenação de área (relevante para supervisores)
@@ -3905,11 +3910,13 @@ function sessionStartWatcher() {
       // Tempo esgotado — logout automático
       sessionStopWatcher();
       sessionHideWarning();
-      const perfil = APP_SESSION.perfil === 'supervisor' ? 'Supervisor' : 'Administrador';
+      const perfil = APP_SESSION.perfil === 'supervisor' ? 'Supervisor' : APP_SESSION.perfil === 'coordenador' ? 'Coordenador' : 'Administrador';
       stopAdminListener();
+      stopCountdown();
       clearSession();
       document.getElementById('session-bar').style.display = 'none';
-      if (isSupervisorSession || document.getElementById('supervisor-panel').style.display !== 'none') {
+      document.getElementById('coord-panel').style.display = 'none';
+      if (isSupervisorSession() || document.getElementById('supervisor-panel').style.display !== 'none') {
         document.getElementById('supervisor-panel').style.display = 'none';
         const tabs = document.querySelector('.tabs');
         if (tabs) tabs.style.removeProperty('display');
@@ -4457,6 +4464,7 @@ async function devolverAoPool(bi) {
   }
 
   renderRhNovosList();
+  _invalidatePickerCache();
   renderHierarquia();
   showToast(nome.split(' ')[0] + ' devolvido ao pool disponível. ✅', 'success');
 }
