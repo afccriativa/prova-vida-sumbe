@@ -252,7 +252,7 @@ body {
 .pay-info-card .name { font-size: 14px; font-weight: 700; color: var(--text); }
 .pay-info-card .meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-.btn-row-action { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: var(--text2); margin-right: 3px; transition: all 0.15s; }
+.btn-row-action { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--sp-1) var(--sp-2); cursor: pointer; font-size: var(--fs-sm); color: var(--text2); margin-right: 3px; transition: all var(--transition-fast); min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
 .btn-row-action:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(244,168,50,0.08); }
 .row-risk td { background: rgba(231,76,60,0.06) !important; border-left: 3px solid #e74c3c; }
 .row-risk td:first-child { color: #e74c3c !important; font-weight: 700; }
@@ -352,11 +352,35 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 13px; font-weight: 600; color: var(--text); box-shadow: var(--shadow); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 1000; max-width: 340px; }
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.t-success { border-left: 4px solid var(--green); }
-.toast.t-warn { border-left: 4px solid var(--accent2); }
-.toast.t-error { border-left: 4px solid var(--red); }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-3) var(--sp-5); font-size: var(--fs-base); font-weight: 600; color: var(--text); box-shadow: var(--shadow-lg); transform: translateY(12px); opacity: 0; transition: transform var(--transition-slow), opacity var(--transition-slow); z-index: 1000; max-width: 340px; pointer-events: none; }
+.toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.toast.t-success { border-left: 4px solid var(--success); }
+.toast.t-warn    { border-left: 4px solid var(--accent2);  }
+.toast.t-error   { border-left: 4px solid var(--error);    }
+.toast.t-info    { border-left: 4px solid var(--info);      }
+
+/* ── Spinner de loading animado ─────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6);
+  justify-content: center;
+  color: var(--text3);
+  font-size: var(--fs-base);
+}
+.loading-row .spinner { width: 20px; height: 20px; border-width: 2.5px; }
 
 /* FASE 2 — Indicador de estado Firebase */
 .fb-status { font-size: 18px; line-height: 1; cursor: default; flex-shrink: 0; transition: color 0.5s ease; user-select: none; }
@@ -566,14 +590,30 @@ body {
 .btn-auth-enter:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Barra de sessão activa */
-.session-bar { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 7px 24px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text2); }
-.sb-badge { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
-.sb-admin { background: rgba(244,168,50,0.15); color: var(--accent2); }
-.sb-supervisor { background: rgba(46,204,113,0.15); color: var(--green); }
-.sb-name { font-weight: 700; color: var(--text); }
-.sb-coord { color: var(--text3); font-size: 11px; }
-.btn-sair { margin-left: auto; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text3); font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.15s; }
-.btn-sair:hover { border-color: var(--red); color: var(--red); }
+.session-bar { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 7px var(--sp-6); display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); color: var(--text2); }
+.sb-badge { padding: 3px var(--sp-2); border-radius: 12px; font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.5px; }
+.sb-admin      { background: rgba(244,168,50,0.15); color: var(--accent2); }
+.sb-supervisor { background: rgba(46,204,113,0.15); color: var(--success); }
+.sb-name  { font-weight: 700; color: var(--text); }
+.sb-coord { color: var(--text3); font-size: var(--fs-xs); }
+/* Logout: discreto por defeito, visível ao hover — não compete com a identidade */
+.btn-sair {
+  margin-left: auto;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  opacity: 0.65;
+}
+.btn-sair:hover { border-color: var(--error); color: var(--error); opacity: 1; background: rgba(231,76,60,0.06); }
 
 /* ═══════════════════════════════════════════════════════════════════════
    FASE 5 — INTERFACE DE VALIDAÇÃO DO SUPERVISOR
@@ -648,8 +688,8 @@ body {
 .sup-rank-bar { display: inline-block; height: 6px; border-radius: 6px; background: var(--green); vertical-align: middle; margin-right: 6px; transition: width 0.4s; min-width: 2px; }
 
 /* Botão eliminar validação */
-.btn-del-val { background: none; border: 1px solid rgba(231,76,60,0.3); border-radius: 4px; padding: 3px 7px; cursor: pointer; font-size: 11px; color: rgba(231,76,60,0.6); margin-right: 2px; transition: all 0.15s; }
-.btn-del-val:hover { border-color: var(--red); color: var(--red); background: rgba(231,76,60,0.07); }
+.btn-del-val { background: none; border: 1px solid rgba(231,76,60,0.3); border-radius: var(--radius-sm); padding: var(--sp-1) var(--sp-2); cursor: pointer; font-size: var(--fs-xs); color: rgba(231,76,60,0.6); margin-right: 2px; transition: all var(--transition-fast); min-width: 30px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; }
+.btn-del-val:hover { border-color: var(--error); color: var(--error); background: rgba(231,76,60,0.07); }
 
 /* Flag de coordenação cruzada */
 .cross-flag { font-size: 11px; cursor: help; margin-left: 4px; }
@@ -696,6 +736,56 @@ button, .tab, .sp-card, .sup-estado-btn, .btn-row-action, .btn-del-val,
 }
 input, textarea, select {
   font-size: 16px !important; /* >=16px evita zoom-on-focus no iOS */
+}
+
+/* ── Focus-visible: indicador de foco para navegação por teclado ── */
+/* Remove outline nativo em todos os elementos (substituído abaixo) */
+:focus { outline: none; }
+
+/* Anel de foco âmbar — apenas visível ao navegar por teclado (não ao clicar) */
+:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Inputs e textareas: manter o estilo de borda colorida já existente */
+.search-input:focus-visible,
+.obs-input:focus-visible,
+.filter-select:focus-visible,
+.rh-field-inp:focus-visible,
+.sup-bi-input:focus-visible,
+.auth-inp:focus-visible,
+.clear-pin-input:focus-visible {
+  outline: none; /* border-color já trata o foco visual */
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(244,168,50,0.15);
+}
+
+/* Botões — anel âmbar */
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-save:focus-visible,
+.confirm-btn:focus-visible,
+.btn-hier-action:focus-visible,
+.sup-mode-btn:focus-visible,
+.btn-sup-search:focus-visible,
+.btn-auth-enter:focus-visible,
+.btn-auth-cancel:focus-visible,
+.pres-btn:focus-visible,
+.pres-day-btn:focus-visible,
+.coord-sup-header:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Tabs */
+.tab:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: -2px;
+  border-radius: 4px 4px 0 0;
 }
 /* ── Tabela admin: scroll horizontal suave em mobile ── */
 .history-table-wrap { -webkit-overflow-scrolling: touch; }
@@ -1194,16 +1284,20 @@ input, textarea, select {
 /* ═══════════════════════════════════════════════════════════════════════
    FASE SUP-1 + SUP-2 — VISTA E IMPRESSÃO DAS EQUIPAS DO SUPERVISOR
    ═══════════════════════════════════════════════════════════════════════ */
-.sup-mode-bar { display:flex; gap:8px; margin-bottom:14px; }
-.sup-mode-btn { flex:1; padding:11px 12px; background:var(--surface);
+.sup-mode-bar { display:flex; gap: var(--sp-2); margin-bottom:14px; }
+/* Botão primário (Validar): ligeiramente mais proeminente */
+.sup-mode-btn { flex:1; padding:11px var(--sp-3); background:var(--surface);
   border:2px solid var(--border); border-radius:9px; cursor:pointer;
-  font-size:12px; font-weight:700; color:var(--text2); transition:all .2s;
+  font-size: var(--fs-sm); font-weight:700; color:var(--text2); transition:all var(--transition-base);
   touch-action:manipulation; text-align:center; }
 .sup-mode-btn:hover { border-color:var(--text3); }
-.sup-mode-btn.active { background:rgba(46,204,113,.08);
-  border-color:var(--green); color:var(--green); }
-.sup-mode-btn.active.mode-teams { background:rgba(52,152,219,.08);
-  border-color:#3498db; color:#3498db; }
+/* Modo activo: mantém cores semânticas por tipo */
+.sup-mode-btn.active { background:rgba(46,204,113,.08); border-color:var(--success); color:var(--success); }
+.sup-mode-btn.active.mode-teams    { background:rgba(52,152,219,.08); border-color:var(--info);    color:var(--info);    }
+.sup-mode-btn.active.mode-presencas{ background:rgba(155,89,182,.10); border-color:#9b59b6;         color:#9b59b6; }
+/* Botão Validar (primário): borda inicial mais visível — indica que é o modo principal */
+#sup-mode-validar { border-color: rgba(46,204,113,0.35); color: var(--text); }
+#sup-mode-validar:not(.active):hover { border-color: var(--success); color: var(--success); }
 
 #sup-teams-mode { display:none; }
 #sup-presencas-mode { display:none; }
@@ -8366,12 +8460,31 @@ function generatePayReport(orientation) {
 }
 
 let toastTimer;
+// ── Toast com fila ────────────────────────────────────────────────────────────
+// Evita sobreposição quando múltiplas operações terminam em sequência rápida.
+const _toastQueue = [];
+let _toastActive  = false;
+
 function showToast(msg, type) {
+  _toastQueue.push({ msg, type: type || 'success' });
+  if (!_toastActive) _toastNext();
+}
+
+function _toastNext() {
+  if (_toastQueue.length === 0) { _toastActive = false; return; }
+  _toastActive = true;
+  const { msg, type } = _toastQueue.shift();
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'toast show t-'+(type||'success');
+  el.className = 'toast t-' + type;
+  // Forçar reflow para a transição funcionar mesmo em chamadas consecutivas
+  void el.offsetWidth;
+  el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>el.classList.remove('show'),3500);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(_toastNext, 360); // aguardar saída antes do próximo
+  }, 3200);
 }
 
 // Event listeners
