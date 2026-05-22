@@ -221,9 +221,61 @@ body {
 .ai-err { color: var(--error); font-weight: 700; }
 
 .empty-state { text-align: center; padding: var(--sp-12); color: var(--text3); }
-.empty-state .icon { font-size: 52px; margin-bottom: 14px; }
+.empty-state .icon { font-size: 40px; margin-bottom: var(--sp-3); opacity: 0.6; }
+.empty-state p { font-size: var(--fs-base); color: var(--text3); line-height: 1.5; max-width: 280px; margin: 0 auto; }
+.empty-state small { font-size: var(--fs-sm); color: var(--text3); opacity: 0.7; display: block; margin-top: var(--sp-2); }
 
-/* Autocomplete dropdown */
+/* ── Indicador de overflow nas tabs (fade-right) ──────────────────────── */
+.tabs-wrap {
+  position: relative;
+}
+.tabs-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 48px;
+  background: linear-gradient(to right, transparent, var(--surface) 90%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+.tabs-wrap.has-overflow::after { opacity: 1; }
+
+/* ── Empty state padronizado ──────────────────────────────────────────── */
+.coord-empty-msg {
+  text-align: center;
+  padding: var(--sp-5) var(--sp-4);
+  color: var(--text3);
+  font-size: var(--fs-sm);
+}
+
+/* ── Loading classes unificadas ───────────────────────────────────────── */
+/* Substituem: sup-teams-loading, pres-loading, coord-loading, sup-loading */
+.sup-teams-loading,
+.pres-loading,
+.coord-loading,
+.sup-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8);
+  color: var(--text3);
+  font-size: var(--fs-base);
+}
+.sup-teams-loading::before,
+.pres-loading::before,
+.coord-loading::before,
+.sup-loading::before {
+  content: '';
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
 .ac-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #111e2d; border: 1px solid var(--accent2); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 500; max-height: 340px; overflow-y: auto; }
 .ac-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(42,61,85,0.4); }
 .ac-item:last-child { border-bottom: none; }
@@ -1524,6 +1576,7 @@ input, textarea, select {
   <div class="header-badge">2ª RONDA</div>
 </div>
 
+<div class="tabs-wrap" id="tabs-wrap">
 <div class="tabs">
   <div class="tab active" data-panel="search">🔍 Pesquisa</div>
   <div class="tab" data-panel="dashboard">📊 Dashboard</div>
@@ -1532,6 +1585,7 @@ input, textarea, select {
   <div class="tab" data-panel="equipas">⚽ Equipas 2ª Ronda</div>
   <div class="tab" data-panel="payments">💰 Pagamentos</div>
   <div class="tab" data-panel="audit">⚠️ Auditoria</div>
+</div>
 </div>
 
 <!-- FASE 4 — Barra de sessão activa (aparece após autenticação) -->
@@ -3029,7 +3083,7 @@ async function renderCoordPanel() {
   const listEl     = document.getElementById('coord-sup-list');
   const summaryEl  = document.getElementById('coord-summary-cards');
   const progressEl = document.getElementById('coord-progress-wrap');
-  if (listEl) listEl.innerHTML = '<div class="coord-loading">⟳ A carregar dados da coordenação...</div>';
+  if (listEl) listEl.innerHTML = '<div class="coord-loading">A carregar dados da coordenação...</div>';
 
   if (!fbReady()) {
     if (listEl) listEl.innerHTML = '<div class="coord-empty-msg">⚠️ Firebase indisponível. Verifique a ligação.</div>';
@@ -3137,7 +3191,7 @@ async function renderCoordPanel() {
     // ── Lista de supervisores (ecrã) ──────────────────────────────────────────
     if (!listEl) return;
     if (supData.length === 0) {
-      listEl.innerHTML = '<div class="coord-empty-msg">Nenhum supervisor atribuído a esta coordenação no Firebase.</div>';
+      listEl.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>Nenhum supervisor atribuído a esta coordenação.</p><small>Verifique as alocações na secção Equipas 2ª Ronda.</small></div>';
       return;
     }
 
@@ -3271,7 +3325,7 @@ async function _renderCoordPresencas() {
   if (!diaVer) { secEl.style.display = 'none'; return; }
 
   secEl.style.display = 'block';
-  secEl.innerHTML = `<div class="dash-presencas"><h3>🏃 Presenças — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">⟳ A carregar...</div></div>`;
+  secEl.innerHTML = `<div class="dash-presencas"><h3>🏃 Presenças — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">A carregar...</div></div>`;
 
   const myCoord   = (APP_SESSION.coordenacao || '').toUpperCase().trim();
   const presencas = await fbGetPresencasDia(diaVer);
@@ -3610,7 +3664,7 @@ async function supSearch() {
 
   // ── 5. CAMADA 2b — Firebase (valida noutro dispositivo em tempo real) ─────
   const valArea = document.getElementById('sup-validation-area');
-  valArea.innerHTML = '<div class="sup-loading">⟳ A verificar sincronização Firebase...</div>';
+  valArea.innerHTML = '<div class="sup-loading">A verificar sincronização Firebase...</div>';
   valArea.style.display = 'block';
 
   const fbConf = await fbGetValidacao(bi);
@@ -4349,7 +4403,7 @@ function renderRhNovosList() {
     el.innerHTML =
       '<div style="text-align:center;padding:50px 20px;color:var(--text3)">' +
         '<div style="font-size:36px;margin-bottom:12px">📋</div>' +
-        '<div style="font-weight:700;margin-bottom:6px">Nenhum RH registado ainda</div>' +
+        '<div class="empty-state"><div class="icon">📋</div><div style="font-weight:700;margin-bottom:6px">Nenhum RH registado ainda</div>' +
         '<div style="font-size:12px">Use o separador "➕ Registar Novo RH" para adicionar profissionais.</div>' +
       '</div>';
     return;
@@ -5706,8 +5760,8 @@ function renderAssignList() {
 
   if (pool.length === 0) {
     el.innerHTML = '<div class="assign-empty">' +
-      (q ? 'Nenhum resultado para "' + escH(q) + '"'
-         : 'Nenhum profissional disponível com esta função.<br>Verifique a Consolidação ou registe novos RH.') +
+      (q ? '<div class="empty-state"><div class="icon">🔍</div><p>Nenhum resultado para &ldquo;' + escH(q) + '&rdquo;</p></div>'
+         : '<div class="empty-state"><div class="icon">✅</div><p>Nenhum profissional disponível com esta função.</p><small>Verifique a Consolidação ou registe novos RH.</small></div>') +
     '</div>';
     return;
   }
@@ -6695,7 +6749,7 @@ if (!CAMPANHA_DIAS.includes(_presencasDiaActivo)) {
 
 async function supCarregarPresencas() {
   const contentEl = document.getElementById('sup-presencas-content');
-  if (contentEl) contentEl.innerHTML = '<div class="pres-loading">⟳ A carregar presenças...</div>';
+  if (contentEl) contentEl.innerHTML = '<div class="pres-loading">A carregar presenças...</div>';
 
   // Renderizar barra de dias
   _supRenderDayBar();
@@ -7062,7 +7116,7 @@ async function supCarregarEquipas() {
   }
 
   document.getElementById('sup-teams-content').innerHTML =
-    '<div class="sup-teams-loading">⟳ A carregar as suas equipas...</div>';
+    '<div class="sup-teams-loading">A carregar as suas equipas...</div>';
 
   const meuBI = APP_SESSION.bi.toUpperCase();
   const minhaCoord = APP_SESSION.coordenacao || '';
@@ -7664,7 +7718,7 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
     secEl.id = 'dash-presencas-sec';
     dashEl.appendChild(secEl);
   }
-  secEl.innerHTML = '<div class="dash-presencas"><h3>🏃 Presenças em Campo — ' + (CAMPANHA_LABELS[dia] || dia) + '</h3><div style="color:var(--text3);font-size:12px;padding:8px 0">⟳ A carregar...</div></div>';
+  secEl.innerHTML = '<div class="dash-presencas"><h3>🏃 Presenças em Campo — ' + (CAMPANHA_LABELS[dia] || dia) + '</h3><div style="color:var(--text3);font-size:12px;padding:8px 0">A carregar...</div></div>';
 
   const presencas = await fbGetPresencasDia(dia);
 
@@ -8523,6 +8577,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // FASE 3: Mostrar ecrã de selecção de perfil ao carregar
     showSelectionScreen();
   }
+  // Tabs overflow indicator — mostra fade-right quando há tabs fora do ecrã
+  const tabsEl   = document.querySelector('.tabs');
+  const tabsWrap = document.getElementById('tabs-wrap');
+  function _checkTabsOverflow() {
+    if (!tabsEl || !tabsWrap) return;
+    const overflowing = tabsEl.scrollWidth > tabsEl.clientWidth;
+    const atEnd = tabsEl.scrollLeft + tabsEl.clientWidth >= tabsEl.scrollWidth - 4;
+    tabsWrap.classList.toggle('has-overflow', overflowing && !atEnd);
+  }
+  if (tabsEl) {
+    tabsEl.addEventListener('scroll', _checkTabsOverflow, { passive: true });
+    window.addEventListener('resize', _checkTabsOverflow, { passive: true });
+    setTimeout(_checkTabsOverflow, 100);
+  }
+
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.panel));
@@ -8857,7 +8926,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <div id="sup-teams-content">
-      <div class="sup-teams-loading">⟳ A carregar as suas equipas...</div>
+      <div class="sup-teams-loading">A carregar as suas equipas...</div>
     </div>
   </div>
 
@@ -8871,7 +8940,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="pres-day-bar" id="pres-day-bar"></div>
     <div id="sup-presencas-content">
-      <div class="pres-loading">⟳ A carregar presenças...</div>
+      <div class="pres-loading">A carregar presenças...</div>
     </div>
   </div>
 
@@ -8909,7 +8978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <div class="coord-section-title">Supervisores e Equipas</div>
     <div id="coord-sup-list">
-      <div class="coord-loading">⟳ A carregar dados da coordenação...</div>
+      <div class="coord-loading">A carregar dados da coordenação...</div>
     </div>
 
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
