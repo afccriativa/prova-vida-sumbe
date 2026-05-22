@@ -2617,7 +2617,7 @@ function selectPerfil(tipo) {
     document.getElementById('auth-sup-bi').value = '';
     resetAuthMsg('sup');
     document.getElementById('auth-sup-bi').classList.remove('inp-err');
-    setTimeout(() => document.getElementById('auth-sup-bi').focus(), 100);
+    setTimeout(() => { document.getElementById('auth-sup-bi').focus(); _trapFocus(modal); }, 100);
 
   } else if (tipo === 'coordenador') {
     const modal = document.getElementById('modal-auth-coord');
@@ -2625,7 +2625,7 @@ function selectPerfil(tipo) {
     document.getElementById('auth-coord-bi').value = '';
     resetAuthMsg('coord');
     document.getElementById('auth-coord-bi').classList.remove('inp-err');
-    setTimeout(() => document.getElementById('auth-coord-bi').focus(), 100);
+    setTimeout(() => { document.getElementById('auth-coord-bi').focus(); _trapFocus(modal); }, 100);
 
   } else if (tipo === 'admin') {
     const modal = document.getElementById('modal-auth-admin');
@@ -2634,19 +2634,18 @@ function selectPerfil(tipo) {
     document.getElementById('auth-admin-pin').value = '';
     document.getElementById('auth-admin-bi').classList.remove('inp-err');
     resetAuthMsg('admin');
-    // Aviso se PIN ainda não configurado
     if (!getAdminPinHash()) {
       showAuthMsg('admin', 'warn',
         '🔐 Primeiro acesso — PIN não configurado. Insira o PIN que deseja criar no campo PIN e clique "Entrar". ' +
         'Ficará guardado neste dispositivo.');
     }
-    setTimeout(() => document.getElementById('auth-admin-bi').focus(), 100);
+    setTimeout(() => { document.getElementById('auth-admin-bi').focus(); _trapFocus(modal); }, 100);
   }
 }
 
 function closeAuthModal(which) {
   const m = document.getElementById('modal-auth-' + which);
-  if (m) m.style.display = 'none';
+  if (m) { _releaseFocus(m); m.style.display = 'none'; }
 }
 
 // ─── Autenticação: Supervisor ─────────────────────────────────────────────────
@@ -3084,35 +3083,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ─── Aplicar focus trap ao abrir modais de autenticação ───────────────────────
-const _origSelectPerfil = selectPerfil;
-function selectPerfil(tipo) {
-  _origSelectPerfil(tipo);
-  requestAnimationFrame(() => {
-    const ids = { supervisor: 'modal-auth-sup', coordenador: 'modal-auth-coord', admin: 'modal-auth-admin' };
-    const el = ids[tipo] ? document.getElementById(ids[tipo]) : null;
-    if (el && el.style.display !== 'none') _trapFocus(el);
-  });
-}
-
-const _origCloseAuthModal = closeAuthModal;
-function closeAuthModal(which) {
-  const el = document.getElementById('modal-auth-' + which);
-  _releaseFocus(el);
-  _origCloseAuthModal(which);
-}
-
-// Focus trap no modal de vagas do coordenador
-const _origShowCoordVagasModal = showCoordVagasModal;
-function showCoordVagasModal() {
-  _origShowCoordVagasModal();
-  requestAnimationFrame(() => _trapFocus(document.getElementById('modal-coord-vagas')));
-}
-const _origHideCoordVagasModal = hideCoordVagasModal;
-function hideCoordVagasModal() {
-  _releaseFocus(document.getElementById('modal-coord-vagas'));
-  _origHideCoordVagasModal();
-}
 function showAuthMsg(modal, tipo, texto) {
   const el = document.getElementById('auth-' + modal + '-msg');
   if (!el) return;
@@ -3463,7 +3433,7 @@ let _coordVagasList = []; // lista flat de vagas para o modal
 
 function hideCoordVagasModal() {
   const m = document.getElementById('modal-coord-vagas');
-  if (m) m.style.display = 'none';
+  if (m) { _releaseFocus(m); m.style.display = 'none'; }
 }
 
 function showCoordVagasModal() {
@@ -3509,7 +3479,7 @@ function showCoordVagasModal() {
   }
 
   const m = document.getElementById('modal-coord-vagas');
-  if (m) m.style.display = 'flex';
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(() => _trapFocus(m)); }
 }
 
 function _coordPopulateSupSelect() {
