@@ -5797,6 +5797,9 @@ async function _assignMemberToTeam(equipaId, memberRole, prof) {
         if (!r.success) {
           otherEq[role]  = prevOther;
           otherEq.status = prevStatusOther;
+          _equipasCache[otherId] = otherEq;
+          showToast('Erro ao limpar slot anterior: ligação instável. Tente novamente.', 'error');
+          return;
         }
         _equipasCache[otherId] = otherEq;
       }
