@@ -1156,6 +1156,43 @@ input, textarea, select {
   border-color:#3498db; color:#3498db; }
 
 #sup-teams-mode { display:none; }
+#sup-presencas-mode { display:none; }
+/* ── Modo Presenças ───────────────────────────────────────────────────────── */
+.sup-mode-btn.mode-presencas.active { background:rgba(155,89,182,.1); border-color:#9b59b6; color:#9b59b6; }
+.pres-day-bar { display:flex; gap:6px; padding:10px 0 14px; flex-wrap:wrap; }
+.pres-day-btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; }
+.pres-day-btn.active { background:rgba(52,152,219,.15); border-color:var(--blue); color:var(--blue); }
+.pres-day-btn:disabled { opacity:.45; cursor:default; }
+.pres-equipa-block { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+.pres-equipa-hdr { padding:10px 14px; font-size:12px; font-weight:800; color:var(--text3); background:var(--surface2); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.pres-equipa-hdr span { font-size:10px; font-weight:400; }
+.pres-membro-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--surface2); flex-wrap:wrap; }
+.pres-membro-row:last-child { border-bottom:none; }
+.pres-membro-info { flex:1; min-width:0; }
+.pres-membro-nome { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pres-membro-func { font-size:10px; color:var(--text3); margin-top:1px; }
+.pres-btn-group { display:flex; gap:5px; flex-shrink:0; }
+.pres-btn { padding:6px 12px; border-radius:7px; border:1.5px solid var(--border); background:var(--surface2); font-size:11px; font-weight:800; cursor:pointer; transition:all .15s; }
+.pres-btn.presente { border-color:var(--green); color:var(--green); background:rgba(46,204,113,.1); }
+.pres-btn.ausente  { border-color:#e74c3c; color:#e74c3c; background:rgba(231,76,60,.1); }
+.pres-btn:disabled { opacity:.5; cursor:default; }
+.pres-resumo-bar { display:flex; gap:8px; padding:10px 14px; background:var(--surface2); border-radius:0 0 10px 10px; font-size:11px; flex-wrap:wrap; }
+.pres-empty { text-align:center; padding:24px; color:var(--text3); font-size:13px; }
+.pres-loading { text-align:center; padding:24px; color:var(--text3); font-size:13px; }
+/* ── Dashboard: card presenças ───────────────────────────────────────────── */
+.dash-presencas { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-top:18px; }
+.dash-presencas h3 { font-size:13px; font-weight:800; margin-bottom:12px; }
+.dash-pres-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:14px; }
+.dash-pres-card { background:var(--surface2); border-radius:8px; padding:12px; text-align:center; }
+.dash-pres-card .dpn { font-size:26px; font-weight:900; }
+.dash-pres-card .dpl { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+.dash-pres-card.dp-green .dpn { color:var(--green); }
+.dash-pres-card.dp-red   .dpn { color:#e74c3c; }
+.dash-pres-card.dp-grey  .dpn { color:var(--text3); }
+.dash-pres-table { width:100%; border-collapse:collapse; font-size:12px; }
+.dash-pres-table th { font-size:10px; color:var(--text3); text-align:left; padding:5px 8px; border-bottom:1px solid var(--border); font-weight:800; text-transform:uppercase; letter-spacing:.3px; }
+.dash-pres-table td { padding:7px 8px; border-bottom:1px solid var(--surface2); }
+.dash-pres-table tr:last-child td { border-bottom:none; }
 
 .sup-teams-header { background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius); padding:14px 18px; margin-bottom:14px; }
@@ -1832,6 +1869,8 @@ input, textarea, select {
     collection,
     onSnapshot,
     getDocs,
+    query,
+    where,
     serverTimestamp,
     getFirestore
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
@@ -1872,6 +1911,8 @@ input, textarea, select {
       getDocs,
       onSnapshot,
       serverTimestamp,
+      query,
+      where,
     };
 
     window.dispatchEvent(new CustomEvent('firebase-ready'));
@@ -2837,6 +2878,7 @@ function coordInit() {
   }
   updateHeaderCount(); // activar countdown no header
   renderCoordPanel();
+  _renderCoordPresencas();
 }
 
 async function renderCoordPanel() {
@@ -3073,6 +3115,42 @@ async function renderCoordPanel() {
 async function coordRefresh() {
   showToast('🔄 A actualizar...', 'info');
   await renderCoordPanel();
+  await _renderCoordPresencas();
+}
+
+// ── Presenças no painel do Coordenador ───────────────────────────────────────
+async function _renderCoordPresencas() {
+  const secEl = document.getElementById('coord-presencas-sec');
+  if (!secEl) return;
+  const hoje = _presHoje();
+  const diaVer = CAMPANHA_DIAS.includes(hoje) ? hoje : CAMPANHA_DIAS.filter(d => d <= hoje).pop();
+  if (!diaVer) { secEl.style.display = 'none'; return; }
+
+  secEl.style.display = 'block';
+  secEl.innerHTML = `<div class="dash-presencas"><h3>🏃 Presenças — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">⟳ A carregar...</div></div>`;
+
+  const myCoord   = (APP_SESSION.coordenacao || '').toUpperCase().trim();
+  const presencas = await fbGetPresencasDia(diaVer);
+  const minhas    = presencas.filter(p => (p.coordenacao||'').toUpperCase().trim() === myCoord);
+
+  const totalEsperado = Object.values(_equipasCache)
+    .filter(eq => (eq.coordenacao||'').toUpperCase().trim() === myCoord)
+    .reduce((s, eq) => s + ['mobilizador','vacinador','registador'].filter(sl => eq[sl]?.bi).length, 0);
+
+  const presentes = minhas.filter(p => p.estado === 'presente').length;
+  const ausentes  = minhas.filter(p => p.estado === 'ausente').length;
+  const pct = totalEsperado > 0 ? Math.round((presentes / totalEsperado) * 100) : 0;
+  const cor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent2)' : '#e74c3c';
+
+  secEl.innerHTML = `<div class="dash-presencas">
+    <h3>🏃 Presenças em Campo — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3>
+    <div class="dash-pres-grid">
+      <div class="dash-pres-card dp-green"><div class="dpn">${presentes}</div><div class="dpl">Presentes</div></div>
+      <div class="dash-pres-card dp-red"><div class="dpn">${ausentes}</div><div class="dpl">Ausentes</div></div>
+      <div class="dash-pres-card dp-grey"><div class="dpn">${totalEsperado - presentes - ausentes}</div><div class="dpl">Por Marcar</div></div>
+      <div class="dash-pres-card"><div class="dpn" style="color:${cor}">${pct}%</div><div class="dpl">Cobertura</div></div>
+    </div>
+  </div>`;
 }
 
 // ─── Filtrar para Imprimir ────────────────────────────────────────────────────
@@ -6405,8 +6483,232 @@ async function exportarListaFormacaoMob(evt) {
 // ─── FIM FASES G+H ───────────────────────────────────────────────────────────
 
 // ═════════════════════════════════════════════════════════════════════════════
-// FASE I — VALIDAÇÕES DE INTEGRIDADE E ALERTAS
+// FASE J — LIVRO DE PONTO DE CAMPO (Presenças durante a campanha)
+// Uma entrada por profissional por dia: {bi}_{YYYYMMDD}
 // ═════════════════════════════════════════════════════════════════════════════
+
+const CAMPANHA_DIAS = ['2026-05-22', '2026-05-23', '2026-05-24'];
+const CAMPANHA_LABELS = { '2026-05-22': 'Dia 1 · 22 Mai', '2026-05-23': 'Dia 2 · 23 Mai', '2026-05-24': 'Dia 3 · 24 Mai' };
+
+function _presDocId(bi, data) {
+  return bi.toUpperCase().trim() + '_' + data.replace(/-/g, '');
+}
+
+function _presHoje() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function _presEdicaoPermitida(data) {
+  // Pode marcar qualquer dia da campanha enquanto a campanha estiver activa
+  const agora = new Date();
+  return agora >= new Date('2026-05-22T07:00:00') && agora <= new Date('2026-05-24T20:00:00');
+}
+
+// ── Firebase: gravar presença ─────────────────────────────────────────────────
+async function fbSavePresenca(doc) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    const id = _presDocId(doc.bi, doc.data);
+    await window._FB.setDoc(window._FB.docRef('presencas_2r/' + id), { ...doc, _id: id });
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ── Firebase: ler presenças de um supervisor para um dia ─────────────────────
+async function fbGetPresencasSupervisor(supervisorBI, data) {
+  if (!fbReady()) return [];
+  try {
+    const { getDocs, query, colRef, where } = window._FB;
+    const q = query(colRef('presencas_2r'),
+      where('supervisor_bi', '==', supervisorBI.toUpperCase()),
+      where('data', '==', data));
+    const snap = await getDocs(q);
+    const docs = [];
+    snap.forEach(d => docs.push(d.data()));
+    return docs;
+  } catch(e) { console.error('[Presenças]', e); return []; }
+}
+
+// ── Firebase: ler todas as presenças de um dia (admin/coord) ─────────────────
+async function fbGetPresencasDia(data) {
+  if (!fbReady()) return [];
+  try {
+    const { getDocs, query, colRef, where } = window._FB;
+    const q = query(colRef('presencas_2r'), where('data', '==', data));
+    const snap = await getDocs(q);
+    const docs = [];
+    snap.forEach(d => docs.push(d.data()));
+    return docs;
+  } catch(e) { console.error('[Presenças]', e); return []; }
+}
+
+// ── Supervisor: carregar e renderizar presenças ───────────────────────────────
+let _presencasDiaActivo = _presHoje();
+// Garantir que o dia activo é um dia de campanha válido
+if (!CAMPANHA_DIAS.includes(_presencasDiaActivo)) {
+  _presencasDiaActivo = CAMPANHA_DIAS[0];
+}
+
+async function supCarregarPresencas() {
+  const contentEl = document.getElementById('sup-presencas-content');
+  if (contentEl) contentEl.innerHTML = '<div class="pres-loading">⟳ A carregar presenças...</div>';
+
+  // Renderizar barra de dias
+  _supRenderDayBar();
+
+  if (!isSupervisorSession() || !APP_SESSION.bi) return;
+
+  // Carregar equipas do supervisor (da cache ou Firebase)
+  if (Object.keys(_equipasCache).length === 0) {
+    const eqDocs = await fbGetEquipas();
+    updateEquipasCache(eqDocs);
+  }
+
+  const meuBI = APP_SESSION.bi.toUpperCase();
+  const minhasEquipas = Object.values(_equipasCache)
+    .filter(eq => (eq.supervisor_id || '').toUpperCase() === meuBI)
+    .sort((a, b) => (a.equipa_num || 0) - (b.equipa_num || 0));
+
+  if (minhasEquipas.length === 0) {
+    if (contentEl) contentEl.innerHTML = '<div class="pres-empty">Não tens equipas atribuídas.</div>';
+    return;
+  }
+
+  // Carregar presenças do dia activo
+  const presencas = await fbGetPresencasSupervisor(meuBI, _presencasDiaActivo);
+  const presMap = {}; // { bi: 'presente'|'ausente' }
+  presencas.forEach(p => { presMap[p.bi.toUpperCase()] = p.estado; });
+
+  _supRenderPresencas(minhasEquipas, presMap, contentEl);
+}
+
+function _supRenderDayBar() {
+  const barEl = document.getElementById('pres-day-bar');
+  if (!barEl) return;
+  const hoje = _presHoje();
+  barEl.innerHTML = CAMPANHA_DIAS.map(d => {
+    const isActive  = d === _presencasDiaActivo;
+    const isFuture  = d > hoje;
+    return `<button class="pres-day-btn ${isActive ? 'active' : ''}"
+      ${isFuture ? 'disabled title="Dia ainda não iniciado"' : ''}
+      onclick="_presSetDia('${d}')">${CAMPANHA_LABELS[d]}</button>`;
+  }).join('');
+}
+
+function _presSetDia(data) {
+  _presencasDiaActivo = data;
+  supCarregarPresencas();
+}
+
+function _supRenderPresencas(equipas, presMap, contentEl) {
+  if (!contentEl) return;
+  const podeEditar = _presEdicaoPermitida(_presencasDiaActivo);
+  const SLOTS = ['mobilizador', 'vacinador', 'registador'];
+  const LABELS = { mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador' };
+
+  // Contar total e marcados
+  let totalMembros = 0, presentes = 0, ausentes = 0;
+  equipas.forEach(eq => {
+    SLOTS.forEach(s => {
+      if (eq[s]?.bi) {
+        totalMembros++;
+        const estado = presMap[(eq[s].bi || '').toUpperCase()];
+        if (estado === 'presente') presentes++;
+        else if (estado === 'ausente') ausentes++;
+      }
+    });
+  });
+  const porcMarcados = totalMembros > 0 ? Math.round(((presentes + ausentes) / totalMembros) * 100) : 0;
+
+  let html = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">`;
+  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
+  html += `<div style="font-size:22px;font-weight:900;color:var(--green)">${presentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Presentes</div></div>`;
+  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
+  html += `<div style="font-size:22px;font-weight:900;color:#e74c3c">${ausentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Ausentes</div></div>`;
+  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
+  html += `<div style="font-size:22px;font-weight:900;color:var(--text3)">${totalMembros - presentes - ausentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Por marcar</div></div>`;
+  html += `</div>`;
+
+  if (!podeEditar) {
+    html += `<div style="background:rgba(244,168,50,.1);border:1px solid rgba(244,168,50,.3);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--accent2);margin-bottom:12px">⚠️ Fora do período de edição — apenas leitura.</div>`;
+  }
+
+  equipas.forEach(eq => {
+    const membros = SLOTS.filter(s => eq[s]?.bi);
+    if (membros.length === 0) return;
+
+    const eqPresentes = membros.filter(s => presMap[(eq[s].bi||'').toUpperCase()] === 'presente').length;
+    html += `<div class="pres-equipa-block">`;
+    html += `<div class="pres-equipa-hdr">Equipa ${eq.equipa_num ?? '—'} <span>${eqPresentes}/${membros.length} presentes</span></div>`;
+
+    membros.forEach(slot => {
+      const membro = eq[slot];
+      const biUp   = (membro.bi || '').toUpperCase();
+      const estado = presMap[biUp];
+      html += `<div class="pres-membro-row">`;
+      html += `<div class="pres-membro-info">`;
+      html += `<div class="pres-membro-nome">${escH(membro.nome || biUp)}</div>`;
+      html += `<div class="pres-membro-func">${LABELS[slot]}</div>`;
+      html += `</div>`;
+      html += `<div class="pres-btn-group">`;
+      html += `<button class="pres-btn ${estado === 'presente' ? 'presente' : ''}"
+        ${!podeEditar ? 'disabled' : ''}
+        onclick="_presMarcar('${escH(biUp)}','${escH(membro.nome||'')}','${slot}',${eq.equipa_num??0},'presente',this)">✅ Presente</button>`;
+      html += `<button class="pres-btn ${estado === 'ausente' ? 'ausente' : ''}"
+        ${!podeEditar ? 'disabled' : ''}
+        onclick="_presMarcar('${escH(biUp)}','${escH(membro.nome||'')}','${slot}',${eq.equipa_num??0},'ausente',this)">❌ Ausente</button>`;
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  });
+
+  contentEl.innerHTML = html;
+}
+
+async function _presMarcar(bi, nome, funcao, equipaNum, estado, btnEl) {
+  if (!isSupervisorSession() || !APP_SESSION.bi) return;
+
+  // Feedback imediato
+  const row = btnEl.closest('.pres-membro-row');
+  if (row) row.querySelectorAll('.pres-btn').forEach(b => b.disabled = true);
+
+  // Obter coordenação da equipa
+  const meuBI    = APP_SESSION.bi.toUpperCase();
+  const minhaEq  = Object.values(_equipasCache).find(eq =>
+    (eq.supervisor_id||'').toUpperCase() === meuBI &&
+    ['mobilizador','vacinador','registador'].some(s => (eq[s]?.bi||'').toUpperCase() === bi)
+  );
+
+  const doc = {
+    bi, nome, funcao,
+    coordenacao:  minhaEq?.coordenacao || APP_SESSION.coordenacao || '',
+    equipa_num:   equipaNum,
+    supervisor_bi:   APP_SESSION.bi,
+    supervisor_nome: APP_SESSION.nome || '',
+    data:  _presencasDiaActivo,
+    estado,
+    registadoPor: APP_SESSION.bi,
+    registadoEm:  window._FB ? window._FB.serverTimestamp() : null,
+    municipio: MUNICIPIO, ronda: RONDA_ID,
+  };
+
+  const result = await fbSavePresenca(doc);
+  if (result.success) {
+    // Actualizar botões
+    if (row) {
+      row.querySelectorAll('.pres-btn').forEach(b => {
+        b.disabled = false;
+        b.classList.remove('presente', 'ausente');
+      });
+      btnEl.classList.add(estado);
+    }
+    // Actualizar contadores do cabeçalho relendo
+    await supCarregarPresencas();
+  } else {
+    if (row) row.querySelectorAll('.pres-btn').forEach(b => b.disabled = false);
+    showToast('Erro ao gravar presença. Tente novamente.', 'error');
+  }
+}
 
 // ── Motor de verificações — retorna array de alertas {tipo, titulo, desc} ────
 function runConsistencyCheck() {
@@ -6573,26 +6875,32 @@ function renderAlertasConsistencia() {
 let _supTeamsCache  = [];  // equipas do supervisor activo
 let _supCoordCache  = null; // dados do Coord área da sua coordenação
 
-// ── Alternar entre modo Validar e modo Minhas Equipas ────────────────────────
+// ── Alternar entre modos: Validar / Minhas Equipas / Presenças ───────────────
 function supSetMode(mode) {
-  const btnValidar  = document.getElementById('sup-mode-validar');
-  const btnTeams    = document.getElementById('sup-mode-teams');
-  const divValidar  = document.getElementById('sup-validate-mode');
-  const divTeams    = document.getElementById('sup-teams-mode');
-  if (!btnValidar || !divValidar || !divTeams) return;
+  const btnValidar   = document.getElementById('sup-mode-validar');
+  const btnTeams     = document.getElementById('sup-mode-teams');
+  const btnPresencas = document.getElementById('sup-mode-presencas');
+  const divValidar   = document.getElementById('sup-validate-mode');
+  const divTeams     = document.getElementById('sup-teams-mode');
+  const divPresencas = document.getElementById('sup-presencas-mode');
+  if (!btnValidar || !divValidar) return;
+
+  // Limpar todos
+  [btnValidar, btnTeams, btnPresencas].forEach(b => b?.classList.remove('active'));
+  [divValidar, divTeams, divPresencas].forEach(d => { if (d) d.style.display = 'none'; });
 
   if (mode === 'validar') {
     btnValidar.classList.add('active');
-    if (btnTeams) btnTeams.classList.remove('active');
     divValidar.style.display = 'block';
-    divTeams.style.display   = 'none';
     setTimeout(() => document.getElementById('sup-bi-input')?.focus(), 80);
-  } else {
-    if (btnTeams) btnTeams.classList.add('active');
-    btnValidar.classList.remove('active');
-    divValidar.style.display = 'none';
-    divTeams.style.display   = 'block';
+  } else if (mode === 'teams') {
+    btnTeams?.classList.add('active');
+    if (divTeams) divTeams.style.display = 'block';
     supCarregarEquipas();
+  } else if (mode === 'presencas') {
+    btnPresencas?.classList.add('active');
+    if (divPresencas) divPresencas.style.display = 'block';
+    supCarregarPresencas();
   }
 }
 
@@ -7179,10 +7487,101 @@ function renderDashboard() {
     '<div style="overflow-x:auto"><table class="coord-table">'+
     '<thead><tr><th>Coordenação</th><th>Total</th><th>SIM ✅</th><th>NÃO ❌</th><th>Outros</th><th>Progresso</th></tr></thead>'+
     '<tbody>'+coordRows+'</tbody></table></div></div>';
+
+  // Secção de presenças em campo (assíncrona, injec após render)
+  _renderDashboardPresencas();
 }
 
 function sCard(n, label, pct, cls) {
   return '<div class="stat-card"><div class="stat-num '+cls+'">'+n+'</div><div class="stat-label">'+label+'</div>'+(pct?'<div class="stat-pct">'+pct+'</div>':'')+'</div>';
+}
+
+// ── Presenças em Campo — secção assíncrona do dashboard ──────────────────────
+async function _renderDashboardPresencas() {
+  const dashEl = document.getElementById('dashboard-content');
+  if (!dashEl) return;
+
+  const hoje = _presHoje();
+  if (!CAMPANHA_DIAS.includes(hoje)) {
+    // Fora do período da campanha — mostrar resumo do último dia disponível
+    const ultimoDia = CAMPANHA_DIAS.filter(d => d <= hoje).pop();
+    if (!ultimoDia) return; // campanha ainda não começou
+    _carregarEInjectarPresencas(ultimoDia, dashEl, false);
+    return;
+  }
+  _carregarEInjectarPresencas(hoje, dashEl, true);
+}
+
+async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
+  // Placeholder enquanto carrega
+  let secEl = document.getElementById('dash-presencas-sec');
+  if (!secEl) {
+    secEl = document.createElement('div');
+    secEl.id = 'dash-presencas-sec';
+    dashEl.appendChild(secEl);
+  }
+  secEl.innerHTML = '<div class="dash-presencas"><h3>🏃 Presenças em Campo — ' + (CAMPANHA_LABELS[dia] || dia) + '</h3><div style="color:var(--text3);font-size:12px;padding:8px 0">⟳ A carregar...</div></div>';
+
+  const presencas = await fbGetPresencasDia(dia);
+
+  // Agrupar por coordenação
+  const coordMap = {};
+  COORDENACOES_2R.forEach(c => { coordMap[c] = { presentes: 0, ausentes: 0, total: 0 }; });
+
+  // Total esperado por coordenação — contar membros das equipas
+  Object.values(_equipasCache).forEach(eq => {
+    const coord = eq.coordenacao || '';
+    if (!coordMap[coord]) coordMap[coord] = { presentes: 0, ausentes: 0, total: 0 };
+    ['mobilizador','vacinador','registador'].forEach(s => {
+      if (eq[s]?.bi) coordMap[coord].total++;
+    });
+  });
+
+  // Registar presenças
+  presencas.forEach(p => {
+    const coord = p.coordenacao || '';
+    if (!coordMap[coord]) coordMap[coord] = { presentes: 0, ausentes: 0, total: 0 };
+    if (p.estado === 'presente') coordMap[coord].presentes++;
+    else if (p.estado === 'ausente') coordMap[coord].ausentes++;
+  });
+
+  const totalPresentes = presencas.filter(p => p.estado === 'presente').length;
+  const totalAusentes  = presencas.filter(p => p.estado === 'ausente').length;
+  const totalEsperado  = Object.values(_equipasCache).reduce((s, eq) =>
+    s + ['mobilizador','vacinador','registador'].filter(sl => eq[sl]?.bi).length, 0);
+  const totalMarcados  = totalPresentes + totalAusentes;
+  const pct = totalEsperado > 0 ? Math.round((totalPresentes / totalEsperado) * 100) : 0;
+
+  // Linhas por coordenação
+  const linhas = Object.entries(coordMap)
+    .filter(([, d]) => d.total > 0)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([coord, d]) => {
+      const pctC = d.total > 0 ? Math.round((d.presentes / d.total) * 100) : 0;
+      const barW = Math.min(pctC, 100);
+      return `<tr>
+        <td>${escH(coord)}</td>
+        <td style="text-align:center;font-weight:700;color:var(--green)">${d.presentes}</td>
+        <td style="text-align:center;font-weight:700;color:#e74c3c">${d.ausentes}</td>
+        <td style="text-align:center;color:var(--text3)">${d.total - d.presentes - d.ausentes}</td>
+        <td><div style="height:6px;background:var(--green);border-radius:4px;width:${barW}px;max-width:100px;display:inline-block"></div>
+            <span style="font-size:11px;color:var(--text3);margin-left:4px">${pctC}%</span></td>
+      </tr>`;
+    }).join('');
+
+  secEl.innerHTML = `
+    <div class="dash-presencas">
+      <h3>🏃 Presenças em Campo — ${CAMPANHA_LABELS[dia] || dia}${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+      <div class="dash-pres-grid">
+        <div class="dash-pres-card dp-green"><div class="dpn">${totalPresentes}</div><div class="dpl">Presentes</div></div>
+        <div class="dash-pres-card dp-red"><div class="dpn">${totalAusentes}</div><div class="dpl">Ausentes</div></div>
+        <div class="dash-pres-card dp-grey"><div class="dpn">${totalEsperado - totalMarcados}</div><div class="dpl">Por Marcar</div></div>
+        <div class="dash-pres-card"><div class="dpn" style="color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'#e74c3c'}">${pct}%</div><div class="dpl">Cobertura</div></div>
+      </div>
+      ${linhas ? `<div style="overflow-x:auto"><table class="dash-pres-table">
+        <thead><tr><th>Coordenação</th><th>✅ Pres.</th><th>❌ Aus.</th><th>⏳ P/Marcar</th><th>Cobertura</th></tr></thead>
+        <tbody>${linhas}</tbody></table></div>` : '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma presença registada para este dia.</div>'}
+    </div>`;
 }
 
 function renderHistory() {
@@ -8203,6 +8602,9 @@ document.addEventListener('DOMContentLoaded', () => {
     <button id="sup-mode-teams" class="sup-mode-btn mode-teams" onclick="supSetMode('teams')">
       📋 Minhas Equipas
     </button>
+    <button id="sup-mode-presencas" class="sup-mode-btn mode-presencas" onclick="supSetMode('presencas')">
+      📅 Presenças
+    </button>
   </div>
 
   <!-- MODO: VALIDAR DISPONIBILIDADE -->
@@ -8296,6 +8698,20 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 
+  <!-- MODO: PRESENÇAS DE CAMPO -->
+  <div id="sup-presencas-mode">
+    <div class="sup-teams-header">
+      <h3>📅 Presenças em Campo</h3>
+      <div class="sup-teams-actions" style="margin-top:6px">
+        <button class="btn-sup-refresh" onclick="supCarregarPresencas()" title="Actualizar">🔄</button>
+      </div>
+    </div>
+    <div class="pres-day-bar" id="pres-day-bar"></div>
+    <div id="sup-presencas-content">
+      <div class="pres-loading">⟳ A carregar presenças...</div>
+    </div>
+  </div>
+
 </div><!-- /supervisor-panel -->
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -8321,6 +8737,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <div style="font-size:12px;color:var(--text2)">Progresso geral da coordenação</div>
       <div class="coord-progress-bar-outer"><div class="coord-progress-bar-inner" style="width:0%"></div></div>
     </div>
+
+    <!-- Presenças em campo (visível durante a campanha) -->
+    <div id="coord-presencas-sec" style="display:none;margin-bottom:16px"></div>
 
     <!-- Faixa de alerta de vagas (só aparece se houver vagas) -->
     <div id="coord-vagas-alert" style="display:none"></div>
