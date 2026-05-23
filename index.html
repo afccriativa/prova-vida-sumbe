@@ -7845,6 +7845,12 @@ async function _carregarEInjectarPresencas(dia, dashEl) {
 
   const presencas = await fbGetPresencasDia(dia);
 
+  // Garantir que a cache de equipas está carregada (pode não estar se a hierarquia nunca foi aberta)
+  if (Object.keys(_equipasCache).length === 0) {
+    const eqDocs = await fbGetEquipas();
+    updateEquipasCache(eqDocs);
+  }
+
   // Agrupar por coordenação
   const coordMap = {};
   COORDENACOES_2R.forEach(c => { coordMap[c] = { presentes: 0, ausentes: 0, total: 0 }; });
@@ -7899,7 +7905,7 @@ async function _carregarEInjectarPresencas(dia, dashEl) {
       <div class="dash-pres-grid">
         <div class="dash-pres-card dp-green"><div class="dpn">${totalPresentes}</div><div class="dpl">Presentes</div></div>
         <div class="dash-pres-card dp-red"><div class="dpn">${totalAusentes}</div><div class="dpl">Ausentes</div></div>
-        <div class="dash-pres-card dp-grey"><div class="dpn">${totalEsperado - totalMarcados}</div><div class="dpl">Por Marcar</div></div>
+        <div class="dash-pres-card dp-grey"><div class="dpn">${Math.max(0, totalEsperado - totalMarcados)}</div><div class="dpl">Por Marcar</div></div>
         <div class="dash-pres-card"><div class="dpn" style="color:${corPct}">${pct}%</div><div class="dpl">Cobertura</div></div>
       </div>
       ${linhas
