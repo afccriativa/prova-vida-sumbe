@@ -6882,7 +6882,9 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
       <!-- Topo: insígnia centrada + caixa VISTO -->
       <div class="topo">
         <div class="topo-insignia">
-          <img src="${INSIGNIA_PNG_B64}" class="insignia" alt="">
+          <div style="display:inline-block;background:#ffffff;border-radius:50%;padding:3px;line-height:0">
+            <img src="${INSIGNIA_PNG_B64}" class="insignia" alt="">
+          </div>
         </div>
         <div class="visto-box">
           <div class="visto-titulo">VISTO</div>
@@ -6898,7 +6900,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
         <div>DIREÇÃO NACIONAL DE SAÚDE PÚBLICA</div>
         <div>GOVERNO DA PROVÍNCIA DO CUANZA SUL</div>
         <div>ADMINISTRAÇÃO MUNICIPAL DO SUMBE</div>
-        <div>DIRECÇÃO DE SAÚDE</div>
+        <div style="margin-bottom:5px">DIRECÇÃO DE SAÚDE</div>
         <div class="cab-campanha">CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2) — 2ª RONDA</div>
         <div>22 a 24 de Maio 2026</div>
       </div>
@@ -6906,7 +6908,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
       <div class="titulo-lista">LISTA DE PRESENÇA</div>
 
       <div class="campos-row">
-        <span>Nome da Coordenação: <span class="campo-linha"></span></span>
+        <span>Nome da Coordenação: <strong>${_escHTML(sup.coordenacao || '—')}</strong></span>
         <span>Nome do Coordenador: <span class="campo-linha"></span></span>
         <span>Nome do Supervisor: <span class="campo-linha"></span></span>
       </div>
@@ -6988,7 +6990,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
 
   /* Campos */
   .campos-row { display: flex; justify-content: space-between;
-    font-size: 8.5pt; font-weight: bold; margin: 3px 0 5px; gap: 4px; }
+    font-size: 8.5pt; font-weight: bold; margin: 3px 0 8px; gap: 4px; }
   .campos-row span { white-space: nowrap; }
   .campo-linha { display: inline-block; border-bottom: 1px solid #000;
     width: 100px; vertical-align: bottom; margin-left: 2px; }
@@ -7011,7 +7013,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* Rodapé */
-  .rodape-texto { margin-top: 8px; font-size: 9pt; font-weight: bold;
+  .rodape-texto { margin-top: 16px; font-size: 9pt; font-weight: bold;
     text-align: center; }
 
   /* Assinaturas — apenas Chefe de Secção, centrada */
