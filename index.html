@@ -7780,7 +7780,8 @@ function renderDashboard() {
     '<thead><tr><th>Coordenação</th><th>Total</th><th>SIM ✅</th><th>NÃO ❌</th><th>Outros</th><th style="min-width:140px">Progresso</th></tr></thead>' +
     '<tbody>' + coordRows + '</tbody></table></div></div>';
 
-  // Presenças em campo (assíncrono)
+  // Presenças em campo (assíncrono) — resetar para o dia actual
+  _dashPresencasDia = null;
   _renderDashboardPresencas();
 }
 
@@ -7789,30 +7790,58 @@ function sCard(n, label, pct, cls) {
 }
 
 // ── Presenças em Campo — secção assíncrona do dashboard ──────────────────────
+let _dashPresencasDia = null; // dia activo no dashboard — null = usar hoje
+
 async function _renderDashboardPresencas() {
   const dashEl = document.getElementById('dashboard-content');
   if (!dashEl) return;
 
   const hoje = _presHoje();
-  if (!CAMPANHA_DIAS.includes(hoje)) {
-    // Fora do período da campanha — mostrar resumo do último dia disponível
-    const ultimoDia = CAMPANHA_DIAS.filter(d => d <= hoje).pop();
-    if (!ultimoDia) return; // campanha ainda não começou
-    _carregarEInjectarPresencas(ultimoDia, dashEl, false);
-    return;
+  // Determinar dia a mostrar
+  if (!_dashPresencasDia) {
+    _dashPresencasDia = CAMPANHA_DIAS.includes(hoje)
+      ? hoje
+      : (CAMPANHA_DIAS.filter(d => d <= hoje).pop() || null);
   }
-  _carregarEInjectarPresencas(hoje, dashEl, true);
+  if (!_dashPresencasDia) return; // campanha ainda não começou
+  _carregarEInjectarPresencas(_dashPresencasDia, dashEl);
 }
 
-async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
-  // Placeholder enquanto carrega
+// Navegação de dias chamada pelos botões da barra
+function _dashPresNav(dia) {
+  _dashPresencasDia = dia;
+  const dashEl = document.getElementById('dashboard-content');
+  if (dashEl) _carregarEInjectarPresencas(dia, dashEl);
+}
+
+async function _carregarEInjectarPresencas(dia, dashEl) {
+  const hoje        = _presHoje();
+  const edicaoActiva = CAMPANHA_DIAS.includes(hoje) && dia === hoje;
+
+  // Criar/obter secção
   let secEl = document.getElementById('dash-presencas-sec');
   if (!secEl) {
     secEl = document.createElement('div');
     secEl.id = 'dash-presencas-sec';
     dashEl.appendChild(secEl);
   }
-  secEl.innerHTML = '<div class="dash-presencas"><h3>🏃 Presenças em Campo — ' + (CAMPANHA_LABELS[dia] || dia) + '</h3><div style="color:var(--text3);font-size:12px;padding:8px 0">A carregar...</div></div>';
+
+  // Barra de navegação de dias
+  const dayBar = CAMPANHA_DIAS.map(d => {
+    const isFuture  = d > hoje;
+    const isActive  = d === dia;
+    return `<button class="pres-day-btn ${isActive ? 'active' : ''}"
+      ${isFuture ? 'disabled title="Dia ainda não iniciado"' : ''}
+      onclick="_dashPresNav('${d}')">${CAMPANHA_LABELS[d]}</button>`;
+  }).join('');
+
+  secEl.innerHTML = `<div class="dash-presencas">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <h3 style="margin:0">🏃 Presenças em Campo${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+      <div class="pres-day-bar" style="margin:0;padding:0;gap:6px">${dayBar}</div>
+    </div>
+    <div style="color:var(--text3);font-size:12px;padding:8px 0" class="pres-loading">A carregar ${CAMPANHA_LABELS[dia] || dia}...</div>
+  </div>`;
 
   const presencas = await fbGetPresencasDia(dia);
 
@@ -7820,7 +7849,6 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
   const coordMap = {};
   COORDENACOES_2R.forEach(c => { coordMap[c] = { presentes: 0, ausentes: 0, total: 0 }; });
 
-  // Total esperado por coordenação — contar membros das equipas
   Object.values(_equipasCache).forEach(eq => {
     const coord = eq.coordenacao || '';
     if (!coordMap[coord]) coordMap[coord] = { presentes: 0, ausentes: 0, total: 0 };
@@ -7829,7 +7857,6 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
     });
   });
 
-  // Registar presenças
   presencas.forEach(p => {
     const coord = p.coordenacao || '';
     if (!coordMap[coord]) coordMap[coord] = { presentes: 0, ausentes: 0, total: 0 };
@@ -7843,13 +7870,13 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
     s + ['mobilizador','vacinador','registador'].filter(sl => eq[sl]?.bi).length, 0);
   const totalMarcados  = totalPresentes + totalAusentes;
   const pct = totalEsperado > 0 ? Math.round((totalPresentes / totalEsperado) * 100) : 0;
+  const corPct = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent2)' : '#e74c3c';
 
-  // Linhas por coordenação
   const linhas = Object.entries(coordMap)
     .filter(([, d]) => d.total > 0)
     .sort((a, b) => b[1].total - a[1].total)
     .map(([coord, d]) => {
-      const pctC = d.total > 0 ? Math.round((d.presentes / d.total) * 100) : 0;
+      const pctC   = d.total > 0 ? Math.round((d.presentes / d.total) * 100) : 0;
       const barCls = pctC >= 80 ? 'bar-green' : pctC >= 50 ? 'bar-amber' : 'bar-red';
       return `<tr>
         <td>${escH(coord)}</td>
@@ -7865,16 +7892,22 @@ async function _carregarEInjectarPresencas(dia, dashEl, edicaoActiva) {
 
   secEl.innerHTML = `
     <div class="dash-presencas">
-      <h3>🏃 Presenças em Campo — ${CAMPANHA_LABELS[dia] || dia}${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <h3 style="margin:0">🏃 Presenças em Campo — ${CAMPANHA_LABELS[dia] || dia}${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+        <div class="pres-day-bar" style="margin:0;padding:0;gap:6px">${dayBar}</div>
+      </div>
       <div class="dash-pres-grid">
         <div class="dash-pres-card dp-green"><div class="dpn">${totalPresentes}</div><div class="dpl">Presentes</div></div>
         <div class="dash-pres-card dp-red"><div class="dpn">${totalAusentes}</div><div class="dpl">Ausentes</div></div>
         <div class="dash-pres-card dp-grey"><div class="dpn">${totalEsperado - totalMarcados}</div><div class="dpl">Por Marcar</div></div>
-        <div class="dash-pres-card"><div class="dpn" style="color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'#e74c3c'}">${pct}%</div><div class="dpl">Cobertura</div></div>
+        <div class="dash-pres-card"><div class="dpn" style="color:${corPct}">${pct}%</div><div class="dpl">Cobertura</div></div>
       </div>
-      ${linhas ? `<div style="overflow-x:auto"><table class="dash-pres-table">
-        <thead><tr><th>Coordenação</th><th>✅ Pres.</th><th>❌ Aus.</th><th>⏳ P/Marcar</th><th>Cobertura</th></tr></thead>
-        <tbody>${linhas}</tbody></table></div>` : '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma presença registada para este dia.</div>'}
+      ${linhas
+        ? `<div style="overflow-x:auto"><table class="dash-pres-table">
+            <thead><tr><th>Coordenação</th><th>✅ Pres.</th><th>❌ Aus.</th><th>⏳ P/Marcar</th><th>Cobertura</th></tr></thead>
+            <tbody>${linhas}</tbody></table></div>`
+        : '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma presença registada para este dia.</div>'
+      }
     </div>`;
 }
 
