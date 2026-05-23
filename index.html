@@ -6933,9 +6933,9 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
 
       <div class="assinaturas">
         <div class="assinatura">
+          <div class="ass-label-top">A Chefe de Secção de Saúde Pública</div>
           <div class="linha-ass"></div>
-          <div class="ass-label">A Chefe de Secção de Saúde Pública<br>
-            Maria Júlia Domingos da Silva<br>
+          <div class="ass-label">Maria Júlia Domingos da Silva<br>
             <em>Msc. em Saúde Pública</em>
           </div>
         </div>
@@ -6970,7 +6970,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
   .topo { display: flex; align-items: flex-start; justify-content: center;
     position: relative; margin-bottom: 2px; }
   .topo-insignia { text-align: center; flex: 1; }
-  .insignia { width: 58px; height: 58px; object-fit: contain; display: block; margin: 0 auto; }
+  .insignia { width: 58px; height: 58px; object-fit: contain; display: block; margin: 0 auto; background: #fff; border-radius: 2px; }
   .visto-box { position: absolute; right: 0; top: 0; border: 1px solid #000;
     width: 140px; padding: 4px 6px; font-size: 7.5pt; text-align: center; }
   .visto-titulo { font-weight: bold; font-size: 8pt; }
@@ -7002,10 +7002,10 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
     height: 22px; vertical-align: middle; }
   .tc { text-align: center; }
   .col-num  { width: 22px; }
-  .col-nome { }
+  .col-nome { max-width: 0; }
   .col-func { width: 66px; }
-  .col-tel  { width: 88px; }
-  .col-dia  { width: 70px; text-align: center; font-size: 7.5pt; }
+  .col-tel  { width: 90px; }
+  .col-dia  { width: 100px; text-align: center; font-size: 7.5pt; }
   .dia-data { font-size: 7pt; font-weight: normal; display: block; margin-top: 1px; }
   tbody tr:nth-child(even) td { background: #f2f2f2;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -7019,6 +7019,7 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
   .assinatura { text-align: center; }
   .linha-ass { border-bottom: 1px solid #000; width: 180px; margin: 0 auto 4px;
     height: 20px; }
+  .ass-label-top { font-size: 8pt; text-align: center; margin-bottom: 4px; font-weight: bold; }
   .ass-label { font-size: 8pt; line-height: 1.5; }
 </style>
 </head>
