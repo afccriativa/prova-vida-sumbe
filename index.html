@@ -1854,6 +1854,9 @@ input, textarea, select {
       <button class="btn-hier-action"
         onclick="gerarListaSupervisoresImpressao()"
         title="Gerar lista de presença de todos os Supervisores de Equipa">📋 Lista Supervisores</button>
+      <button class="btn-hier-action"
+        onclick="gerarListaCoordenadoresImpressao()"
+        title="Gerar lista de presença de todos os Coordenadores de Área">📋 Lista Coordenadores</button>
       <span class="hier-toolbar-lbl" style="margin-left:8px">Cards:</span>
       <button class="btn-hier-action" onclick="hierExpandAll()" title="Expandir todas as coordenações">⊞ Expandir tudo</button>
       <button class="btn-hier-action" onclick="hierCollapseAll()" title="Colapsar todas as coordenações">⊟ Colapsar tudo</button>
@@ -7090,10 +7093,47 @@ function gerarListaSupervisoresImpressao() {
   showToast(`Lista de ${sups.length} supervisores aberta em nova aba.`, 'success');
 }
 
+function gerarListaCoordenadoresImpressao() {
+  const coords = Object.values(_alocacoesCache)
+    .filter(d => d.status === 'coord' && d.bi && d.nome)
+    .map(d => {
+      const prof = findProfissional(d.bi);
+      return {
+        nome:        _toTitleCase(d.nome),
+        coordenacao: d.coordenacao || '—',
+        telefone:    (prof ? (prof.telefone || prof.telefone_r2 || '') : '') || d.telefone || ''
+      };
+    })
+    .sort((a, b) =>
+      a.coordenacao.localeCompare(b.coordenacao, 'pt') ||
+      a.nome.localeCompare(b.nome, 'pt')
+    );
+
+  if (coords.length === 0) {
+    showToast('Nenhum Coordenador de Área encontrado. Certifique-se de que as alocações estão carregadas.', 'warn');
+    return;
+  }
+
+  const html = _buildListaGeralHTML(
+    coords,
+    'Coordenador de Área',
+    'LISTA DE PRESENÇA — COORDENADORES DE ÁREA'
+  );
+  const w = window.open('', '_blank');
+  if (!w) { showToast('O browser bloqueou a nova aba. Permita popups para este site.', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+  showToast(`Lista de ${coords.length} coordenadores aberta em nova aba.`, 'success');
+}
+
 function _buildListaSupervisoresHTML(sups) {
+  return _buildListaGeralHTML(sups, 'Supervisor de Equipa', 'LISTA DE PRESENÇA — SUPERVISORES DE EQUIPA');
+}
+
+function _buildListaGeralHTML(membros, funcaoLabel, tituloLista) {
   let coordActual = null;
   let linhas = '';
-  sups.forEach((s, idx) => {
+  membros.forEach((s, idx) => {
     if (s.coordenacao !== coordActual) {
       coordActual = s.coordenacao;
       linhas += `<tr class="coord-sep">
@@ -7105,7 +7145,7 @@ function _buildListaSupervisoresHTML(sups) {
     linhas += `<tr>
       <td class="tc">${idx + 1}</td>
       <td>${_escHTML(s.nome)}</td>
-      <td class="tc">Supervisor de Equipa</td>
+      <td class="tc">${_escHTML(funcaoLabel)}</td>
       <td>${_escHTML(s.telefone)}</td>
       <td></td><td></td><td></td><td></td>
     </tr>`;
@@ -7194,7 +7234,7 @@ function _buildListaSupervisoresHTML(sups) {
     <div class="cab-campanha">CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2) — 2ª RONDA</div>
     <div>22 a 24 de Maio 2026</div>
   </div>
-  <div class="titulo-lista">LISTA DE PRESENÇA — SUPERVISORES DE EQUIPA</div>
+  <div class="titulo-lista">${_escHTML(tituloLista)}</div>
 </div>
 
 <!-- Tabela contínua -->
