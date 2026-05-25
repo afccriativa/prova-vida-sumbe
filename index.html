@@ -2913,7 +2913,8 @@ function activateSystem() {
       .then(() => fbGetAlocacoes())
       .then(docs => {
         updateAlocacoesCache(docs);
-        reconciliarNovosRH();                                  // A-02: sincronizar após caches prontos
+        _enrichSupervisoresFromCache(); // supervisores realocados via Firebase
+        reconciliarNovosRH();           // A-02
       });
   }
 }
@@ -7964,6 +7965,26 @@ function findBI(bi) { const i = biIndex[bi.toUpperCase().trim()]; return i !== u
     };
   });
 })();
+
+function _enrichSupervisoresFromCache() {
+  // Enriquecer SUPERVISORES_INDEX com supervisores que estão em alocacoes_2r
+  // (inclui realocados de outras funções confirmados pelo Admin)
+  Object.values(_alocacoesCache).forEach(doc => {
+    const biUpper = (doc.bi || '').toUpperCase();
+    if (!biUpper || SUPERVISORES_INDEX[biUpper]) return; // já no índice
+    const isSup = doc.status === 'supervisor' || doc.funcao === 'Supervisor equipa';
+    if (!isSup) return;
+    const base = findBI(doc.bi);
+    const r2   = getR2Record(doc.bi);
+    SUPERVISORES_INDEX[biUpper] = {
+      bi:          doc.bi,
+      nome:        doc.nome || (base && base.nome) || doc.bi,
+      coordenacao: (r2 && r2.coordenacao_r2) || doc.coordenacao || (base && base.coordenacao) || '',
+      sexo:        doc.sexo || (base && base.sexo) || 'M',
+      _fromAlocacoes: true,
+    };
+  });
+}
 
 function detectType(q) {
   const s = q.trim();
