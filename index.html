@@ -7051,15 +7051,22 @@ ${paginaHTML(registadores, 'Registador')}
 }
 
 function gerarListaSupervisoresImpressao() {
-  // Recolher todos os supervisores do índice
+  // Fonte de verdade: alocacoes_2r com status 'supervisor'
+  // Garante que só aparecem supervisores activos na 2ª Ronda
+  const supervisores2R = new Set(
+    Object.values(_alocacoesCache)
+      .filter(d => d.status === 'supervisor')
+      .map(d => (d.bi || '').toUpperCase())
+  );
+
   const sups = Object.values(SUPERVISORES_INDEX)
-    .filter(s => s.bi && s.nome)
+    .filter(s => s.bi && s.nome && supervisores2R.has(s.bi.toUpperCase()))
     .map(s => {
       const prof = findProfissional(s.bi);
       return {
-        nome:       _toTitleCase(s.nome),
+        nome:        _toTitleCase(s.nome),
         coordenacao: s.coordenacao || '—',
-        telefone:   (prof ? (prof.telefone || prof.telefone_r2 || '') : '') || ''
+        telefone:    (prof ? (prof.telefone || prof.telefone_r2 || '') : '') || ''
       };
     })
     .sort((a, b) =>
@@ -7068,7 +7075,7 @@ function gerarListaSupervisoresImpressao() {
     );
 
   if (sups.length === 0) {
-    showToast('Nenhum supervisor encontrado no índice.', 'warn');
+    showToast('Nenhum supervisor activo na 2ª Ronda encontrado. Certifique-se de que as alocações estão carregadas.', 'warn');
     return;
   }
 
