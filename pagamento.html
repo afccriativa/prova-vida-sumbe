@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<meta name="theme-color" content="#0f1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Verificação de Pagamento — 1ª Ronda Pólio | Mobilizadores Sumbe 2026</title>
+<style>
+:root {
+  --bg:       #0f1923;
+  --surface:  #1a2635;
+  --surface2: #1e2d40;
+  --border:   #2a3d55;
+  --accent:   #e63329;
+  --accent2:  #f4a832;
+  --success:  #2ecc71;
+  --error:    #e74c3c;
+  --warning:  #f39c12;
+  --info:     #3498db;
+  --teal:     #1abc9c;
+  --text:     #e8edf2;
+  --text2:    #8fa3b8;
+  --text3:    #7a96b0;
+  --fs-xs:    10px;
+  --fs-sm:    12px;
+  --fs-base:  13px;
+  --fs-md:    15px;
+  --fs-lg:    17px;
+  --fs-xl:    22px;
+  --fs-2xl:   32px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px;
+  --radius: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--text); }
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.hdr {
+  width: 100%; max-width: 520px;
+  padding: var(--sp-6) var(--sp-4) var(--sp-4);
+  text-align: center;
+}
+.hdr-badge {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(230,51,41,0.12);
+  border: 1px solid rgba(230,51,41,0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: var(--sp-3);
+}
+.hdr h1 {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: var(--sp-1);
+}
+.hdr p { font-size: var(--fs-sm); color: var(--text2); }
+
+/* ── Card wrapper ───────────────────────────────────────────────── */
+.card {
+  width: 100%; max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  margin: 0 var(--sp-4) var(--sp-4);
+}
+.card-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  margin-bottom: var(--sp-4);
+}
+
+/* ── Input & Button ─────────────────────────────────────────────── */
+.input-group { margin-bottom: var(--sp-4); }
+.input-group label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: var(--sp-2);
+}
+.input-bi {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color .2s;
+}
+.input-bi:focus { border-color: var(--accent2); }
+.input-bi::placeholder { color: var(--text3); font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 24px;
+  border: none; border-radius: 8px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .1s, opacity .2s;
+  width: 100%;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-sim { background: var(--success); color: #fff; font-size: var(--fs-md); }
+.btn-nao { background: var(--error); color: #fff; font-size: var(--fs-md); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn-sm { padding: 10px 16px; font-size: var(--fs-sm); }
+.btn[disabled] { opacity: .4; pointer-events: none; }
+
+/* ── Profissional info card ─────────────────────────────────────── */
+.prof-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+.prof-name {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  margin-bottom: var(--sp-2);
+}
+.prof-meta {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-sm); color: var(--text2);
+}
+.prof-meta span { display: flex; align-items: center; gap: 4px; }
+
+.question-box {
+  text-align: center;
+  padding: var(--sp-4) 0;
+}
+.question-box p {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: var(--sp-5);
+  line-height: 1.5;
+}
+.btn-row { display: flex; gap: var(--sp-3); }
+.btn-row .btn { flex: 1; }
+
+/* ── Messages ───────────────────────────────────────────────────── */
+.msg {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  margin-bottom: var(--sp-4);
+  display: none;
+}
+.msg-error { background: rgba(231,76,60,0.12); color: var(--error); border: 1px solid rgba(231,76,60,0.25); }
+.msg-success { background: rgba(46,204,113,0.12); color: var(--success); border: 1px solid rgba(46,204,113,0.25); }
+.msg-warning { background: rgba(243,156,18,0.12); color: var(--warning); border: 1px solid rgba(243,156,18,0.25); }
+.msg-info { background: rgba(52,152,219,0.12); color: var(--info); border: 1px solid rgba(52,152,219,0.25); }
+
+/* ── Confirmação final ──────────────────────────────────────────── */
+.confirm-box {
+  text-align: center;
+  padding: var(--sp-6) 0;
+}
+.confirm-icon { font-size: 48px; margin-bottom: var(--sp-3); }
+.confirm-text {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+.confirm-sub { font-size: var(--fs-sm); color: var(--text2); }
+
+/* ── Admin Dashboard ────────────────────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+.stat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--sp-3);
+  text-align: center;
+}
+.stat-num { font-size: var(--fs-2xl); font-weight: 800; line-height: 1; margin-bottom: 2px; }
+.stat-label { font-size: var(--fs-xs); color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.stat-pago .stat-num { color: var(--success); }
+.stat-npago .stat-num { color: var(--error); }
+.stat-pend .stat-num { color: var(--text3); }
+
+.progress-outer {
+  background: var(--surface2);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+}
+.progress-inner { height: 100%; border-radius: 6px; transition: width .4s; }
+
+/* ── Tabs ───────────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; margin-bottom: var(--sp-4); }
+.tab {
+  flex: 1;
+  padding: 10px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text3);
+  cursor: pointer;
+  transition: all .2s;
+}
+.tab:first-child { border-radius: 8px 0 0 8px; }
+.tab:last-child { border-radius: 0 8px 8px 0; }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── Table ──────────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin-bottom: var(--sp-4); }
+table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--surface);
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(42,61,85,0.4);
+  vertical-align: middle;
+}
+tr:hover td { background: rgba(30,45,64,0.5); }
+.badge-sim, .badge-nao, .badge-pend {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.badge-sim { background: rgba(46,204,113,0.15); color: var(--success); }
+.badge-nao { background: rgba(231,76,60,0.15); color: var(--error); }
+.badge-pend { background: rgba(127,140,155,0.15); color: var(--text3); }
+
+/* ── Filter ─────────────────────────────────────────────────────── */
+.filter-row {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+.filter-row select, .filter-row input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+}
+.filter-row input::placeholder { color: var(--text3); }
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.ftr {
+  width: 100%; max-width: 520px;
+  padding: var(--sp-4);
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+.ftr a { color: var(--accent2); text-decoration: none; }
+
+/* ── Admin link in header ──────────────────────────────────────── */
+.admin-link {
+  display: inline-block;
+  margin-top: var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Coordenação breakdown ──────────────────────────────────────── */
+.coord-breakdown { margin-bottom: var(--sp-5); }
+.coord-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(42,61,85,0.3);
+  font-size: var(--fs-sm);
+}
+.coord-row:last-child { border-bottom: none; }
+.coord-name { flex: 1; font-weight: 600; min-width: 0; }
+.coord-bar-outer {
+  flex: 0 0 80px;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.coord-bar-fill { height: 100%; border-radius: 3px; }
+.coord-nums { font-size: var(--fs-xs); color: var(--text3); white-space: nowrap; min-width: 70px; text-align: right; }
+
+/* ── Print ──────────────────────────────────────────────────────── */
+@media print {
+  body { background: #fff; color: #000; }
+  .hdr, .ftr, .btn, .filter-row, .tabs, .admin-link { display: none; }
+  .card { border: 1px solid #ccc; background: #fff; }
+  .stat-card { border: 1px solid #ccc; background: #f9f9f9; }
+  .stat-num { color: #000 !important; }
+  th { background: #f0f0f0; color: #333; }
+  td { color: #000; }
+  .badge-sim { background: #d4edda; color: #155724; }
+  .badge-nao { background: #f8d7da; color: #721c24; }
+  .badge-pend { background: #e2e3e5; color: #383d41; }
+  #print-title { display: block !important; text-align: center; font-size: 16pt; font-weight: bold; margin: 16px 0; }
+}
+#print-title { display: none; }
+
+/* ── Loading spinner ────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .dash-grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+  .stat-num { font-size: var(--fs-xl); }
+  .card { padding: var(--sp-4); margin: 0 var(--sp-2) var(--sp-3); }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="hdr">
+  <div class="hdr-badge">1ª Ronda · Março 2026</div>
+  <h1>💰 Verificação de Pagamento<br>Mobilizadores — Sumbe</h1>
+  <p>Campanha nOPV2 — 1ª Ronda Pólio · Município do Sumbe</p>
+  <div class="admin-link" id="admin-toggle" onclick="toggleAdminAuth()">🔐 Painel Administrativo</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ECRÃ 1: IDENTIFICAÇÃO POR BI
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="card" id="screen-bi">
+  <div class="card-title">📋 Identificação</div>
+  <div id="msg-bi" class="msg msg-error"></div>
+  <div class="input-group">
+    <label for="bi-input">Número do Bilhete de Identidade</label>
+    <input type="text" id="bi-input" class="input-bi" placeholder="Ex: 003555663KS039" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <button class="btn btn-primary" id="btn-verificar" onclick="verificarBI()">Verificar</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ECRÃ 2: PERGUNTA DE PAGAMENTO
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="card" id="screen-pergunta" style="display:none">
+  <div class="prof-card">
+    <div class="prof-name" id="prof-nome"></div>
+    <div class="prof-meta">
+      <span>📌 <span id="prof-coord"></span></span>
+      <span>🪪 <span id="prof-bi"></span></span>
+      <span id="prof-tel-wrap">📞 <span id="prof-tel"></span></span>
+    </div>
+  </div>
+  <div id="msg-pergunta" class="msg msg-warning"></div>
+  <div class="question-box" id="question-area">
+    <p>Já recebeu o pagamento referente à<br><strong>1ª Ronda Pólio — Março 2026?</strong></p>
+    <div class="btn-row">
+      <button class="btn btn-sim" onclick="responder('SIM')">✅ SIM</button>
+      <button class="btn btn-nao" onclick="responder('NAO')">❌ NÃO</button>
+    </div>
+  </div>
+  <div class="confirm-box" id="confirm-area" style="display:none">
+    <div class="confirm-icon" id="confirm-icon"></div>
+    <div class="confirm-text" id="confirm-text"></div>
+    <div class="confirm-sub" id="confirm-sub"></div>
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-4)">← Voltar ao início</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ECRÃ 3: AUTENTICAÇÃO ADMIN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="card" id="screen-admin-auth" style="display:none">
+  <div class="card-title">🔐 Acesso Administrativo</div>
+  <div id="msg-admin" class="msg msg-error"></div>
+  <div class="input-group">
+    <label for="admin-bi">BI do Administrador</label>
+    <input type="text" id="admin-bi" class="input-bi" placeholder="Introduza o BI do gestor" autocomplete="off">
+  </div>
+  <button class="btn btn-primary" onclick="autenticarAdmin()">Entrar</button>
+  <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-3)">← Voltar</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ECRÃ 4: DASHBOARD ADMIN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="card" id="screen-dashboard" style="display:none; max-width: 720px">
+  <div id="print-title">Verificação de Pagamento — Mobilizadores 1ª Ronda Pólio Sumbe 2026</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:var(--sp-4)">
+    <div class="card-title" style="margin:0">📊 Painel de Pagamentos</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="refreshDashboard()">🔄 Actualizar</button>
+      <button class="btn btn-outline btn-sm" onclick="exportarExcel()">📥 Excel</button>
+      <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </div>
+
+  <div class="dash-grid" id="dash-stats">
+    <div class="stat-card"><div class="stat-num" id="st-total">—</div><div class="stat-label">Total Mob.</div></div>
+    <div class="stat-card stat-pago"><div class="stat-num" id="st-pago">—</div><div class="stat-label">Pagos</div></div>
+    <div class="stat-card stat-npago"><div class="stat-num" id="st-npago">—</div><div class="stat-label">Não Pagos</div></div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--sp-2)">
+    <div class="progress-outer" style="flex:1">
+      <div class="progress-inner" id="progress-resp" style="width:0%;background:linear-gradient(90deg,var(--info),var(--teal))"></div>
+    </div>
+    <span style="font-size:var(--fs-xs);color:var(--text3);white-space:nowrap" id="progress-label">0% responderam</span>
+  </div>
+
+  <div class="coord-breakdown" id="coord-breakdown"></div>
+
+  <!-- Filtros & tabela -->
+  <div class="tabs" id="dash-tabs">
+    <div class="tab active" onclick="setTab('todos')">Todos</div>
+    <div class="tab" onclick="setTab('pagos')">✅ Pagos</div>
+    <div class="tab" onclick="setTab('nao_pagos')">❌ Não Pagos</div>
+    <div class="tab" onclick="setTab('sem_resposta')">⏳ Sem Resp.</div>
+  </div>
+
+  <div class="filter-row">
+    <select id="filter-coord" onchange="renderTable()">
+      <option value="">Todas as Coordenações</option>
+    </select>
+    <input type="text" id="filter-search" placeholder="🔍 Pesquisar nome ou BI..." oninput="renderTable()">
+  </div>
+
+  <div class="tbl-wrap" style="max-height:55vh;overflow-y:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Nº</th>
+          <th>Nome</th>
+          <th>BI</th>
+          <th>Coordenação</th>
+          <th>Telefone</th>
+          <th>Estado</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+  <div style="font-size:var(--fs-xs);color:var(--text3);margin-top:var(--sp-2)" id="tbl-count"></div>
+
+  <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-4)">← Terminar sessão</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="ftr">
+  DMS Sumbe · Campanha nOPV2 2026 · Ibisner Solutions<br>
+  Sistema desenvolvido por <a href="#">AFC CRIATIVA</a>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FIREBASE + LÓGICA
+     ═══════════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, getDocs, collection, query
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:        "AIzaSyD6UWzHeAfOScgjwiVRHZuea1pN-GYvbWo",
+  authDomain:    "prova-vida-sumbe-2026.firebaseapp.com",
+  projectId:     "prova-vida-sumbe-2026",
+  storageBucket: "prova-vida-sumbe-2026.firebasestorage.app",
+  messagingSenderId: "410674337220",
+  appId:         "1:410674337220:web:6b0c6ad04925011feb8091"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── Base de dados dos 148 mobilizadores ─────────────────────────
+const MOBILIZADORES = [{"bi":"003555663KS039","nome":"ÁBIA DOMINGAS SOARES CHIMBUNDO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"936452292"},{"bi":"003443358KS034","nome":"ADÉLIA DOMINGOS BENTO","sexo":"F","coordenacao":"CHINGO 1","telefone":"923983120"},{"bi":"021017788KS051","nome":"ADELINO LONGANDO LUÍS LUCAS","sexo":"M","coordenacao":"CHINGO 2","telefone":"928015975"},{"bi":"008755907KS047","nome":"ALBERTINA ERNESTO ANTÓNIO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"933658073"},{"bi":"020597168LA052","nome":"ALBERTO BISGAIA DA SILVA","sexo":"M","coordenacao":"CIDADE","telefone":"935287113"},{"bi":"000659758KS030","nome":"ALCIDIA DE ANINHAS DA COSTA CARLOS","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"926729189"},{"bi":"009359744KS045","nome":"AMADEU JOSÉ QUINDA","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"927446593"},{"bi":"024438041KS054","nome":"AMBRÓSIO KATCHEHILE JÚLIO SANDUMBO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"976358581"},{"bi":"024235515KS053","nome":"ANA MARIA LEMOS CASTRO","sexo":"F","coordenacao":"CHINGO 2","telefone":"941640898"},{"bi":"003764800KS033","nome":"ANA PAULA CASSOMA CHUNDUMULA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":""},{"bi":"005707519KS041","nome":"ANAIR JULIETA HENRIQUES EUGÉNIO LUANICA","sexo":"F","coordenacao":"KICOMBO SEDE","telefone":"935217328"},{"bi":"020914180KS050","nome":"ANDRÉ QUICÓLIO ALBERTO DA FONSECA","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"972935458"},{"bi":"003390636KS034","nome":"ANGELINA MATEUS JAMBA","sexo":"F","coordenacao":"CHINGO 1","telefone":"923382066"},{"bi":"003089680KS031","nome":"ANISTELDE DE ANGELINA CALEI JOAQUIM","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"943030195"},{"bi":"006061560KS043","nome":"ANTÓNIO JOSÉ MANUEL","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"941816498"},{"bi":"023679282KS058","nome":"ARISTIDES ARAÚJO ANTÓNIO ANTÓNIO CARLOS","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"936901339"},{"bi":"005768978KS048","nome":"ARIZACHER FRANCISCO AUGUSTO SORTE","sexo":"M","coordenacao":"CHINGO 2","telefone":""},{"bi":"020384177LA054","nome":"ARLETE GARCIA CAHASSA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"933677697"},{"bi":"007251694KS040","nome":"ARMINDA MILUCHA AMARAL JOSÉ","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"923354705"},{"bi":"005723034KS049","nome":"ASSÍRIA NGALO CATUMBELA CASSOMA","sexo":"F","coordenacao":"CHINGO 1","telefone":"930108637"},{"bi":"008087451KS047","nome":"AZEOFAN DA SILVA FERNANDO VIAGEM","sexo":"F","coordenacao":"KICOMBO SEDE","telefone":"974488958"},{"bi":"020181085KS057","nome":"BEATRIZ CHEILA CHINGILA CACOCOLO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"925142150"},{"bi":"020742684KS054","nome":"BEATRIZ SANTANA GUVINGUE CACUMBA","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"009652752KS045","nome":"BERCIOR NGOLA BERNARDO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"943730578"},{"bi":"009311364KS045","nome":"BIBIANA FINEZA DA SILVA MESSA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"939680352"},{"bi":"009890739KS042","nome":"CARLOS LINO MIÚDO","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"944657072"},{"bi":"010097131KS041","nome":"CARLOS MATEUS NANJAMBA VERNIL","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"936063938"},{"bi":"007379745KS042","nome":"CAROLINA GONÇALVES ANTÓNIO","sexo":"F","coordenacao":"CHINGO 1","telefone":"942107454"},{"bi":"004677460KS041","nome":"CECÍLIA CARLOS FRANCISCO ANTÓNIO","sexo":"F","coordenacao":"CHINGO 1","telefone":""},{"bi":"020223883KS053","nome":"CECÍLIA JOSÉ LENTINO","sexo":"F","coordenacao":"CIDADE","telefone":""},{"bi":"004987688BA042","nome":"CECÍLIA NGUEVE SANDAMBONGO MOÍSES","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"946628607"},{"bi":"007217688KS046","nome":"CÉLCIO FERNANDO VIEGAS","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"922459524"},{"bi":"010173992KS048","nome":"CELSIA CLAUDETH CANIVETE ANTÓNIO","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"005386192KS040","nome":"CÉSAR JOSÉ CANDUANGO","sexo":"M","coordenacao":"CHINGO 2","telefone":""},{"bi":"020894005KS050","nome":"CLAUDIO DOMINGOS NUMA","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"976183302"},{"bi":"020759186KS054","nome":"DAIANA ZULMIRAAUGUSTO SANTUREIRA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"923865224"},{"bi":"020628982KS059","nome":"DÁRIO JOÃO DA SILVA DOMINGOS","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"972856590"},{"bi":"007793515KS040","nome":"DENILSON JOSÉ CABINDA","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"942583566"},{"bi":"020239131KS059","nome":"DENILSON MANUEL HUAMBO CAETANO","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"922954486"},{"bi":"009545488KS049","nome":"DENISE LINDILA AGUIAR DA COSTA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"922244618"},{"bi":"010282039KS043","nome":"DJAMILA TERESA DE OLIVEIRA MACANJA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"941325537"},{"bi":"007883888KS047","nome":"DOMINGAS EVARISTO ABILIO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"942135107"},{"bi":"008018318KS042","nome":"DOMINGAS ALBERTO FERREIRA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"939848570"},{"bi":"005718046KS048","nome":"DOMINGOS CULEMBALA LISBOA","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"926902950"},{"bi":"009196504KS047","nome":"DULCE CÂNDIDA MATEIA JOAQUIM","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"938151216"},{"bi":"006457206KS041","nome":"DULCE GABRIEL BAPTISTA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"935288037"},{"bi":"009982973KS049","nome":"DULCE PAULA LINO FRANCISCO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"947343160"},{"bi":"020129312KS051","nome":"EANES PEDRO LUÍS WAMBEMBE","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":""},{"bi":"008082288KS044","nome":"EDMILSA INÊS MARCOLINO PAULO","sexo":"F","coordenacao":"KICOMBO SEDE","telefone":"929594649"},{"bi":"021177466KS052","nome":"EDNA ELISA SMITE RODRIGUES","sexo":"F","coordenacao":"CHINGO 1","telefone":"929652758"},{"bi":"009554918KS041","nome":"EDUARDA ALBERTINA FRANCISCO FREDERICO","sexo":"F","coordenacao":"CHINGO 2","telefone":"934109915"},{"bi":"009040386KS044","nome":"EDUWENE MÁRCIO SEGUNDA DA SILVA","sexo":"M","coordenacao":"CHINGO 2","telefone":""},{"bi":"022159512KS056","nome":"ELIANDRA ADEUS VENTURA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"923008758"},{"bi":"006695029BA046","nome":"ELISNAIDA ZUMIRA KATIVAMUKUMBA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"929561919"},{"bi":"020456489KS056","nome":"ENGRÁCIA KIMBILA DIMBO","sexo":"F","coordenacao":"CHINGO 2","telefone":"921850118"},{"bi":"008268225KS045","nome":"ERIVANDA TOMÁS DA FONSECA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"937214820"},{"bi":"021148759KS051","nome":"ESMERALDA ALBERTO HUAMBO","sexo":"F","coordenacao":"CHINGO 1","telefone":"947150653"},{"bi":"008847410KS046","nome":"EUGÉNIA JAMBA CULEMBA MUTO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"931003323"},{"bi":"007005488LS045","nome":"EVA DA CONCEIÇÃO MUTUNDA AVILE","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"924816774"},{"bi":"023120257KS056","nome":"EVA DOMINGOS ALBINO","sexo":"F","coordenacao":"CHINGO 2","telefone":"924821740"},{"bi":"010184737KS044","nome":"EZÉLIA ANGÉLICA FRANCISCO","sexo":"F","coordenacao":"CHINGO 2","telefone":"922071921"},{"bi":"020615545KS055","nome":"FERNANDO NDULO CASSARROTE ANTÓNIO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"922748913"},{"bi":"005092837KS045","nome":"FLORENÇA GOMES MÁRIO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"945032579"},{"bi":"008923111CE048","nome":"FRANCISCA ROMANA TONGEILENI","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"944050341"},{"bi":"001624755KS035","nome":"FRANCISCO JOÃO SILVA","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"938429280"},{"bi":"021303373KS059","nome":"FRANCISCO KISSAMA FELIZARDO","sexo":"M","coordenacao":"CIDADE","telefone":"929521298"},{"bi":"009590375KS046","nome":"FRANCISCO MARCOS DE FÁTIMA CONCELHO","sexo":"M","coordenacao":"CHINGO 2","telefone":"939795700"},{"bi":"005121889KS044","nome":"GENILDA MANELA SETAS CARDOSO","sexo":"F","coordenacao":"CIDADE","telefone":"923325425"},{"bi":"020731343KS057","nome":"GEORGINELA INÊS GUEDES CAPILO","sexo":"F","coordenacao":"CHINGO 2","telefone":"924998955"},{"bi":"005457138KS049","nome":"GUILHERMINA FORTUNA CARLOS","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"005136518KS045","nome":"HELENA DIOGO DOS SANTOS","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"939679800"},{"bi":"006518108KS040","nome":"HOSNY JOAQUIM GABRIEL DOS SANTOS FERNANDO","sexo":"M","coordenacao":"CHINGO 1","telefone":""},{"bi":"020373194KS056","nome":"HUMBERTO CARVALHO JÚLIO","sexo":"M","coordenacao":"CHINGO 2","telefone":"972861030"},{"bi":"007948302KS046","nome":"IDALINA VIGÍLIO LUANDA","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"009347555KS049","nome":"IRENE CRISTINA SOARES NUNDA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"927469674"},{"bi":"009471721KS042","nome":"ISABEL JOANA BENIAR MANUEL","sexo":"F","coordenacao":"CHINGO 1","telefone":""},{"bi":"005495763KS040","nome":"ISABEL MANUEL TCHIWALE","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"928896145"},{"bi":"007252386KS045","nome":"JOANA GONÇALVES MANECO RAÚL","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":""},{"bi":"009970558KS045","nome":"JOAQUIM MANUEL NELO LEIRIA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"929986797"},{"bi":"021225053KS058","nome":"JOEL CATRAIO SOBRAL JOÃO","sexo":"M","coordenacao":"KICOMBO SEDE","telefone":"932373767"},{"bi":"020455378KS056","nome":"JORGE SOLOMBO GANDO ABEL","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"921803750"},{"bi":"020356791KS053","nome":"JOSÉ INÁCIO NENE DANIEL","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"921843998"},{"bi":"020531990KS050","nome":"JOSÉ KAIONDA VICTOR BENJAMIM","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"939927162"},{"bi":"000491210KS031","nome":"JOSEFA DA CONCEIÇÃO ALFREDO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"944051015"},{"bi":"008568041KS047","nome":"JUDITE VICTORINO ALEXANDRE","sexo":"F","coordenacao":"KICOMBO SEDE","telefone":"972854553"},{"bi":"009554924KS049","nome":"JUDITH DOMINGAS ANDRÉ SONGO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"943069454"},{"bi":"009139240KS044","nome":"LENUSA ADELINA AUGUSTO SAMPAIO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"931006573"},{"bi":"007085355KS043","nome":"LEONALDO TCHIMICA PAIM","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"928819156"},{"bi":"010164189KS048","nome":"LETÍCIA DELFINA ZEFERINO AVELINO ZECA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"945219276"},{"bi":"004726962KS045","nome":"LUANDINO ZEFERINO AVELINO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":""},{"bi":"003382072KS033","nome":"LUCINDA DE JESUS DE CARVALHO","sexo":"M","coordenacao":"CHINGO 2","telefone":""},{"bi":"003175106BA031","nome":"LUISA CLARA","sexo":"F","coordenacao":"CASA BRANCA, PRAIAS E HUAMBA","telefone":"942654189"},{"bi":"010281771KS040","nome":"LUISA MAURICIO BERNARDO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"942135107"},{"bi":"008077780KS046","nome":"LUQUENIA ALBERTINA ANTÓNIOJOAQUIM","sexo":"F","coordenacao":"CHINGO 1","telefone":""},{"bi":"002338507KS031","nome":"LUZIA SAMBA ALFREDO FERREIRA","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"007265082KS049","nome":"MADALENA TOMÁS ALBERTO ANTÓNIO","sexo":"F","coordenacao":"CHINGO 1","telefone":"935266310"},{"bi":"023071611KS057","nome":"MADILSON MARCOS FRANCISCO MANUEL","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"947146976"},{"bi":"023505231KS050","nome":"MANECO GONÇALVES AUGUSTO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"935233928"},{"bi":"021942585KS051","nome":"MANUEL BURICA GOMES JOSÉ","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"946400875"},{"bi":"008070709KS041","nome":"MARIA ANTÓNIA ANDRÉ SONGO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"932330310"},{"bi":"003733655KS033","nome":"MARIA CHIPANDA SEGUNDA BARATO","sexo":"F","coordenacao":"KICOMBO SEDE","telefone":"923260201"},{"bi":"007800220KS047","nome":"MARIA DAS DORES ROBERTO AGOSTINHO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"935954964"},{"bi":"006732309KS045","nome":"MARIA MANUELA ULICA JANUÁRIO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"923346840"},{"bi":"020785101KS052","nome":"MARIA NASSOLE MARIANO","sexo":"F","coordenacao":"CHINGO 2","telefone":"929833894"},{"bi":"008051287KS044","nome":"MARIA YOLENE PEDRO ADRIANO","sexo":"F","coordenacao":"CHINGO 1","telefone":"937932123"},{"bi":"008071670KS047","nome":"MARIANA ANTÓNIO FILIPE","sexo":"F","coordenacao":"CHINGO 1","telefone":"921757118"},{"bi":"007142107KS043","nome":"MARIZA MANUEL NICOLAU GINGA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"935201281"},{"bi":"009235953KS040","nome":"MATILDE JACINTO NACHOCO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"929218277"},{"bi":"003039001KS033","nome":"MIGUEL MARQUES FEIO","sexo":"M","coordenacao":"CASA BRANCA, PRAIAS E HUAMBA","telefone":"926990305"},{"bi":"020422242KS054","nome":"MILEIDY JAMBA ANTÓNIO VIEIRA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"925851510"},{"bi":"005639631KS047","nome":"MIRCA PATROCÍNIO MATEIA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"929972482"},{"bi":"009059328LA045","nome":"MIRENI KAMBANI ANTÓNIO SEBASTIÃO","sexo":"F","coordenacao":"CHINGO 2","telefone":""},{"bi":"009947149KS045","nome":"MOISES LEONARDO CONDOLOLA CHIVINDA","sexo":"M","coordenacao":"CHINGO 2","telefone":""},{"bi":"007004018KS045","nome":"NAIRA DA CONCEIÇÃO DIOGO FILIPE","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"948928160"},{"bi":"008495839KS044","nome":"NATERÇA BIMBI ALEXANDRE ANGOLANO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"930033681"},{"bi":"021645146KS056","nome":"NEFIBOZETY WIMBO CAPENDA GOMES","sexo":"M","coordenacao":"CIDADE","telefone":""},{"bi":"005072910KS047","nome":"NEIVA LEONILDE EDUARDO LUÍS DA SILVA","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"942449357"},{"bi":"005361655KS040","nome":"NEUSA JOSÉ DOMINGOS","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":""},{"bi":"000565944KS039","nome":"ODETE ANTÓNIO","sexo":"F","coordenacao":"CIDADE","telefone":"932876180"},{"bi":"005438351KS046","nome":"OLÍVIA ARMINDO AVELINO ALFREDO SEBASTIÃO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"923619495"},{"bi":"008940149KS040","nome":"ONÉZIO MARCELO CACUMBA TEXEIRA","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"936246820"},{"bi":"004664655KS043","nome":"OSVALDINA DE JESUS FRANCISCO DOMINGOS BENGUELA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"927202808"},{"bi":"020664310KS059","nome":"PAULO CAPEMBE FREITAS DANIEL","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"929107101"},{"bi":"021514192KS057","nome":"PAULO DE ALMEIDA SOARES CAMBAMBI","sexo":"M","coordenacao":"CHINGO 1","telefone":"947789951"},{"bi":"021356863KS059","nome":"QUENILSON FRANCISCO VENÂNCIO QUIANDO","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"939620217"},{"bi":"000358023UE032","nome":"QUIAMA MASSANGA GABRIEL PANZO","sexo":"F","coordenacao":"CHINGO 1","telefone":"924431453"},{"bi":"023123234KS051","nome":"RAÚL COUTO MIÚDO","sexo":"M","coordenacao":"CHINGO 1","telefone":"933742927"},{"bi":"007972008KS044","nome":"RITA FRANCISCO DA COSTA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"923773531"},{"bi":"007150165KS040","nome":"RITA JOAQUIM MANUEL RATO","sexo":"F","coordenacao":"CHINGO 1","telefone":"928969993"},{"bi":"007376199KS046","nome":"ROSA ELIZABETH CORRENTE SABALO","sexo":"F","coordenacao":"CHINGO 1","telefone":"948734137"},{"bi":"023943146KS050","nome":"ROSALINA SOARES JAIA","sexo":"F","coordenacao":"CHINGO 1","telefone":""},{"bi":"006575358KS044","nome":"SANDRA FRANCISCO HENRIQUES","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"936738626"},{"bi":"020522077KS055","nome":"SÉRGIO JOSÉ ANTÓNIO CANHANGA","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"931095720"},{"bi":"010208320KS045","nome":"SILVIA LUISA ABRAÃO ANTÔNIO","sexo":"F","coordenacao":"CHINGO 2","telefone":"933738913"},{"bi":"020026926KS057","nome":"SIMÃO DA SILVA MESSA","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"926929702"},{"bi":"009999428KS042","nome":"STELLA DA CONCEIÇÃO PAULO NORBERTO FERREIRA","sexo":"F","coordenacao":"CIDADE","telefone":"925165927"},{"bi":"009590429KS043","nome":"STÓNIA TERESA AUGUSTO PINHEIRO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"943976771"},{"bi":"021352829KS051","nome":"SUZANA PEDRO JONGOLO","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"924328844"},{"bi":"021424791HO053","nome":"TANIRA NGUEVE BIBIANA XAQUINDA","sexo":"F","coordenacao":"CHINGO 2","telefone":"972857212"},{"bi":"008442133KS040","nome":"TEODORO MOISÉS MANUEL","sexo":"M","coordenacao":"ZONA ALTA 1","telefone":"932869993"},{"bi":"005467062KS041","nome":"TERESA ÂNGELO AFONSO","sexo":"F","coordenacao":"CHINGO 1","telefone":"939923226"},{"bi":"009576122KS041","nome":"TERESA JOSÉ QUESSONGO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"936247515"},{"bi":"009161529KS041","nome":"VALSI MIGUEL GABRIEL","sexo":"M","coordenacao":"CHINGO 1","telefone":"933344753"},{"bi":"009272792HO049","nome":"VICTÓRIA HUMBA CHBUNDO KUNDJUCA","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"921716472"},{"bi":"020502278KS052","nome":"XAVIER KITUMBA MÁRIO  AUGUSTO GONGA","sexo":"M","coordenacao":"CHINGO 1","telefone":"936128575"},{"bi":"009409767KS043","nome":"YONARA CECÍLIA GANDO ABEL","sexo":"F","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"948580592"},{"bi":"004730841KS048","nome":"ZACARIAS UPITE ALBINO QUELÉM","sexo":"M","coordenacao":"ZONA ALTA 2 ATUCO E POMBA NOVA","telefone":"941674339"},{"bi":"025125564KS058","nome":"ZÉLIA TELMA FRANCISCO SETA BARATO","sexo":"F","coordenacao":"ZONA ALTA 1","telefone":"948893871"}];
+
+const ADMIN_BI = '007199402KS040';
+const COLECAO  = 'pagamentos_1ronda_mob';
+
+// ── Índice BI → mobilizador ──────────────────────────────────────
+const INDEX = {};
+MOBILIZADORES.forEach(m => { INDEX[m.bi.toUpperCase()] = m; });
+
+// ── Estado ────────────────────────────────────────────────────────
+let currentMob  = null;
+let currentTab  = 'todos';
+let respostasDB = {};  // bi -> { resposta, timestamp }
+
+// ── Utilidades DOM ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function showScreen(id) {
+  ['screen-bi','screen-pergunta','screen-admin-auth','screen-dashboard'].forEach(s => {
+    $(s).style.display = s === id ? '' : 'none';
+  });
+}
+function showMsg(id, type, text) {
+  const el = $(id);
+  el.className = `msg msg-${type}`;
+  el.textContent = text;
+  el.style.display = 'block';
+}
+function hideMsg(id) { $(id).style.display = 'none'; }
+
+// ── Ecrã 1: Verificar BI ────────────────────────────────────────
+window.verificarBI = async function() {
+  hideMsg('msg-bi');
+  const bi = ($('bi-input').value || '').toUpperCase().trim();
+  if (!bi) { showMsg('msg-bi','error','Introduza o seu número de BI.'); return; }
+
+  const mob = INDEX[bi];
+  if (!mob) {
+    showMsg('msg-bi','error','BI não encontrado na lista de mobilizadores da 1ª Ronda. Verifique se digitou correctamente.');
+    return;
+  }
+
+  currentMob = mob;
+  $('prof-nome').textContent = mob.nome;
+  $('prof-coord').textContent = mob.coordenacao;
+  $('prof-bi').textContent = mob.bi;
+  if (mob.telefone) {
+    $('prof-tel').textContent = mob.telefone;
+    $('prof-tel-wrap').style.display = '';
+  } else {
+    $('prof-tel-wrap').style.display = 'none';
+  }
+
+  // Verificar se já respondeu
+  $('question-area').style.display = '';
+  $('confirm-area').style.display = 'none';
+  hideMsg('msg-pergunta');
+
+  try {
+    const snap = await getDoc(doc(db, COLECAO, bi));
+    if (snap.exists()) {
+      const d = snap.data();
+      mostrarConfirmacao(d.resposta, d.timestamp);
+      showMsg('msg-pergunta','warning','Já respondeu anteriormente. A sua resposta está registada.');
+    }
+  } catch(e) { console.warn('Erro ao verificar resposta anterior:', e); }
+
+  showScreen('screen-pergunta');
+};
+
+// ── Ecrã 2: Responder ───────────────────────────────────────────
+window.responder = async function(resp) {
+  if (!currentMob) return;
+  const now = new Date().toISOString();
+  const payload = {
+    bi:          currentMob.bi,
+    nome:        currentMob.nome,
+    coordenacao: currentMob.coordenacao,
+    telefone:    currentMob.telefone || '',
+    sexo:        currentMob.sexo || '',
+    resposta:    resp,
+    timestamp:   now
+  };
+  try {
+    await setDoc(doc(db, COLECAO, currentMob.bi.toUpperCase()), payload);
+    mostrarConfirmacao(resp, now);
+  } catch(e) {
+    showMsg('msg-pergunta','error','Erro ao gravar. Verifique a ligação à internet e tente novamente.');
+    console.error(e);
+  }
+};
+
+function mostrarConfirmacao(resp, ts) {
+  $('question-area').style.display = 'none';
+  $('confirm-area').style.display = '';
+  if (resp === 'SIM') {
+    $('confirm-icon').textContent = '✅';
+    $('confirm-text').textContent = 'Resposta registada: JÁ FOI PAGO';
+    $('confirm-text').style.color = 'var(--success)';
+  } else {
+    $('confirm-icon').textContent = '❌';
+    $('confirm-text').textContent = 'Resposta registada: NÃO FOI PAGO';
+    $('confirm-text').style.color = 'var(--error)';
+  }
+  const dt = ts ? new Date(ts) : new Date();
+  $('confirm-sub').textContent = `Registado em ${dt.toLocaleDateString('pt-AO')} às ${dt.toLocaleTimeString('pt-AO',{hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// ── Voltar ────────────────────────────────────────────────────────
+window.voltarInicio = function() {
+  currentMob = null;
+  $('bi-input').value = '';
+  hideMsg('msg-bi');
+  showScreen('screen-bi');
+  $('admin-toggle').style.display = '';
+};
+
+// ── Admin Auth ───────────────────────────────────────────────────
+window.toggleAdminAuth = function() {
+  showScreen('screen-admin-auth');
+  hideMsg('msg-admin');
+  $('admin-bi').value = '';
+};
+
+window.autenticarAdmin = async function() {
+  hideMsg('msg-admin');
+  const bi = ($('admin-bi').value || '').toUpperCase().trim();
+  if (bi !== ADMIN_BI.toUpperCase()) {
+    showMsg('msg-admin','error','Acesso negado. Este BI não tem permissão de administrador.');
+    return;
+  }
+  $('admin-toggle').style.display = 'none';
+  await refreshDashboard();
+  showScreen('screen-dashboard');
+};
+
+// ── Dashboard ────────────────────────────────────────────────────
+window.refreshDashboard = async function() {
+  respostasDB = {};
+  try {
+    const snap = await getDocs(query(collection(db, COLECAO)));
+    snap.forEach(d => {
+      const data = d.data();
+      respostasDB[(data.bi || d.id).toUpperCase()] = data;
+    });
+  } catch(e) { console.error('Erro ao carregar respostas:', e); }
+
+  const total = MOBILIZADORES.length;
+  let pagos = 0, naoPagos = 0, semResp = 0;
+  MOBILIZADORES.forEach(m => {
+    const r = respostasDB[m.bi.toUpperCase()];
+    if (!r) semResp++;
+    else if (r.resposta === 'SIM') pagos++;
+    else naoPagos++;
+  });
+
+  $('st-total').textContent = total;
+  $('st-pago').textContent  = pagos;
+  $('st-npago').textContent = naoPagos;
+
+  const responderam = pagos + naoPagos;
+  const pctResp = Math.round((responderam / total) * 100);
+  $('progress-resp').style.width = pctResp + '%';
+  $('progress-label').textContent = `${responderam}/${total} responderam (${pctResp}%)`;
+
+  // Breakdown por coordenação
+  buildCoordBreakdown(pagos, naoPagos, semResp);
+
+  // Filtro coordenações
+  const sel = $('filter-coord');
+  const current = sel.value;
+  const coords = [...new Set(MOBILIZADORES.map(m => m.coordenacao))].sort();
+  sel.innerHTML = '<option value="">Todas as Coordenações</option>';
+  coords.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  sel.value = current;
+
+  renderTable();
+};
+
+function buildCoordBreakdown() {
+  const coords = {};
+  MOBILIZADORES.forEach(m => {
+    if (!coords[m.coordenacao]) coords[m.coordenacao] = { total: 0, pagos: 0, nao: 0, pend: 0 };
+    const c = coords[m.coordenacao];
+    c.total++;
+    const r = respostasDB[m.bi.toUpperCase()];
+    if (!r) c.pend++;
+    else if (r.resposta === 'SIM') c.pagos++;
+    else c.nao++;
+  });
+
+  let html = '';
+  Object.keys(coords).sort().forEach(name => {
+    const c = coords[name];
+    const shortName = name.length > 20 ? name.substring(0,18) + '…' : name;
+    const pctPago = c.total ? Math.round((c.pagos / c.total) * 100) : 0;
+    html += `<div class="coord-row">
+      <div class="coord-name" title="${name}">${shortName}</div>
+      <div class="coord-bar-outer">
+        <div class="coord-bar-fill" style="width:${pctPago}%;background:${pctPago > 60 ? 'var(--success)' : pctPago > 30 ? 'var(--warning)' : 'var(--error)'}"></div>
+      </div>
+      <div class="coord-nums">✅${c.pagos} ❌${c.nao} ⏳${c.pend}</div>
+    </div>`;
+  });
+  $('coord-breakdown').innerHTML = html;
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────
+window.setTab = function(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#dash-tabs .tab').forEach(t => t.classList.remove('active'));
+  const idx = { todos:0, pagos:1, nao_pagos:2, sem_resposta:3 }[tab];
+  document.querySelectorAll('#dash-tabs .tab')[idx].classList.add('active');
+  renderTable();
+};
+
+// ── Tabela ───────────────────────────────────────────────────────
+window.renderTable = function() {
+  const coordFilter  = $('filter-coord').value;
+  const searchFilter = ($('filter-search').value || '').toUpperCase();
+
+  let list = MOBILIZADORES.map(m => {
+    const r = respostasDB[m.bi.toUpperCase()];
+    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
+  });
+
+  // Tab filter
+  if (currentTab === 'pagos')       list = list.filter(x => x.resposta === 'SIM');
+  if (currentTab === 'nao_pagos')   list = list.filter(x => x.resposta === 'NAO');
+  if (currentTab === 'sem_resposta') list = list.filter(x => !x.resposta);
+
+  // Coord filter
+  if (coordFilter) list = list.filter(x => x.coordenacao === coordFilter);
+
+  // Search
+  if (searchFilter) list = list.filter(x =>
+    x.nome.toUpperCase().includes(searchFilter) || x.bi.toUpperCase().includes(searchFilter)
+  );
+
+  // Sort: nome
+  list.sort((a,b) => a.nome.localeCompare(b.nome));
+
+  let html = '';
+  list.forEach((m, i) => {
+    const badge = m.resposta === 'SIM' ? '<span class="badge-sim">PAGO</span>'
+                : m.resposta === 'NAO' ? '<span class="badge-nao">NÃO PAGO</span>'
+                : '<span class="badge-pend">Sem resposta</span>';
+    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-AO') : '—';
+    html += `<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:600">${m.nome}</td>
+      <td style="font-size:var(--fs-xs);font-family:monospace">${m.bi}</td>
+      <td style="font-size:var(--fs-xs)">${m.coordenacao}</td>
+      <td style="font-size:var(--fs-xs)">${m.telefone || '—'}</td>
+      <td>${badge}</td>
+      <td style="font-size:var(--fs-xs);color:var(--text3)">${dt}</td>
+    </tr>`;
+  });
+
+  $('tbl-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Nenhum resultado</td></tr>';
+  $('tbl-count').textContent = `${list.length} mobilizador${list.length !== 1 ? 'es' : ''} encontrado${list.length !== 1 ? 's' : ''}`;
+};
+
+// ── Export Excel (CSV UTF-8) ─────────────────────────────────────
+window.exportarExcel = function() {
+  const BOM = '\uFEFF';
+  let csv = BOM + 'Nº;Nome;BI;Coordenação;Telefone;Estado;Data Resposta\n';
+  const list = MOBILIZADORES.map(m => {
+    const r = respostasDB[m.bi.toUpperCase()];
+    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
+  }).sort((a,b) => a.nome.localeCompare(b.nome));
+
+  list.forEach((m, i) => {
+    const estado = m.resposta === 'SIM' ? 'PAGO' : m.resposta === 'NAO' ? 'NÃO PAGO' : 'SEM RESPOSTA';
+    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-AO') : '';
+    csv += `${i+1};${m.nome};${m.bi};${m.coordenacao};${m.telefone || ''};${estado};${dt}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `Pagamento_Mobilizadores_1Ronda_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ── Enter key ────────────────────────────────────────────────────
+$('bi-input').addEventListener('keydown', e => { if (e.key === 'Enter') verificarBI(); });
+$('admin-bi').addEventListener('keydown', e => { if (e.key === 'Enter') autenticarAdmin(); });
+</script>
+</body>
+</html>
