@@ -9270,13 +9270,21 @@ async function mobConfRefresh() {
   if (!fbReady()) { showToast('Firebase não disponível.', 'error'); return; }
   _mobConfData = {};
   try {
-    const snap = await window._FB.getDocs(window._FB.query(window._FB.colRef(MOB_CONF_COLECAO)));
+    const snap = await window._FB.getDocs(window._FB.colRef(MOB_CONF_COLECAO));
     snap.forEach(d => {
       const data = d.data();
       _mobConfData[(data.bi || d.id).toUpperCase()] = data;
     });
     _mobConfLoaded = true;
-  } catch(e) { console.error('Erro mobConfRefresh:', e); showToast('Erro ao carregar confirmações.', 'error'); return; }
+  } catch(e) {
+    console.error('Erro mobConfRefresh:', e);
+    // Se a colecção ainda não existir (0 documentos), não é erro — tratar como vazio
+    if (e.code === 'permission-denied') {
+      showToast('Erro de permissão Firestore. Verifique as regras da colecção "'+MOB_CONF_COLECAO+'".', 'error');
+      return;
+    }
+    _mobConfLoaded = true; // tratar como vazio
+  }
   mobConfRender();
   const now = new Date();
   const el = document.getElementById('mob-conf-last-refresh');
