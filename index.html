@@ -1695,6 +1695,14 @@ input, textarea, select {
 </div>
 
 <div id="panel-payments" class="panel">
+  <!-- Sub-tabs: Controlo Manual vs Confirmação dos Mobilizadores -->
+  <div class="equipas-subtab-bar" style="margin-bottom:16px">
+    <div class="equipas-subtab active" data-subtab="pay-manual" onclick="paySubtab('pay-manual')">💰 Controlo Manual</div>
+    <div class="equipas-subtab" data-subtab="pay-confirm" onclick="paySubtab('pay-confirm')">📱 Confirmação Mobilizadores<span id="pay-confirm-badge" class="subtab-badge" style="display:none;margin-left:6px;background:var(--accent);color:#fff;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">0</span></div>
+  </div>
+
+  <!-- SUB-PAINEL A: Controlo Manual (existente) -->
+  <div id="pay-sub-manual" class="equipas-subpanel">
   <div class="search-box" style="margin-bottom:14px">
     <h2>💰 Controlo de Pagamentos da 1ª Ronda</h2>
     <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">Regista o estado de pagamento de cada profissional. Esta informação é independente da Prova de Vida — uma pessoa pode estar disponível para a 2ª ronda <strong>e</strong> ainda não ter sido paga pela 1ª.</p>
@@ -1725,6 +1733,54 @@ input, textarea, select {
   </div>
 
   <div id="pay-table-area"></div>
+  </div><!-- /pay-sub-manual -->
+
+  <!-- SUB-PAINEL B: Confirmação dos Mobilizadores (via link externo) -->
+  <div id="pay-sub-confirm" class="equipas-subpanel" style="display:none">
+    <div class="search-box" style="margin-bottom:14px">
+      <h2>📱 Confirmação de Pagamento — Mobilizadores</h2>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Respostas dos <strong>148 mobilizadores</strong> da 1ª Ronda que acederam ao link de confirmação e declararam se já foram pagos ou não.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary" onclick="mobConfRefresh()" style="font-size:12px;padding:8px 14px">🔄 Actualizar</button>
+        <button class="btn btn-secondary" onclick="mobConfExportCSV()" style="font-size:12px;padding:8px 14px">⬇️ Exportar CSV</button>
+        <button class="btn btn-secondary" onclick="mobConfPrint()" style="font-size:12px;padding:8px 14px">🖨️ Imprimir</button>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px" id="mob-conf-last-refresh"></span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-grid" id="mob-conf-stats" style="margin-bottom:14px"></div>
+
+    <!-- Barra de progresso -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <div style="flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden">
+        <div id="mob-conf-progress" style="height:100%;border-radius:4px;transition:width .4s;background:linear-gradient(90deg,var(--info),var(--teal));width:0%"></div>
+      </div>
+      <span style="font-size:var(--fs-xs);color:var(--text3);white-space:nowrap" id="mob-conf-progress-label">—</span>
+    </div>
+
+    <!-- Breakdown por coordenação -->
+    <div id="mob-conf-coord-breakdown" style="margin-bottom:16px"></div>
+
+    <!-- Filtros -->
+    <div class="filter-row" style="gap:8px;margin-bottom:14px">
+      <select class="filter-select" id="mob-conf-filter-status">
+        <option value="">Todos os estados</option>
+        <option value="SIM">✅ Pagos (SIM)</option>
+        <option value="NAO">❌ Não Pagos (NÃO)</option>
+        <option value="PEND">⏳ Sem Resposta</option>
+      </select>
+      <select class="filter-select" id="mob-conf-filter-coord">
+        <option value="">Todas as coordenações</option>
+      </select>
+      <input class="search-input" id="mob-conf-search" placeholder="🔍 Pesquisar nome ou BI..." style="flex:1;font-size:13px;padding:10px 14px">
+    </div>
+
+    <!-- Tabela -->
+    <div id="mob-conf-table-area" style="max-height:55vh;overflow-y:auto"></div>
+    <div style="font-size:var(--fs-xs);color:var(--text3);margin-top:6px" id="mob-conf-count"></div>
+  </div><!-- /pay-sub-confirm -->
+
 </div>
 
 <!-- Payment modal -->
@@ -9187,6 +9243,216 @@ function generatePayReport(orientation) {
   setTimeout(()=> document.body.classList.remove('printing-report'), 500);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MÓDULO: CONFIRMAÇÃO DE PAGAMENTO DOS MOBILIZADORES (via link externo)
+// Lê do Firestore colecção 'pagamentos_1ronda_mob'
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MOB_CONF_COLECAO = 'pagamentos_1ronda_mob';
+let _mobConfData = {};  // bi -> { resposta, timestamp, nome, coordenacao, ... }
+let _mobConfLoaded = false;
+
+// Lista dos 148 mobilizadores (BI + nome + coordenação + telefone)
+const MOB_148 = RH_DATA.filter(r => r.funcao === 'Mobilizador').map(r => ({
+  bi: r.bi, nome: r.nome, coordenacao: r.coordenacao, telefone: r.telefone || '', sexo: r.sexo || ''
+}));
+
+// Sub-tab switching dentro do painel de pagamentos
+function paySubtab(name) {
+  document.querySelectorAll('#panel-payments > .equipas-subtab-bar .equipas-subtab').forEach(t => t.classList.remove('active'));
+  document.querySelector('#panel-payments .equipas-subtab[data-subtab="'+name+'"]')?.classList.add('active');
+  document.getElementById('pay-sub-manual').style.display  = name === 'pay-manual'  ? 'block' : 'none';
+  document.getElementById('pay-sub-confirm').style.display = name === 'pay-confirm' ? 'block' : 'none';
+  if (name === 'pay-confirm' && !_mobConfLoaded) mobConfRefresh();
+}
+
+async function mobConfRefresh() {
+  if (!fbReady()) { showToast('Firebase não disponível.', 'error'); return; }
+  _mobConfData = {};
+  try {
+    const snap = await window._FB.getDocs(window._FB.query(window._FB.colRef(MOB_CONF_COLECAO)));
+    snap.forEach(d => {
+      const data = d.data();
+      _mobConfData[(data.bi || d.id).toUpperCase()] = data;
+    });
+    _mobConfLoaded = true;
+  } catch(e) { console.error('Erro mobConfRefresh:', e); showToast('Erro ao carregar confirmações.', 'error'); return; }
+  mobConfRender();
+  const now = new Date();
+  const el = document.getElementById('mob-conf-last-refresh');
+  if (el) el.textContent = '🕐 ' + now.toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'});
+}
+
+function mobConfRender() {
+  const total = MOB_148.length;
+  let pagos = 0, naoPagos = 0, semResp = 0;
+  MOB_148.forEach(m => {
+    const r = _mobConfData[m.bi.toUpperCase()];
+    if (!r) semResp++;
+    else if (r.resposta === 'SIM') pagos++;
+    else naoPagos++;
+  });
+  const responderam = pagos + naoPagos;
+  const pctResp = total ? Math.round((responderam / total) * 100) : 0;
+  const pctPago = total ? Math.round((pagos / total) * 100) : 0;
+
+  // Badge
+  const badge = document.getElementById('pay-confirm-badge');
+  if (badge) { badge.textContent = responderam; badge.style.display = responderam > 0 ? '' : 'none'; }
+
+  // Stats
+  document.getElementById('mob-conf-stats').innerHTML =
+    '<div class="stat-card"><div class="stat-num c-text">'+total+'</div><div class="stat-label">Total Mob.</div></div>' +
+    '<div class="stat-card"><div class="stat-num c-green">'+pagos+'</div><div class="stat-label">Pagos (SIM)</div></div>' +
+    '<div class="stat-card"><div class="stat-num c-red">'+naoPagos+'</div><div class="stat-label">Não Pagos (NÃO)</div></div>' +
+    '<div class="stat-card"><div class="stat-num c-text3">'+semResp+'</div><div class="stat-label">Sem Resposta</div></div>';
+
+  // Progress
+  document.getElementById('mob-conf-progress').style.width = pctResp + '%';
+  document.getElementById('mob-conf-progress-label').textContent = responderam + '/' + total + ' responderam (' + pctResp + '%)';
+
+  // Coord breakdown
+  const coords = {};
+  MOB_148.forEach(m => {
+    if (!coords[m.coordenacao]) coords[m.coordenacao] = { total: 0, pagos: 0, nao: 0, pend: 0 };
+    const c = coords[m.coordenacao];
+    c.total++;
+    const r = _mobConfData[m.bi.toUpperCase()];
+    if (!r) c.pend++; else if (r.resposta === 'SIM') c.pagos++; else c.nao++;
+  });
+  let cbHtml = '';
+  Object.keys(coords).sort().forEach(name => {
+    const c = coords[name];
+    const pct = c.total ? Math.round((c.pagos / c.total) * 100) : 0;
+    const shortName = name.length > 22 ? name.substring(0,20) + '…' : name;
+    cbHtml += '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(42,61,85,0.3);font-size:12px">' +
+      '<div style="flex:1;font-weight:600;min-width:0" title="'+escH(name)+'">'+escH(shortName)+'</div>' +
+      '<div style="flex:0 0 80px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">' +
+      '<div style="height:100%;border-radius:3px;width:'+pct+'%;background:'+(pct>60?'var(--success)':pct>30?'var(--warning)':'var(--error)')+'"></div></div>' +
+      '<div style="font-size:10px;color:var(--text3);white-space:nowrap;min-width:70px;text-align:right">✅'+c.pagos+' ❌'+c.nao+' ⏳'+c.pend+'</div></div>';
+  });
+  document.getElementById('mob-conf-coord-breakdown').innerHTML = cbHtml;
+
+  // Populate coord filter
+  const fCoord = document.getElementById('mob-conf-filter-coord');
+  const curVal = fCoord.value;
+  fCoord.innerHTML = '<option value="">Todas as coordenações</option>';
+  Object.keys(coords).sort().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    fCoord.appendChild(opt);
+  });
+  fCoord.value = curVal;
+
+  // Table
+  mobConfRenderTable();
+}
+
+function mobConfRenderTable() {
+  const fStatus = document.getElementById('mob-conf-filter-status').value;
+  const fCoord  = document.getElementById('mob-conf-filter-coord').value;
+  const fSearch = (document.getElementById('mob-conf-search').value || '').toUpperCase();
+
+  let list = MOB_148.map(m => {
+    const r = _mobConfData[m.bi.toUpperCase()];
+    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
+  });
+
+  if (fStatus === 'SIM')  list = list.filter(x => x.resposta === 'SIM');
+  if (fStatus === 'NAO')  list = list.filter(x => x.resposta === 'NAO');
+  if (fStatus === 'PEND') list = list.filter(x => !x.resposta);
+  if (fCoord) list = list.filter(x => x.coordenacao === fCoord);
+  if (fSearch) list = list.filter(x => x.nome.toUpperCase().includes(fSearch) || x.bi.toUpperCase().includes(fSearch));
+
+  list.sort((a,b) => a.nome.localeCompare(b.nome));
+
+  let html = '<table class="history-table" style="font-size:12px"><thead><tr>' +
+    '<th>#</th><th>Nome</th><th>BI</th><th>Coordenação</th><th>Telefone</th><th>Estado</th><th>Data</th></tr></thead><tbody>';
+  list.forEach((m, i) => {
+    const badge = m.resposta === 'SIM' ? '<span class="pay-badge" style="background:rgba(46,204,113,0.15);color:var(--success)">PAGO</span>'
+                : m.resposta === 'NAO' ? '<span class="pay-badge" style="background:rgba(231,76,60,0.15);color:var(--error)">NÃO PAGO</span>'
+                : '<span class="pay-badge" style="background:rgba(127,140,155,0.15);color:var(--text3)">Sem resposta</span>';
+    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-PT') : '—';
+    html += '<tr><td>'+(i+1)+'</td><td style="font-weight:600">'+escH(m.nome)+'</td>' +
+      '<td style="font-family:monospace;font-size:10px">'+escH(m.bi)+'</td>' +
+      '<td style="font-size:11px">'+escH(m.coordenacao)+'</td>' +
+      '<td style="font-size:11px">'+(m.telefone||'—')+'</td><td>'+badge+'</td>' +
+      '<td style="font-size:11px;color:var(--text3)">'+dt+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('mob-conf-table-area').innerHTML = html;
+  document.getElementById('mob-conf-count').textContent = list.length + ' mobilizador' + (list.length !== 1 ? 'es' : '') + ' encontrado' + (list.length !== 1 ? 's' : '');
+}
+
+function mobConfExportCSV() {
+  const BOM = '\uFEFF';
+  let csv = BOM + 'Nº;Nome;BI;Sexo;Coordenação;Telefone;Estado;Data Resposta\n';
+  const list = MOB_148.map(m => {
+    const r = _mobConfData[m.bi.toUpperCase()];
+    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
+  }).sort((a,b) => a.nome.localeCompare(b.nome));
+
+  list.forEach((m, i) => {
+    const estado = m.resposta === 'SIM' ? 'PAGO' : m.resposta === 'NAO' ? 'NÃO PAGO' : 'SEM RESPOSTA';
+    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-PT') : '';
+    csv += [i+1, m.nome, m.bi, m.sexo, m.coordenacao, m.telefone, estado, dt].map(v => '"'+String(v||'').replace(/"/g,'""')+'"').join(';') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'CONFIRMACAO_MOBILIZADORES_1RONDA_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exportado com '+list.length+' mobilizadores', 'success');
+}
+
+function mobConfPrint() {
+  let styleEl = document.getElementById('print-orientation-style');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'print-orientation-style'; document.head.appendChild(styleEl); }
+  styleEl.textContent = '@page { size: A4 landscape; margin: 1cm; }';
+
+  const list = MOB_148.map(m => {
+    const r = _mobConfData[m.bi.toUpperCase()];
+    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
+  }).sort((a,b) => a.coordenacao.localeCompare(b.coordenacao) || a.nome.localeCompare(b.nome));
+
+  const pagos = list.filter(x => x.resposta === 'SIM').length;
+  const nao   = list.filter(x => x.resposta === 'NAO').length;
+  const pend  = list.filter(x => !x.resposta).length;
+  const now   = new Date().toLocaleDateString('pt-PT');
+
+  const trs = list.map((m,i) => {
+    const est = m.resposta === 'SIM' ? '✅ PAGO' : m.resposta === 'NAO' ? '❌ NÃO PAGO' : '⏳ Sem resposta';
+    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-PT') : '—';
+    return '<tr><td>'+(i+1)+'</td><td>'+escH(m.coordenacao)+'</td><td><strong>'+escH(m.nome)+'</strong></td><td>'+escH(m.bi)+'</td><td>'+(m.telefone||'—')+'</td><td>'+est+'</td><td>'+dt+'</td></tr>';
+  }).join('');
+
+  const html = '<div style="font-family:Arial,sans-serif;font-size:10pt;color:#000;padding:8px">' +
+    '<h2 style="text-align:center;margin:0 0 2px">CONFIRMAÇÃO DE PAGAMENTO — MOBILIZADORES</h2>' +
+    '<p style="text-align:center;font-size:9pt;color:#555;margin:0 0 10px">1ª Ronda Pólio nOPV2 · Sumbe · Março 2026 &nbsp;|&nbsp; Impresso: '+now+'</p>' +
+    '<div style="display:flex;gap:20px;justify-content:center;margin-bottom:10px;font-size:9pt">' +
+    '<span>Total: <strong>'+list.length+'</strong></span>' +
+    '<span>✅ Pagos: <strong>'+pagos+'</strong></span>' +
+    '<span>❌ Não Pagos: <strong>'+nao+'</strong></span>' +
+    '<span>⏳ Sem Resposta: <strong>'+pend+'</strong></span></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:8.5pt"><thead><tr style="background:#f0f0f0">' +
+    '<th style="border:1px solid #ccc;padding:4px">#</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">Coordenação</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">Nome</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">BI</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">Telefone</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">Estado</th>' +
+    '<th style="border:1px solid #ccc;padding:4px">Data</th></tr></thead>' +
+    '<tbody>'+trs+'</tbody></table></div>';
+
+  let rpt = document.getElementById('payment-report-panel');
+  if (!rpt) { rpt = document.createElement('div'); rpt.id = 'payment-report-panel'; rpt.className = 'panel payment-report'; document.body.appendChild(rpt); }
+  rpt.innerHTML = html;
+  document.body.classList.add('printing-report');
+  window.print();
+  setTimeout(()=> document.body.classList.remove('printing-report'), 500);
+}
+
 let toastTimer;
 // ── Toast com fila ────────────────────────────────────────────────────────────
 // Evita sobreposição quando múltiplas operações terminam em sequência rápida.
@@ -9430,6 +9696,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pay-filter-status').addEventListener('change', renderPayments);
   document.getElementById('pay-filter-coord').addEventListener('change', renderPayments);
   document.getElementById('pay-filter-funcao').addEventListener('change', renderPayments);
+
+  // Filtros da confirmação dos mobilizadores
+  document.getElementById('mob-conf-filter-status').addEventListener('change', mobConfRenderTable);
+  document.getElementById('mob-conf-filter-coord').addEventListener('change', mobConfRenderTable);
+  document.getElementById('mob-conf-search').addEventListener('input', mobConfRenderTable);
   document.getElementById('btn-pay-export').addEventListener('click', exportPayCSV);
   document.getElementById('btn-pay-report-p').addEventListener('click', () => generatePayReport('portrait'));
   document.getElementById('btn-pay-report-l').addEventListener('click', () => generatePayReport('landscape'));
