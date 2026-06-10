@@ -303,15 +303,6 @@ tr:hover td { background: rgba(30,45,64,0.5); }
 .ftr a { color: var(--accent2); text-decoration: none; }
 
 /* ── Admin link in header ──────────────────────────────────────── */
-.admin-link {
-  display: inline-block;
-  margin-top: var(--sp-3);
-  font-size: var(--fs-xs);
-  color: var(--text3);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
 
 /* ── Coordenação breakdown ──────────────────────────────────────── */
 .coord-breakdown { margin-bottom: var(--sp-5); }
@@ -381,7 +372,6 @@ tr:hover td { background: rgba(30,45,64,0.5); }
   <div class="hdr-badge">1ª Ronda · Março 2026</div>
   <h1>💰 Verificação de Pagamento<br>Mobilizadores — Sumbe</h1>
   <p>Campanha nOPV2 — 1ª Ronda Pólio · Município do Sumbe</p>
-  <div class="admin-link" id="admin-toggle" onclick="toggleAdminAuth()">🔐 Painel Administrativo</div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════
@@ -423,85 +413,6 @@ tr:hover td { background: rgba(30,45,64,0.5); }
     <div class="confirm-sub" id="confirm-sub"></div>
   </div>
   <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-4)">← Voltar ao início</button>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     ECRÃ 3: AUTENTICAÇÃO ADMIN
-     ═══════════════════════════════════════════════════════════════ -->
-<div class="card" id="screen-admin-auth" style="display:none">
-  <div class="card-title">🔐 Acesso Administrativo</div>
-  <div id="msg-admin" class="msg msg-error"></div>
-  <div class="input-group">
-    <label for="admin-bi">BI do Administrador</label>
-    <input type="text" id="admin-bi" class="input-bi" placeholder="Introduza o BI do gestor" autocomplete="off">
-  </div>
-  <button class="btn btn-primary" onclick="autenticarAdmin()">Entrar</button>
-  <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-3)">← Voltar</button>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     ECRÃ 4: DASHBOARD ADMIN
-     ═══════════════════════════════════════════════════════════════ -->
-<div class="card" id="screen-dashboard" style="display:none; max-width: 720px">
-  <div id="print-title">Verificação de Pagamento — Mobilizadores 1ª Ronda Pólio Sumbe 2026</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:var(--sp-4)">
-    <div class="card-title" style="margin:0">📊 Painel de Pagamentos</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" onclick="refreshDashboard()">🔄 Actualizar</button>
-      <button class="btn btn-outline btn-sm" onclick="exportarExcel()">📥 Excel</button>
-      <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-    </div>
-  </div>
-
-  <div class="dash-grid" id="dash-stats">
-    <div class="stat-card"><div class="stat-num" id="st-total">—</div><div class="stat-label">Total Mob.</div></div>
-    <div class="stat-card stat-pago"><div class="stat-num" id="st-pago">—</div><div class="stat-label">Pagos</div></div>
-    <div class="stat-card stat-npago"><div class="stat-num" id="st-npago">—</div><div class="stat-label">Não Pagos</div></div>
-  </div>
-
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--sp-2)">
-    <div class="progress-outer" style="flex:1">
-      <div class="progress-inner" id="progress-resp" style="width:0%;background:linear-gradient(90deg,var(--info),var(--teal))"></div>
-    </div>
-    <span style="font-size:var(--fs-xs);color:var(--text3);white-space:nowrap" id="progress-label">0% responderam</span>
-  </div>
-
-  <div class="coord-breakdown" id="coord-breakdown"></div>
-
-  <!-- Filtros & tabela -->
-  <div class="tabs" id="dash-tabs">
-    <div class="tab active" onclick="setTab('todos')">Todos</div>
-    <div class="tab" onclick="setTab('pagos')">✅ Pagos</div>
-    <div class="tab" onclick="setTab('nao_pagos')">❌ Não Pagos</div>
-    <div class="tab" onclick="setTab('sem_resposta')">⏳ Sem Resp.</div>
-  </div>
-
-  <div class="filter-row">
-    <select id="filter-coord" onchange="renderTable()">
-      <option value="">Todas as Coordenações</option>
-    </select>
-    <input type="text" id="filter-search" placeholder="🔍 Pesquisar nome ou BI..." oninput="renderTable()">
-  </div>
-
-  <div class="tbl-wrap" style="max-height:55vh;overflow-y:auto">
-    <table>
-      <thead>
-        <tr>
-          <th>Nº</th>
-          <th>Nome</th>
-          <th>BI</th>
-          <th>Coordenação</th>
-          <th>Telefone</th>
-          <th>Estado</th>
-          <th>Data</th>
-        </tr>
-      </thead>
-      <tbody id="tbl-body"></tbody>
-    </table>
-  </div>
-  <div style="font-size:var(--fs-xs);color:var(--text3);margin-top:var(--sp-2)" id="tbl-count"></div>
-
-  <button class="btn btn-outline btn-sm" onclick="voltarInicio()" style="margin-top:var(--sp-4)">← Terminar sessão</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════
@@ -551,7 +462,7 @@ let respostasDB = {};  // bi -> { resposta, timestamp }
 // ── Utilidades DOM ───────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 function showScreen(id) {
-  ['screen-bi','screen-pergunta','screen-admin-auth','screen-dashboard'].forEach(s => {
+  ['screen-bi','screen-pergunta'].forEach(s => {
     $(s).style.display = s === id ? '' : 'none';
   });
 }
@@ -647,186 +558,10 @@ window.voltarInicio = function() {
   $('bi-input').value = '';
   hideMsg('msg-bi');
   showScreen('screen-bi');
-  $('admin-toggle').style.display = '';
-};
-
-// ── Admin Auth ───────────────────────────────────────────────────
-window.toggleAdminAuth = function() {
-  showScreen('screen-admin-auth');
-  hideMsg('msg-admin');
-  $('admin-bi').value = '';
-};
-
-window.autenticarAdmin = async function() {
-  hideMsg('msg-admin');
-  const bi = ($('admin-bi').value || '').toUpperCase().trim();
-  if (bi !== ADMIN_BI.toUpperCase()) {
-    showMsg('msg-admin','error','Acesso negado. Este BI não tem permissão de administrador.');
-    return;
-  }
-  $('admin-toggle').style.display = 'none';
-  await refreshDashboard();
-  showScreen('screen-dashboard');
-};
-
-// ── Dashboard ────────────────────────────────────────────────────
-window.refreshDashboard = async function() {
-  respostasDB = {};
-  try {
-    const snap = await getDocs(query(collection(db, COLECAO)));
-    snap.forEach(d => {
-      const data = d.data();
-      respostasDB[(data.bi || d.id).toUpperCase()] = data;
-    });
-  } catch(e) { console.error('Erro ao carregar respostas:', e); }
-
-  const total = MOBILIZADORES.length;
-  let pagos = 0, naoPagos = 0, semResp = 0;
-  MOBILIZADORES.forEach(m => {
-    const r = respostasDB[m.bi.toUpperCase()];
-    if (!r) semResp++;
-    else if (r.resposta === 'SIM') pagos++;
-    else naoPagos++;
-  });
-
-  $('st-total').textContent = total;
-  $('st-pago').textContent  = pagos;
-  $('st-npago').textContent = naoPagos;
-
-  const responderam = pagos + naoPagos;
-  const pctResp = Math.round((responderam / total) * 100);
-  $('progress-resp').style.width = pctResp + '%';
-  $('progress-label').textContent = `${responderam}/${total} responderam (${pctResp}%)`;
-
-  // Breakdown por coordenação
-  buildCoordBreakdown(pagos, naoPagos, semResp);
-
-  // Filtro coordenações
-  const sel = $('filter-coord');
-  const current = sel.value;
-  const coords = [...new Set(MOBILIZADORES.map(m => m.coordenacao))].sort();
-  sel.innerHTML = '<option value="">Todas as Coordenações</option>';
-  coords.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c; opt.textContent = c;
-    sel.appendChild(opt);
-  });
-  sel.value = current;
-
-  renderTable();
-};
-
-function buildCoordBreakdown() {
-  const coords = {};
-  MOBILIZADORES.forEach(m => {
-    if (!coords[m.coordenacao]) coords[m.coordenacao] = { total: 0, pagos: 0, nao: 0, pend: 0 };
-    const c = coords[m.coordenacao];
-    c.total++;
-    const r = respostasDB[m.bi.toUpperCase()];
-    if (!r) c.pend++;
-    else if (r.resposta === 'SIM') c.pagos++;
-    else c.nao++;
-  });
-
-  let html = '';
-  Object.keys(coords).sort().forEach(name => {
-    const c = coords[name];
-    const shortName = name.length > 20 ? name.substring(0,18) + '…' : name;
-    const pctPago = c.total ? Math.round((c.pagos / c.total) * 100) : 0;
-    html += `<div class="coord-row">
-      <div class="coord-name" title="${name}">${shortName}</div>
-      <div class="coord-bar-outer">
-        <div class="coord-bar-fill" style="width:${pctPago}%;background:${pctPago > 60 ? 'var(--success)' : pctPago > 30 ? 'var(--warning)' : 'var(--error)'}"></div>
-      </div>
-      <div class="coord-nums">✅${c.pagos} ❌${c.nao} ⏳${c.pend}</div>
-    </div>`;
-  });
-  $('coord-breakdown').innerHTML = html;
-}
-
-// ── Tabs ──────────────────────────────────────────────────────────
-window.setTab = function(tab) {
-  currentTab = tab;
-  document.querySelectorAll('#dash-tabs .tab').forEach(t => t.classList.remove('active'));
-  const idx = { todos:0, pagos:1, nao_pagos:2, sem_resposta:3 }[tab];
-  document.querySelectorAll('#dash-tabs .tab')[idx].classList.add('active');
-  renderTable();
-};
-
-// ── Tabela ───────────────────────────────────────────────────────
-window.renderTable = function() {
-  const coordFilter  = $('filter-coord').value;
-  const searchFilter = ($('filter-search').value || '').toUpperCase();
-
-  let list = MOBILIZADORES.map(m => {
-    const r = respostasDB[m.bi.toUpperCase()];
-    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
-  });
-
-  // Tab filter
-  if (currentTab === 'pagos')       list = list.filter(x => x.resposta === 'SIM');
-  if (currentTab === 'nao_pagos')   list = list.filter(x => x.resposta === 'NAO');
-  if (currentTab === 'sem_resposta') list = list.filter(x => !x.resposta);
-
-  // Coord filter
-  if (coordFilter) list = list.filter(x => x.coordenacao === coordFilter);
-
-  // Search
-  if (searchFilter) list = list.filter(x =>
-    x.nome.toUpperCase().includes(searchFilter) || x.bi.toUpperCase().includes(searchFilter)
-  );
-
-  // Sort: nome
-  list.sort((a,b) => a.nome.localeCompare(b.nome));
-
-  let html = '';
-  list.forEach((m, i) => {
-    const badge = m.resposta === 'SIM' ? '<span class="badge-sim">PAGO</span>'
-                : m.resposta === 'NAO' ? '<span class="badge-nao">NÃO PAGO</span>'
-                : '<span class="badge-pend">Sem resposta</span>';
-    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-AO') : '—';
-    html += `<tr>
-      <td>${i+1}</td>
-      <td style="font-weight:600">${m.nome}</td>
-      <td style="font-size:var(--fs-xs);font-family:monospace">${m.bi}</td>
-      <td style="font-size:var(--fs-xs)">${m.coordenacao}</td>
-      <td style="font-size:var(--fs-xs)">${m.telefone || '—'}</td>
-      <td>${badge}</td>
-      <td style="font-size:var(--fs-xs);color:var(--text3)">${dt}</td>
-    </tr>`;
-  });
-
-  $('tbl-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Nenhum resultado</td></tr>';
-  $('tbl-count').textContent = `${list.length} mobilizador${list.length !== 1 ? 'es' : ''} encontrado${list.length !== 1 ? 's' : ''}`;
-};
-
-// ── Export Excel (CSV UTF-8) ─────────────────────────────────────
-window.exportarExcel = function() {
-  const BOM = '\uFEFF';
-  let csv = BOM + 'Nº;Nome;BI;Coordenação;Telefone;Estado;Data Resposta\n';
-  const list = MOBILIZADORES.map(m => {
-    const r = respostasDB[m.bi.toUpperCase()];
-    return { ...m, resposta: r?.resposta || null, timestamp: r?.timestamp || null };
-  }).sort((a,b) => a.nome.localeCompare(b.nome));
-
-  list.forEach((m, i) => {
-    const estado = m.resposta === 'SIM' ? 'PAGO' : m.resposta === 'NAO' ? 'NÃO PAGO' : 'SEM RESPOSTA';
-    const dt = m.timestamp ? new Date(m.timestamp).toLocaleDateString('pt-AO') : '';
-    csv += `${i+1};${m.nome};${m.bi};${m.coordenacao};${m.telefone || ''};${estado};${dt}\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `Pagamento_Mobilizadores_1Ronda_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 };
 
 // ── Enter key ────────────────────────────────────────────────────
 $('bi-input').addEventListener('keydown', e => { if (e.key === 'Enter') verificarBI(); });
-$('admin-bi').addEventListener('keydown', e => { if (e.key === 'Enter') autenticarAdmin(); });
 </script>
 </body>
 </html>
