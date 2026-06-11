@@ -9419,10 +9419,10 @@ function mobConfPrint() {
   if (!window.jspdf) {
     showToast('A carregar gerador de PDF...', 'info');
     const s1 = document.createElement('script');
-    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+    s1.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
     s1.onload = () => {
       const s2 = document.createElement('script');
-      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js';
+      s2.src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js';
       s2.onload = () => { _gerarPDFMobilizadores(); };
       s2.onerror = () => showToast('Erro ao carregar AutoTable. Verifique a internet.', 'error');
       document.head.appendChild(s2);
