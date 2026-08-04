@@ -1084,6 +1084,11 @@ input, textarea, select {
 .rh-novo-badge { display:inline-block; padding:2px 8px; border-radius:10px;
   font-size:9px; font-weight:700; background:rgba(52,152,219,.15);
   color:#3498db; letter-spacing:0.5px; }
+.origem-badge { display:inline-block; padding:2px 8px; border-radius:10px;
+  font-size:9px; font-weight:700; letter-spacing:0.5px; margin-left:4px; white-space:nowrap; }
+.origem-rh_data { background:rgba(149,165,166,.18); color:#95a5a6; }
+.origem-ronda2  { background:rgba(46,204,113,.15);  color:#2ecc71; }
+.origem-rh_novo { background:rgba(52,152,219,.15);  color:#3498db; }
 
 /* Modal pós-registo */
 .rh-saved-modal { position:fixed; inset:0; background:rgba(0,0,0,.8);
@@ -2157,7 +2162,7 @@ input, textarea, select {
     </div>
     <div class="assign-search">
       <input id="assign-search-inp" type="text"
-             placeholder="Filtrar por nome ou BI..."
+             placeholder="Pesquisar por nome ou BI (1ª, 2ª Ronda e novos RH)..."
              oninput="renderAssignList()" autocomplete="off">
     </div>
     <div class="assign-list" id="assign-list-content"></div>
@@ -5184,6 +5189,65 @@ function getAvailablePool(funcoes) {
   return pool;
 }
 
+// ── Pool universal de pesquisa para atribuição na 3ª Ronda ───────────────────
+// Junta 1ª Ronda (RH_DATA, imutável) + 2ª Ronda (arquivo Firestore congelado,
+// _ronda2ArquivoCache) + Novos RH já registados na 3ª Ronda (_rhNovosCache).
+// NÃO exige confirmação prévia (SIM na Consolidação) nem correspondência de
+// função — a própria atribuição funciona como confirmação para a 3ª Ronda.
+// Prioridade em caso de BI repetido: 3ª Ronda > 2ª Ronda > 1ª Ronda (dado mais recente).
+// Exclui quem já ocupa um papel na 3ª Ronda (equipa activa ou coord/supervisor).
+function getUniversalSearchPool() {
+  const blocked = new Set();
+  Object.values(_equipasCache).forEach(eq => {
+    ['mobilizador','vacinador','registador','vitaminador'].forEach(role => {
+      if (eq[role]?.bi) blocked.add(eq[role].bi.toUpperCase());
+    });
+  });
+  Object.values(_alocacoesCache).forEach(a => {
+    if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) {
+      blocked.add(a.bi.toUpperCase());
+    }
+  });
+
+  const map = {};
+
+  // FONTE 1 — 1ª Ronda (RH_DATA, base imutável)
+  RH_DATA.forEach(r => {
+    const bi = r.bi.toUpperCase();
+    map[bi] = {
+      bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      _fonte: 'rh_data', _fonteLabel: '1ª Ronda',
+    };
+  });
+
+  // FONTE 2 — 2ª Ronda (arquivo Firestore congelado) — sobrepõe a 1ª Ronda
+  if (_ronda2ArquivoCache) {
+    _ronda2ArquivoCache.forEach(r => {
+      const bi = (r.bi || '').toUpperCase();
+      if (!bi) return;
+      map[bi] = {
+        bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+        telefone: r.telefone || '', sexo: map[bi]?.sexo || 'M',
+        _fonte: 'ronda2', _fonteLabel: '2ª Ronda',
+      };
+    });
+  }
+
+  // FONTE 3 — Novos RH já registados na 3ª Ronda — sobrepõe tudo (mais recente)
+  Object.values(_rhNovosCache).forEach(r => {
+    const bi = (r.bi || '').toUpperCase();
+    if (!bi) return;
+    map[bi] = {
+      bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      _fonte: 'rh_novo', _fonteLabel: 'Novo RH · 3ª Ronda',
+    };
+  });
+
+  return Object.values(map).filter(r => !blocked.has(r.bi.toUpperCase()));
+}
+
 // ── Inicializar hierarquia ────────────────────────────────────────────────────
 async function loadHierarquia() {
   // Carregar as três colecções em paralelo — inclui novos RH para garantir pool actualizado
@@ -5904,11 +5968,14 @@ async function openAssignModal(coordenacao, role, equipaId, memberRole) {
 
   if (needsRefresh) {
     try {
-      const [alocDocs, novosDocs, eqDocs] = await Promise.all([
+      const fetches = [
         fbGetAlocacoes(),
         fbGetRhNovos(),
         fbGetEquipas(),
-      ]);
+      ];
+      // Garantir que o arquivo da 2ª Ronda está disponível para a pesquisa universal
+      if (!_ronda2ArquivoCache) fetches.push(carregarRonda2Arquivo());
+      const [alocDocs, novosDocs, eqDocs] = await Promise.all(fetches);
       updateAlocacoesCache(alocDocs);
       updateRhNovosCache(novosDocs);
       updateEquipasCache(eqDocs);
@@ -5953,32 +6020,42 @@ function closeAssignModal() {
   _assignContext = null;
 }
 
+// Índice temporário do último pool renderizado — permite ao selectAssignItem
+// recuperar o registo completo (incl. de gente só presente na 2ª Ronda),
+// sem depender de findProfissional (que só cobre RH_DATA + novos RH da 3ª Ronda).
+let _assignPoolIndex = {};
+
 function renderAssignList() {
   if (!_assignContext) return;
-  const { coordenacao, role, memberRole } = _assignContext;
-  const isMember = role === 'member';
-  const q = (document.getElementById('assign-search-inp')?.value || '').toLowerCase();
+  const { coordenacao } = _assignContext;
+  const q = (document.getElementById('assign-search-inp')?.value || '').trim().toLowerCase();
 
-  let funcoes;
-  if (role === 'coord')   funcoes = ['Coord area/ Comuna'];
-  else if (isMember)      funcoes = [({mobilizador:'Mobilizador',vacinador:'Vacinador',registador:'Registador',vitaminador:'Vitaminador'})[memberRole] || 'Mobilizador'];
-  else                    funcoes = ['Supervisor equipa'];
+  const el = document.getElementById('assign-list-content');
+  if (!el) return;
 
-  let pool = getAvailablePool(funcoes);
-  if (q) pool = pool.filter(r => (r.nome||'').toLowerCase().includes(q) || (r.bi||'').toLowerCase().includes(q));
+  // Exigir pesquisa mínima — o pool universal (1ª+2ª+3ª Ronda) pode ter
+  // largas centenas de pessoas; listar tudo de uma vez seria impraticável.
+  if (q.length < 2) {
+    el.innerHTML = '<div class="assign-empty">' +
+      '<div class="empty-state"><div class="icon">🔎</div>' +
+      '<p>Pesquise por nome ou BI</p>' +
+      '<small>A pesquisa cobre a 1ª Ronda, a 2ª Ronda e os novos RH já registados na 3ª Ronda.</small>' +
+      '</div></div>';
+    return;
+  }
+
+  let pool = getUniversalSearchPool();
+  pool = pool.filter(r => (r.nome||'').toLowerCase().includes(q) || (r.bi||'').toLowerCase().includes(q));
   pool.sort((a, b) => {
     const aM = a.coordenacao === coordenacao ? -1 : 0;
     const bM = b.coordenacao === coordenacao ? -1 : 0;
     return aM - bM || (a.nome||'').localeCompare(b.nome||'');
   });
 
-  const el = document.getElementById('assign-list-content');
-  if (!el) return;
-
   if (pool.length === 0) {
     el.innerHTML = '<div class="assign-empty">' +
-      (q ? '<div class="empty-state"><div class="icon">🔍</div><p>Nenhum resultado para &ldquo;' + escH(q) + '&rdquo;</p></div>'
-         : '<div class="empty-state"><div class="icon">✅</div><p>Nenhum profissional disponível com esta função.</p><small>Verifique a Consolidação ou registe novos RH.</small></div>') +
+      '<div class="empty-state"><div class="icon">🔍</div><p>Nenhum resultado para &ldquo;' + escH(q) + '&rdquo;</p>' +
+      '<small>Se a pessoa é totalmente nova, use "Registar Novo RH".</small></div>' +
     '</div>';
     return;
   }
@@ -5998,12 +6075,14 @@ function renderAssignList() {
     });
   });
 
-  el.innerHTML = pool.map(r => {
+  _assignPoolIndex = {};
+  pool.forEach(r => { _assignPoolIndex[r.bi.toUpperCase()] = r; });
+
+  el.innerHTML = pool.slice(0, 60).map(r => {
     const biUpper  = (r.bi || '').toUpperCase();
     const isAuto   = r.coordenacao === coordenacao;
     const icon     = r.sexo === 'F' ? '👩' : '👨';
-    const fonte    = r._fonte === 'rh_novo'
-      ? '<span class="rh-novo-badge" style="margin-left:4px">NOVO</span>' : '';
+    const fonte    = '<span class="origem-badge origem-' + r._fonte + '">' + escH(r._fonteLabel) + '</span>';
 
     // M-05: detectar se já está num slot de equipa
     const teamInfo = inTeamMap[biUpper];
@@ -6026,16 +6105,20 @@ function renderAssignList() {
         '<div class="assign-item-nome">' + escH(r.nome) + fonte + moveBadge +
           (isAuto ? ' <span class="auto-badge">✦ Mesma coord.</span>' : '') +
         '</div>' +
-        '<div class="assign-item-sub">' + escH(r.coordenacao||'—') + ' · ' + escH(r.bi) + '</div>' +
+        '<div class="assign-item-sub">' + escH(r.funcao||'—') + ' · ' + escH(r.coordenacao||'—') + ' · ' + escH(r.bi) + '</div>' +
       '</div></div>';
-  }).join('');
+  }).join('') + (pool.length > 60
+    ? '<div style="text-align:center;padding:8px;font-size:11px;color:var(--text3)">' + (pool.length - 60) + ' resultado(s) adicional(is) — refine a pesquisa</div>'
+    : '');
 }
 
 async function selectAssignItem(bi, inTeam, eqNum, eqCoord) {
   if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
   if (!_assignContext) return;
   const { coordenacao, role, equipaId, memberRole } = _assignContext;
-  const prof = findProfissional(bi);
+  // Usa o índice do pool universal (cobre 1ª Ronda, 2ª Ronda e novos RH da 3ª Ronda) —
+  // findProfissional() sozinho não encontra gente que só existe no arquivo da 2ª Ronda.
+  const prof = _assignPoolIndex[(bi||'').toUpperCase()] || findProfissional(bi);
   if (!prof) return;
 
   // M-05: confirmação ao mover alguém que já está numa equipa
@@ -6053,11 +6136,14 @@ async function selectAssignItem(bi, inTeam, eqNum, eqCoord) {
   }
 
   closeAssignModal();
+  const MEMBER_LABELS = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador', vitaminador:'Vitaminador' };
   if (role === 'member') {
-    await _assignMemberToTeam(equipaId, memberRole, prof);
+    // A função gravada reflecte o papel atribuído nesta 3ª Ronda,
+    // independentemente da função que a pessoa teve em rondas anteriores.
+    const profParaEquipa = { ...prof, funcao: MEMBER_LABELS[memberRole] || prof.funcao };
+    await _assignMemberToTeam(equipaId, memberRole, profParaEquipa);
   } else {
-    const r2       = getR2Record(bi) || prof;
-    const funcaoEf = r2.funcao_r2 || prof.funcao;
+    const funcaoEf = role === 'coord' ? 'Coord area/ Comuna' : 'Supervisor equipa';
     await _alocarProfissional(prof.bi, prof.nome, funcaoEf, coordenacao, prof.sexo || 'M', role, prof._fonte || 'rh_data');
   }
 }
