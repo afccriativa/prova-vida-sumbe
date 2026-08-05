@@ -1956,7 +1956,7 @@ input, textarea, select {
       <span class="hier-toolbar-lbl" style="margin-left:8px">Presenças:</span>
       <button class="btn-hier-action" id="btn-lista-pres-toggle"
         onclick="toggleListaPresencaPanel()"
-        title="Gerar lista de presença de campo por supervisor (Vacinadores + Registadores)">📄 Lista Presença</button>
+        title="Gerar lista de presença de campo por supervisor (toda a equipa)">📄 Lista Presença</button>
       <button class="btn-hier-action"
         onclick="gerarListaSupervisoresImpressao()"
         title="Gerar lista de presença de todos os Supervisores de Equipa">📋 Lista Supervisores</button>
@@ -1971,7 +1971,7 @@ input, textarea, select {
     <!-- Painel: Lista de Presença de Campo -->
     <div id="lista-pres-panel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:8px">
       <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">
-        📄 Gerar Lista de Presença — Vacinadores & Registadores
+        📄 Gerar Lista de Presença — Toda a Equipa (Mobilizador, Vacinador, Registador, Vitaminador)
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div style="flex:1;min-width:260px">
@@ -1990,7 +1990,7 @@ input, textarea, select {
           style="padding:8px 12px;font-size:12px;align-self:flex-end">✕</button>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:8px">
-        Abre uma nova aba pronta a imprimir (A4 paisagem) com as listas de Vacinadores e Registadores desse supervisor.
+        Abre uma nova aba pronta a imprimir (A4 paisagem) com as listas de Mobilizadores, Vacinadores, Registadores e Vitaminadores desse supervisor.
       </div>
     </div>
     <!-- Barra de pesquisa na hierarquia -->
@@ -6989,7 +6989,7 @@ async function exportarListaFormacaoMob(evt) {
 // ─── FIM FASES G+H ───────────────────────────────────────────────────────────
 
 // ═════════════════════════════════════════════════════════════════════════════
-// FASE K — LISTA DE PRESENÇA DE CAMPO (Vacinadores + Registadores)
+// FASE K — LISTA DE PRESENÇA DE CAMPO (toda a equipa: Mobilizador, Vacinador, Registador, Vitaminador)
 // Gera HTML institucional A4 paisagem fiel ao modelo oficial DNSP
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -7069,10 +7069,12 @@ function gerarListaPresencaImpressao() {
     });
   }
 
+  const mobilizadores = membros('mobilizador');
   const vacinadores   = membros('vacinador');
   const registadores  = membros('registador');
+  const vitaminadores = membros('vitaminador');
 
-  const html = _buildListaPresHTML(sup, coordNome, vacinadores, registadores);
+  const html = _buildListaPresHTML(sup, coordNome, mobilizadores, vacinadores, registadores, vitaminadores);
 
   const w = window.open('', '_blank');
   if (!w) { showToast('O browser bloqueou a nova aba. Permita popups para este site.', 'error'); return; }
@@ -7081,7 +7083,7 @@ function gerarListaPresencaImpressao() {
   showToast('Lista aberta em nova aba. Use Ctrl+P para imprimir.', 'success');
 }
 
-function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
+function _buildListaPresHTML(sup, coordNome, mobilizadores, vacinadores, registadores, vitaminadores) {
 
   function paginaHTML(membros, funcao) {
     const linhas = membros.map((m, i) =>
@@ -7242,8 +7244,10 @@ function _buildListaPresHTML(sup, coordNome, vacinadores, registadores) {
 </head>
 <body>
 <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+${paginaHTML(mobilizadores, 'Mobilizador')}
 ${paginaHTML(vacinadores,  'Vacinador')}
 ${paginaHTML(registadores, 'Registador')}
+${paginaHTML(vitaminadores, 'Vitaminador')}
 </body>
 </html>`;
 }
