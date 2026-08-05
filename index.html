@@ -490,6 +490,38 @@ body {
 .sp-card-coord .sp-card-btn { background: #1241a1; color: #fff; }
 .sp-footer { text-align: center; margin-top: 22px; font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
 
+/* ── Identificação unificada por BI (substitui a selecção simultânea de perfis) ── */
+.id-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 26px 24px 22px; max-width: 420px; margin: 0 auto; animation: spFadeIn 0.2s ease; }
+.id-card .auth-lbl { margin-top: 0; }
+.id-btn-continuar { width: 100%; margin-top: 18px; padding: 13px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; letter-spacing: 0.3px; }
+.id-btn-continuar:hover:not(:disabled) { background: #c0291f; }
+.id-btn-continuar:disabled { opacity: 0.6; cursor: default; }
+
+.id-result-card { max-width: 440px; margin: 0 auto; text-align: center; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 30px 26px 24px; animation: spFadeIn 0.25s ease; }
+.id-result-icon { font-size: 42px; margin-bottom: 10px; }
+.id-result-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 6px; }
+.id-result-nome { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.id-result-sub  { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+.id-result-desc { font-size: 12px; color: var(--text3); line-height: 1.6; margin: 0; }
+.id-actions { display: flex; gap: 10px; margin-top: 20px; }
+.id-actions .btn-auth-cancel, .id-actions .btn-auth-enter { flex: 1; }
+
+.id-res-sup   { border-color: rgba(46,204,113,0.3); }
+.id-res-sup   .id-result-role      { color: var(--green); }
+.id-res-sup   .id-actions .btn-auth-enter { background: var(--green); }
+.id-res-coord { border-color: rgba(18,65,161,0.3); }
+.id-res-coord .id-result-role      { color: #1241a1; }
+.id-res-coord .id-actions .btn-auth-enter { background: #1241a1; }
+.id-res-admin { border-color: rgba(244,168,50,0.3); }
+.id-res-admin .id-result-role      { color: var(--accent2); }
+.id-res-admin .id-actions .btn-auth-enter { background: var(--accent2); color: #1a1a1a; }
+.id-res-negado { border-color: rgba(231,76,60,0.35); }
+
+@media (max-width: 640px) {
+  .id-card, .id-result-card { padding: 22px 18px 20px; }
+  .id-actions { flex-direction: column; }
+}
+
 /* ── Cards mobile: layout horizontal compacto (≤ 520px) ── */
 @media (max-width: 520px) {
   /* Container: scroll permitido, alinhado ao topo */
@@ -1477,27 +1509,25 @@ input, textarea, select {
       </div>
     </div>
     <hr class="sp-divider">
-    <p class="sp-prompt">Seleccione o seu perfil para continuar</p>
-    <div class="sp-cards">
-      <div class="sp-card sp-card-sup" onclick="selectPerfil('supervisor')">
-        <div class="sp-card-icon">🏥</div>
-        <h2>Supervisor de Equipa</h2>
-        <p>Validar a disponibilidade dos profissionais sob a sua supervisão</p>
-        <div class="sp-card-btn">Entrar como Supervisor →</div>
-      </div>
-      <div class="sp-card sp-card-admin" onclick="selectPerfil('admin')">
-        <div class="sp-card-icon">⚙️</div>
-        <h2>Administrador</h2>
-        <p>Acesso total à consolidação, gestão e auditoria do sistema</p>
-        <div class="sp-card-btn">Acesso Administrativo →</div>
-      </div>
-      <div class="sp-card sp-card-coord" onclick="selectPerfil('coordenador')">
-        <div class="sp-card-icon">📍</div>
-        <h2>Coordenador de Área</h2>
-        <p>Monitorizar o estado das equipas e supervisores da sua coordenação</p>
-        <div class="sp-card-btn">Entrar como Coordenador →</div>
+
+    <!-- Passo 1 — Identificação por BI (único ponto de entrada) -->
+    <div id="id-step-input">
+      <p class="sp-prompt">Identifique-se para continuar</p>
+      <div class="id-card">
+        <label class="auth-lbl" for="id-bi-input">Número do Bilhete de Identidade</label>
+        <input id="id-bi-input" class="auth-inp" type="text"
+               placeholder="Ex: 006185927KS046"
+               autocomplete="off" autocorrect="off" spellcheck="false"
+               autocapitalize="characters" inputmode="text" enterkeyhint="go"
+               onkeydown="if(event.key==='Enter') identificarPerfil()">
+        <div id="id-bi-msg" class="auth-msg"></div>
+        <button id="id-btn-continuar" class="id-btn-continuar" onclick="identificarPerfil()">Continuar →</button>
       </div>
     </div>
+
+    <!-- Passo 2 — Resultado da identificação: resumo do perfil detectado ou acesso negado -->
+    <div id="id-step-result" style="display:none"></div>
+
     <div class="sp-footer">Ibisner Solutions · Direcção Municipal de Saúde do Sumbe · 2026</div>
   </div>
 </div>
@@ -2746,6 +2776,7 @@ async function fbLogSessao(supervisorBI, nome, coordenacao, totalValidacoes) {
 function showSelectionScreen() {
   const s = document.getElementById('screen-perfil');
   if (s) { s.style.display = 'flex'; s.classList.add('sp-enter'); }
+  _resetIdentificacaoScreen();
 }
 
 function hideSelectionScreen() {
@@ -2790,7 +2821,226 @@ function selectPerfil(tipo) {
 function closeAuthModal(which) {
   const m = document.getElementById('modal-auth-' + which);
   if (m) { _releaseFocus(m); m.style.display = 'none'; }
+  if (which === 'admin') {
+    const biField = document.getElementById('auth-admin-bi');
+    if (biField) biField.readOnly = false;
+  }
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 3b — IDENTIFICAÇÃO UNIFICADA POR BI
+// Substitui a selecção simultânea de perfis: o utilizador identifica-se uma
+// única vez pelo BI e o sistema detecta e confirma o perfil correspondente,
+// sem expor os restantes perfis a quem não tem acesso a eles.
+// A autenticação real (sessão, PIN do Admin, etc.) continua 100% delegada às
+// funções já existentes (doAuthSupervisor/doAuthCoordenador/doAuthAdmin) —
+// esta camada apenas decide qual delas invocar e como apresentar o resultado.
+// ═════════════════════════════════════════════════════════════════════════════
+
+let _idBIAtual     = null;
+let _idPerfilAtual = null;
+
+function _resetIdentificacaoScreen() {
+  _idBIAtual = null; _idPerfilAtual = null;
+  const stepInput  = document.getElementById('id-step-input');
+  const stepResult = document.getElementById('id-step-result');
+  const biInput    = document.getElementById('id-bi-input');
+  const msg        = document.getElementById('id-bi-msg');
+  if (stepInput)  stepInput.style.display = 'block';
+  if (stepResult) { stepResult.style.display = 'none'; stepResult.innerHTML = ''; }
+  if (biInput)    { biInput.value = ''; biInput.classList.remove('inp-err'); }
+  if (msg)        { msg.className = 'auth-msg'; msg.textContent = ''; }
+}
+
+// ─── Passo 1: ler o BI e despoletar a detecção ────────────────────────────────
+async function identificarPerfil() {
+  const input = document.getElementById('id-bi-input');
+  const bi    = (input.value || '').toUpperCase().trim();
+  const msg   = document.getElementById('id-bi-msg');
+  const btn   = document.getElementById('id-btn-continuar');
+
+  msg.className = 'auth-msg'; msg.textContent = '';
+  input.classList.remove('inp-err');
+
+  if (!bi) {
+    msg.className = 'auth-msg msg-error on';
+    msg.textContent = 'Por favor insira o número do Bilhete de Identidade.';
+    input.focus(); return;
+  }
+
+  btn.disabled = true; btn.textContent = '⟳ A verificar...';
+  let perfil;
+  try {
+    perfil = await detectarPerfilPorBI(bi);
+  } catch(e) {
+    console.error('[Identificação]', e);
+    perfil = { tipo: null };
+  }
+  btn.disabled = false; btn.textContent = 'Continuar →';
+
+  if (!perfil.tipo) {
+    input.classList.add('inp-err');
+  }
+
+  _idBIAtual = bi;
+  _idPerfilAtual = perfil;
+  _renderResultadoIdentificacao(perfil, bi);
+}
+
+// ─── Cascata de detecção: Administrador → Supervisor → Coordenador ───────────
+// Reaproveita os mesmos índices/consultas já usados nas funções de autenticação
+// originais, apenas em modo de leitura (não abre sessão nem pede PIN aqui).
+async function detectarPerfilPorBI(bi) {
+  // 1. Administrador — BI único e fixo, verificação local imediata
+  if (isAdminBI(bi)) return { tipo: 'admin' };
+
+  // 2. Supervisor — índice estático (dados de origem + realocações já sincronizadas)
+  if (isSupervisorAuthorized(bi)) {
+    return { tipo: 'supervisor', sup: SUPERVISORES_INDEX[bi] };
+  }
+
+  // 3. Fallback Firebase — cobre Supervisor realocado noutro dispositivo
+  //    e Coordenador de Área, numa única consulta
+  if (fbReady()) {
+    try {
+      const alocDocs = await fbGetAlocacoes();
+      for (const doc of alocDocs) {
+        const docBI = (doc.bi || '').toUpperCase();
+        if (docBI !== bi) continue;
+        if (doc.status === 'supervisor' || doc.funcao === 'Supervisor equipa') {
+          const r2 = getR2Record(doc.bi);
+          const sup = {
+            bi: doc.bi, nome: doc.nome,
+            coordenacao: (r2 && r2.coordenacao_r2) || doc.coordenacao || '',
+            sexo: doc.sexo || 'M', _fromFirebase: true,
+          };
+          SUPERVISORES_INDEX[docBI] = sup; // manter índice coerente com o resto da app
+          return { tipo: 'supervisor', sup };
+        }
+        if (doc.status === 'coord') return { tipo: 'coordenador', coord: doc };
+      }
+    } catch(e) {
+      console.error('[Identificação] Falha na consulta Firebase:', e);
+    }
+  }
+
+  return { tipo: null };
+}
+
+// ─── Passo 2: apresentar o resumo do perfil detectado (ou negar acesso) ──────
+function _renderResultadoIdentificacao(perfil, bi) {
+  document.getElementById('id-step-input').style.display = 'none';
+  const el = document.getElementById('id-step-result');
+  el.style.display = 'block';
+
+  if (perfil.tipo === 'supervisor') {
+    el.innerHTML = _htmlIdCard({
+      cls: 'id-res-sup', icon: '🏥', role: 'Supervisor de Equipa',
+      nome: perfil.sup.nome,
+      sub: perfil.sup.coordenacao ? 'Coordenação: ' + escH(perfil.sup.coordenacao) : '',
+      desc: 'Vai poder validar a disponibilidade dos profissionais sob a sua supervisão.',
+      btnTxt: '✔ Entrar como Supervisor', btnFn: 'confirmarEntradaSupervisor()'
+    });
+  } else if (perfil.tipo === 'coordenador') {
+    el.innerHTML = _htmlIdCard({
+      cls: 'id-res-coord', icon: '📍', role: 'Coordenador de Área',
+      nome: perfil.coord.nome || bi,
+      sub: perfil.coord.coordenacao ? 'Coordenação: ' + escH(perfil.coord.coordenacao) : '',
+      desc: 'Vai poder monitorizar o estado das equipas e supervisores da sua coordenação.',
+      btnTxt: '✔ Entrar como Coordenador', btnFn: 'confirmarEntradaCoordenador()'
+    });
+  } else if (perfil.tipo === 'admin') {
+    const rec = findBI(bi);
+    el.innerHTML = _htmlIdCard({
+      cls: 'id-res-admin', icon: '⚙️', role: 'Administrador',
+      nome: rec ? rec.nome : 'Administrador do Sistema',
+      sub: '',
+      desc: 'Acesso total à consolidação, gestão e auditoria do sistema. Vai ser-lhe pedido o PIN de segurança.',
+      btnTxt: '✔ Continuar', btnFn: 'confirmarEntradaAdmin()'
+    });
+  } else {
+    el.innerHTML =
+      '<div class="id-result-card id-res-negado">' +
+        '<div class="id-result-icon">🚫</div>' +
+        '<div class="id-result-nome">Acesso não autorizado</div>' +
+        '<div class="id-result-desc">O Bilhete <strong>' + escH(bi) + '</strong> não está associado a nenhum perfil ' +
+        'neste sistema (Supervisor de Equipa, Coordenador de Área ou Administrador).<br>' +
+        'Verifique se o número está correcto ou contacte o Administrador do sistema.</div>' +
+        '<div class="id-actions">' +
+          '<button class="btn-auth-cancel" style="flex:none;width:100%" onclick="voltarIdentificacao()">← Tentar outro Bilhete</button>' +
+        '</div>' +
+      '</div>';
+  }
+}
+
+function _htmlIdCard(cfg) {
+  return (
+    '<div class="id-result-card ' + cfg.cls + '">' +
+      '<div class="id-result-icon">' + cfg.icon + '</div>' +
+      '<div class="id-result-role">' + cfg.role + '</div>' +
+      '<div class="id-result-nome">' + escH(cfg.nome) + '</div>' +
+      (cfg.sub ? '<div class="id-result-sub">' + cfg.sub + '</div>' : '') +
+      '<p class="id-result-desc">' + cfg.desc + '</p>' +
+      '<div id="id-result-msg" class="auth-msg"></div>' +
+      '<div class="id-actions">' +
+        '<button class="btn-auth-cancel" onclick="voltarIdentificacao()">← Não sou eu</button>' +
+        '<button class="btn-auth-enter" onclick="' + cfg.btnFn + '">' + cfg.btnTxt + '</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function voltarIdentificacao() {
+  _resetIdentificacaoScreen();
+  setTimeout(() => document.getElementById('id-bi-input')?.focus(), 50);
+}
+
+// Propaga uma eventual mensagem de erro das funções de autenticação originais
+// (ex.: falha de rede na confirmação) para o cartão de resultado desta camada.
+function _syncLegacyAuthMsg(which) {
+  const legacy = document.getElementById('auth-' + which + '-msg');
+  const target = document.getElementById('id-result-msg');
+  if (legacy && target && legacy.textContent) {
+    target.className = legacy.className;
+    target.textContent = legacy.textContent;
+  }
+}
+
+// ─── Confirmação final: delega para as funções de autenticação já existentes ─
+async function confirmarEntradaSupervisor() {
+  if (!_idPerfilAtual || _idPerfilAtual.tipo !== 'supervisor') return;
+  document.getElementById('auth-sup-bi').value = _idBIAtual;
+  await doAuthSupervisor();
+  _syncLegacyAuthMsg('sup');
+}
+
+async function confirmarEntradaCoordenador() {
+  if (!_idPerfilAtual || _idPerfilAtual.tipo !== 'coordenador') return;
+  document.getElementById('auth-coord-bi').value = _idBIAtual;
+  await doAuthCoordenador();
+  _syncLegacyAuthMsg('coord');
+}
+
+// Administrador: abre o modal de PIN já existente (com toda a lógica de
+// primeiro acesso / expiração de 24h intacta), apenas pré-preenchendo o BI
+// já confirmado nesta etapa, para não o pedir uma segunda vez.
+function confirmarEntradaAdmin() {
+  if (!_idPerfilAtual || _idPerfilAtual.tipo !== 'admin') return;
+  const modal = document.getElementById('modal-auth-admin');
+  const biField = document.getElementById('auth-admin-bi');
+  modal.style.display = 'flex';
+  biField.value = _idBIAtual;
+  biField.readOnly = true;
+  document.getElementById('auth-admin-pin').value = '';
+  resetAuthMsg('admin');
+  if (!getAdminPinHash()) {
+    showAuthMsg('admin', 'warn',
+      '🔐 Primeiro acesso — PIN não configurado. Insira o PIN que deseja criar e clique "Entrar". Ficará guardado neste dispositivo.');
+  }
+  setTimeout(() => { document.getElementById('auth-admin-pin').focus(); _trapFocus(modal); }, 100);
+}
+
+// ─── FIM FASE 3b ──────────────────────────────────────────────────────────────
 
 // ─── Autenticação: Supervisor ─────────────────────────────────────────────────
 async function doAuthSupervisor() {
