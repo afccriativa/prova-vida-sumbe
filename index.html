@@ -3850,8 +3850,8 @@ async function supSearch() {
   const prof = getR2Record(bi);
   if (!prof) {
     supShowAlert('error',
-      'Titular não encontrado. Verifique se o número do Bilhete está correcto. ' +
-      'Caso esteja, significa que não integrou a 3ª Ronda 2026.');
+      'Titular não encontrado na base de registo (1ª/2ª Ronda). Verifique se o número do Bilhete está correcto. ' +
+      'Só é possível validar aqui profissionais já registados em rondas anteriores.');
     document.getElementById('sup-bi-input').focus();
     return;
   }
