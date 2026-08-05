@@ -6771,7 +6771,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#000;background
 <body>
 <div class="dh">
   <div class="dt">Direcção Municipal de Saúde — Sumbe</div>
-  <div class="ds">Campanha nOPV2 &nbsp;·&nbsp; 3ª Ronda Pólio 2026 &nbsp;·&nbsp; 22 a 24 de Maio</div>
+  <div class="ds">Campanha nOPV2 &nbsp;·&nbsp; 3ª Ronda Pólio 2026 &nbsp;·&nbsp; 14 a 16 de Agosto</div>
   <div class="ds">Lista de Equipas de Campo</div>
   <div class="dm">Gerado em: ${e(dtStr)}</div>
   <div class="dl">${modoLbl}</div>
@@ -6929,7 +6929,7 @@ async function exportarListaFormacaoMob(evt) {
     ['DIRECÇÃO DE SAÚDE',                                                      '', '', '', ''], // 8
     ['CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2)',           '', '', '', ''], // 9
     [],   // row 10
-    ['22 a 24 de Maio 2026',                                                   '', '', '', ''], // 11
+    ['14 a 16 de Agosto 2026',                                                   '', '', '', ''], // 11
     ['LISTA DE PRESENÇA - FORMAÇÃO',                                           '', '', '', ''], // 12
     [],   // row 13
     ['Formador:_______________________________________________', '', '', 'Data:__________/_____________/2026', ''], // 14
@@ -7119,7 +7119,7 @@ function _buildListaPresHTML(sup, coordNome, mobilizadores, vacinadores, regista
         <div>ADMINISTRAÇÃO MUNICIPAL DO SUMBE</div>
         <div style="margin-bottom:5px">DIRECÇÃO DE SAÚDE</div>
         <div class="cab-campanha">CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2) — 3ª RONDA</div>
-        <div>22 a 24 de Maio 2026</div>
+        <div>14 a 16 de Agosto 2026</div>
       </div>
 
       <div class="titulo-lista">LISTA DE PRESENÇA</div>
@@ -7137,10 +7137,10 @@ function _buildListaPresHTML(sup, coordNome, mobilizadores, vacinadores, regista
             <th class="col-nome">NOME COMPLETO</th>
             <th class="col-func">FUNÇÃO</th>
             <th class="col-tel">CONTACTO</th>
-            <th class="col-dia">1º dia<br><span class="dia-data">_____/05/2026</span></th>
-            <th class="col-dia">2º dia<br><span class="dia-data">_____/05/2026</span></th>
-            <th class="col-dia">3º dia<br><span class="dia-data">_____/05/2026</span></th>
-            <th class="col-dia">Repescagem<br><span class="dia-data">_____/05/2026</span></th>
+            <th class="col-dia">1º dia<br><span class="dia-data">_____/08/2026</span></th>
+            <th class="col-dia">2º dia<br><span class="dia-data">_____/08/2026</span></th>
+            <th class="col-dia">3º dia<br><span class="dia-data">_____/08/2026</span></th>
+            <th class="col-dia">Repescagem<br><span class="dia-data">_____/08/2026</span></th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -7431,7 +7431,7 @@ function _buildListaGeralHTML(membros, funcaoLabel, tituloLista) {
     <div>ADMINISTRAÇÃO MUNICIPAL DO SUMBE</div>
     <div style="margin-bottom:5px">DIRECÇÃO DE SAÚDE</div>
     <div class="cab-campanha">CAMPANHA NACIONAL DE VACINAÇÃO CONTRA A POLIOMIELITE (nOPV2) — 3ª RONDA</div>
-    <div>22 a 24 de Maio 2026</div>
+    <div>14 a 16 de Agosto 2026</div>
   </div>
   <div class="titulo-lista">${_escHTML(tituloLista)}</div>
 </div>
@@ -7444,10 +7444,10 @@ function _buildListaGeralHTML(membros, funcaoLabel, tituloLista) {
       <th>NOME COMPLETO</th>
       <th style="width:110px">FUNÇÃO</th>
       <th style="width:90px">CONTACTO</th>
-      <th class="col-dia">1º dia<br><span class="dia-data">_____/05/2026</span></th>
-      <th class="col-dia">2º dia<br><span class="dia-data">_____/05/2026</span></th>
-      <th class="col-dia">3º dia<br><span class="dia-data">_____/05/2026</span></th>
-      <th class="col-dia">Repescagem<br><span class="dia-data">_____/05/2026</span></th>
+      <th class="col-dia">1º dia<br><span class="dia-data">_____/08/2026</span></th>
+      <th class="col-dia">2º dia<br><span class="dia-data">_____/08/2026</span></th>
+      <th class="col-dia">3º dia<br><span class="dia-data">_____/08/2026</span></th>
+      <th class="col-dia">Repescagem<br><span class="dia-data">_____/08/2026</span></th>
     </tr>
   </thead>
   <tbody>${linhas}</tbody>
@@ -7479,8 +7479,8 @@ function _escHTML(s) {
 // Uma entrada por profissional por dia: {bi}_{YYYYMMDD}
 // ═════════════════════════════════════════════════════════════════════════════
 
-const CAMPANHA_DIAS = ['2026-05-22', '2026-05-23', '2026-05-24'];
-const CAMPANHA_LABELS = { '2026-05-22': 'Dia 1 · 22 Mai', '2026-05-23': 'Dia 2 · 23 Mai', '2026-05-24': 'Dia 3 · 24 Mai' };
+const CAMPANHA_DIAS = ['2026-08-14', '2026-08-15', '2026-08-16'];
+const CAMPANHA_LABELS = { '2026-08-14': 'Dia 1 · 14 Ago', '2026-08-15': 'Dia 2 · 15 Ago', '2026-08-16': 'Dia 3 · 16 Ago' };
 
 function _presDocId(bi, data) {
   return bi.toUpperCase().trim() + '_' + data.replace(/-/g, '');
@@ -7493,7 +7493,7 @@ function _presHoje() {
 function _presEdicaoPermitida(data) {
   // Pode marcar qualquer dia da campanha enquanto a campanha estiver activa
   const agora = new Date();
-  return agora >= new Date('2026-05-22T07:00:00') && agora <= new Date('2026-05-24T20:00:00');
+  return agora >= new Date('2026-08-14T07:00:00') && agora <= new Date('2026-08-16T20:00:00');
 }
 
 // ── Firebase: gravar presença ─────────────────────────────────────────────────
@@ -7998,6 +7998,7 @@ function supRenderEquipas() {
       memberRow('mobilizador', '📱', 'MOB', eq.mobilizador) +
       memberRow('vacinador',   '💉', 'VAC', eq.vacinador) +
       memberRow('registador',  '📋', 'REG', eq.registador) +
+      memberRow('vitaminador', '💊', 'VIT', eq.vitaminador) +
     '</div>';
   }).join('');
 }
@@ -8025,6 +8026,7 @@ function supImprimirMinhasEquipas() {
     const mobProf  = eq.mobilizador ? findProfissional(eq.mobilizador.bi) : null;
     const vacProf  = eq.vacinador   ? findProfissional(eq.vacinador.bi)   : null;
     const regProf  = eq.registador  ? findProfissional(eq.registador.bi)  : null;
+    const vitProf  = eq.vitaminador ? findProfissional(eq.vitaminador.bi) : null;
     return {
       coordenacao: minhaCoord,
       coordNome:   _supCoordCache ? _supCoordCache.nome : '—',
@@ -8044,6 +8046,9 @@ function supImprimirMinhasEquipas() {
       regNome: eq.registador ? eq.registador.nome : '',
       regBI:   eq.registador ? eq.registador.bi   : '',
       regTel:  regProf ? (regProf.telefone || '') : '',
+      vitNome: eq.vitaminador ? eq.vitaminador.nome : '',
+      vitBI:   eq.vitaminador ? eq.vitaminador.bi   : '',
+      vitTel:  vitProf ? (vitProf.telefone || '') : '',
     };
   });
 
@@ -9006,8 +9011,8 @@ function exportCSV() {
 }
 
 // ── Contagem regressiva para a Campanha (sessão Supervisor) ──────────────────
-const CD_START = new Date('2026-05-22T07:00:00'); // início oficial da campanha
-const CD_END   = new Date('2026-05-24T18:00:00'); // fim da campanha
+const CD_START = new Date('2026-08-14T07:00:00'); // início oficial da campanha
+const CD_END   = new Date('2026-08-16T18:00:00'); // fim da campanha
 let   _cdInterval = null;
 
 function _cdRender() {
@@ -9072,7 +9077,7 @@ function _cdRender() {
   if (_cdInterval) { clearInterval(_cdInterval); _cdInterval = null; }
   el.innerHTML =
     '<div class="cd-phase" style="color:var(--text3)">✅ Campanha concluída</div>' +
-    '<div class="cd-main" style="color:var(--text3);font-size:13px">22–24 Mai 2026</div>' +
+    '<div class="cd-main" style="color:var(--text3);font-size:13px">14–16 Ago 2026</div>' +
     '<div class="cd-sub">Obrigado pela participação!</div>';
 }
 
