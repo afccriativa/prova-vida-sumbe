@@ -1119,6 +1119,9 @@ input, textarea, select {
 .aval-table tr:hover td { background:var(--card2); }
 .aval-stars { white-space:nowrap; }
 .aval-star:hover { transform:scale(1.15); }
+.aval-nota-inp { transition:border-color .15s, color .15s; }
+.aval-nota-inp.aval-nota-excl { border-color:var(--error) !important; color:var(--error) !important; }
+.aval-nota-inp.aval-nota-adm  { border-color:var(--success) !important; color:var(--success) !important; }
 .aval-sit { display:inline-block; padding:3px 9px; border-radius:10px;
   font-size:10px; font-weight:800; letter-spacing:.4px; white-space:nowrap; }
 .aval-sit-excluido { background:rgba(231,76,60,.15); color:var(--error); }
@@ -2159,10 +2162,10 @@ input, textarea, select {
   <!-- Sub-painel: Avaliação de Desempenho -->
   <div id="equipas-sub-avaliacao" class="equipas-subpanel" style="display:none">
     <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
-      Avalie o desempenho de profissionais das rondas anteriores. Nota de 0 a 2 estrelas marca a pessoa como
-      <strong style="color:var(--error)">Excluída</strong> da 3ª Ronda (bloqueia qualquer tentativa de atribuição);
-      3 a 5 estrelas marca como <strong style="color:var(--success)">Admitida</strong>. Quem não for avaliado
-      permanece neutro e pode ser atribuído normalmente.
+      Avalie o desempenho de profissionais das rondas anteriores. Nota de 0 a 20 —
+      abaixo de 10 marca a pessoa como <strong style="color:var(--error)">Excluída</strong> da 3ª Ronda
+      (bloqueia qualquer tentativa de atribuição); 10 ou mais marca como
+      <strong style="color:var(--success)">Admitida</strong>. Campo vazio = neutro, pode ser atribuído normalmente.
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <input id="aval-search" type="text" placeholder="Filtrar na tabela..."
@@ -5446,12 +5449,12 @@ function updateAvaliacoesCache(docs) {
 }
 
 // Situação derivada da nota — nunca guardada em duro, para nunca dessincronizar.
-// null/undefined (sem avaliação) = neutro; 0-2 = excluído; 3-5 = admitido.
+// null/undefined (sem avaliação) = neutro; 0-9 = excluído; 10-20 = admitido.
 function situacaoAvaliacao(nota) {
   if (nota === null || nota === undefined || nota === '') return 'neutro';
   const n = Number(nota);
   if (Number.isNaN(n)) return 'neutro';
-  return n <= 2 ? 'excluido' : 'admitido';
+  return n < 10 ? 'excluido' : 'admitido';
 }
 
 // Verifica se um BI está bloqueado (Excluído) para atribuição na 3ª Ronda.
@@ -5524,17 +5527,17 @@ function _avalFiltroFuncaoOptions() {
   }
 }
 
-function renderStarsWidget(bi, nota) {
-  const n = (nota === null || nota === undefined || nota === '') ? 0 : Number(nota);
-  const starOn  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" fill="var(--warning)"><path d="M10 1.3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"/></svg>';
-  const starOff = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.4"><path d="M10 1.3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"/></svg>';
-  let html = '<span class="aval-stars" data-bi="' + escAttr(bi) + '">';
-  for (let i = 1; i <= 5; i++) {
-    html += '<span class="aval-star" onclick="avalStarClick(\'' + escAttr(bi) + '\',' + i + ')" style="cursor:pointer;padding:0 1px">' +
-      (i <= n ? starOn : starOff) + '</span>';
-  }
-  html += '</span>';
-  return html;
+function renderNotaInput(bi, nota) {
+  const val = (nota === null || nota === undefined || nota === '') ? '' : Number(nota);
+  const situacao = situacaoAvaliacao(nota);
+  const cls = situacao === 'excluido' ? 'aval-nota-inp aval-nota-excl'
+            : situacao === 'admitido' ? 'aval-nota-inp aval-nota-adm'
+            : 'aval-nota-inp';
+  return '<input type="number" min="0" max="20" step="1" class="' + cls + '" ' +
+    'data-bi="' + escAttr(bi) + '" value="' + val + '" placeholder="—" ' +
+    'onblur="avalNotaBlur(this)" onkeydown="if(event.key===\'Enter\')this.blur()" ' +
+    'style="width:56px;font-size:13px;font-weight:700;text-align:center;' +
+    'background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;color:var(--text)">';
 }
 
 function renderAvaliacaoTable() {
@@ -5582,7 +5585,7 @@ function renderAvaliacaoTable() {
       '<td>' + escH(r.coordenacao||'—') + '</td>' +
       '<td style="font-family:monospace;font-size:11px">' + escH(r.bi) + '</td>' +
       '<td>' + escH(r.telefone||'—') + '</td>' +
-      '<td>' + renderStarsWidget(r.bi, nota) + '</td>' +
+      '<td>' + renderNotaInput(r.bi, nota) + '</td>' +
       '<td>' + SITUACAO_LBL[situacao] + '</td>' +
       '<td>' +
         '<input type="text" class="aval-obs-inp" data-bi="' + escAttr(r.bi) + '" value="' + escAttr(obs) + '" ' +
@@ -5599,18 +5602,26 @@ function renderAvaliacaoTable() {
   el.innerHTML = html;
 }
 
-async function avalStarClick(bi, nota) {
-  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); return; }
+async function avalNotaBlur(inputEl) {
+  if (!isAdminSession()) { showToast('Acesso restrito ao Administrador.', 'error'); renderAvaliacaoTable(); return; }
+  const bi  = inputEl.dataset.bi;
   const biU = bi.toUpperCase();
   const existente = _avaliacoesCache[biU];
-  // Clicar na mesma estrela já seleccionada limpa a nota (volta a Neutro)
-  const novaNota = (existente && Number(existente.nota) === nota) ? null : nota;
-  const situacaoNova = situacaoAvaliacao(novaNota);
+  const raw = inputEl.value.trim();
 
+  let novaNota = raw === '' ? null : Math.round(Number(raw));
+  if (novaNota !== null) {
+    if (Number.isNaN(novaNota)) { showToast('Nota inválida.', 'error'); renderAvaliacaoTable(); return; }
+    if (novaNota < 0 || novaNota > 20) { showToast('A nota deve estar entre 0 e 20.', 'error'); renderAvaliacaoTable(); return; }
+  }
+  const notaAnterior = existente ? existente.nota : null;
+  if (notaAnterior === novaNota) return; // sem alteração real
+
+  const situacaoNova = situacaoAvaliacao(novaNota);
   let observacao = existente?.observacao || '';
   if (situacaoNova === 'excluido' && !observacao.trim()) {
     observacao = (prompt('Esta avaliação marca a pessoa como EXCLUÍDA da 3ª Ronda.\n\nJustifique brevemente (obrigatório):') || '').trim();
-    if (!observacao) { showToast('Observação obrigatória para marcar Exclusão.', 'error'); return; }
+    if (!observacao) { showToast('Observação obrigatória para marcar Exclusão.', 'error'); renderAvaliacaoTable(); return; }
   }
   await _avalSalvar(bi, novaNota, observacao);
 }
