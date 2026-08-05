@@ -1631,7 +1631,7 @@ input, textarea, select {
   <div class="tab" data-panel="supervisors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="7.2" cy="6.5" r="2.8" fill="currentColor"/><path d="M1.8 17c0-3.3 2.4-5.5 5.4-5.5s5.4 2.2 5.4 5.5" fill="currentColor"/><circle cx="14" cy="7" r="2.2" fill="currentColor" opacity="0.55"/><path d="M12.6 11.7c2.7.2 4.6 2.2 4.6 5.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/></svg> Supervisores</div>
   <div class="tab" data-panel="ronda1">1️⃣ 1ª Ronda</div>
   <div class="tab" data-panel="ronda2">2️⃣ 2ª Ronda</div>
-  <div class="tab" data-panel="equipas">🧩 Compor RH 3ª Ronda</div>
+  <div class="tab" data-panel="equipas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M4 4h4.3a1.4 1.4 0 0 1 2.7 0H15v4.3a1.4 1.4 0 0 1 0 2.7V15h-4.3a1.4 1.4 0 0 0-2.7 0H4v-4.3a1.4 1.4 0 0 0 0-2.7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Compor RH 3ª Ronda</div>
   <div class="tab" data-panel="payments"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.5v9M12.3 7.3c0-1-1-1.6-2.3-1.6-1.5 0-2.4.7-2.4 1.8 0 2.6 4.9 1.3 4.9 3.9 0 1.1-1 1.8-2.5 1.8-1.3 0-2.4-.6-2.4-1.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Pagamentos</div>
   <div class="tab" data-panel="audit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg> Auditoria</div>
 </div>
@@ -2149,7 +2149,7 @@ input, textarea, select {
     <div class="rh-saved-info" id="rh-saved-info"></div>
     <div class="rh-saved-btns">
       <button class="btn-rh-outro" onclick="rhSavedRegistarOutro()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Registar outro</button>
-      <button class="btn-rh-add2r" onclick="rhSavedAdd2R()">⚽ Adicionar à 3ª Ronda →</button>
+      <button class="btn-rh-add2r" onclick="rhSavedAdd2R()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 6.5l5 3-2 5-5-1-1-5z" fill="currentColor"/></svg> Adicionar à 3ª Ronda →</button>
     </div>
   </div>
 </div>
@@ -2313,11 +2313,11 @@ const RH_DATA = [{"bi":"001037456LS038","nome":"HILDEBRANDO MAURÍCIO TCHEIA CAS
 const STATUS_OPTIONS = [
   { key:'SIM', label:'Disponível', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>', cls:'btn-sim', scls:'s-SIM' },
   { key:'NÃO', label:'Indisponível', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--error)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>', cls:'btn-nao', scls:'s-NAO' },
-  { key:'SEM CONTACTO', label:'Sem Contacto', icon:'📵', cls:'btn-semctc', scls:'s-SEM' },
-  { key:'NÃO ATENDE', label:'Não Atende', icon:'🔇', cls:'btn-natende', scls:'s-NATENDE' },
+  { key:'SEM CONTACTO', label:'Sem Contacto', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="6" y="1.5" width="8" height="17" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="8.5" y1="15.3" x2="11.5" y2="15.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>', cls:'btn-semctc', scls:'s-SEM' },
+  { key:'NÃO ATENDE', label:'Não Atende', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M2.5 7.5v5h3l4.5 3.5v-12L5.5 7.5z" fill="currentColor"/><line x1="12.5" y1="7" x2="17.5" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="17.5" y1="7" x2="12.5" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>', cls:'btn-natende', scls:'s-NATENDE' },
   { key:'NÚMERO INVÁLIDO', label:'Nº Inválido', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg>', cls:'btn-invalido', scls:'s-INVALIDO' },
-  { key:'FALECIDO', label:'Falecido(a)', icon:'🕊️', cls:'btn-falecido', scls:'s-FALECIDO' },
-  { key:'AUSENTE', label:'Ausente Muníc.', icon:'🚶', cls:'btn-ausente', scls:'s-AUSENTE' },
+  { key:'FALECIDO', label:'Falecido(a)', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5c-3 3-3 6 0 8-3 2-6 2-8 .5 1 3 4 5 8 5s7-2 8-5c-2 1.5-5 1.5-8-.5 3-2 3-5 0-8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>', cls:'btn-falecido', scls:'s-FALECIDO' },
+  { key:'AUSENTE', label:'Ausente Muníc.', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="11.5" cy="3.6" r="1.7" fill="currentColor"/><path d="M9.5 7l-1 4 1.5 1 .5 5.5M9.5 7l3 1 1.5 3M9.5 7L7 9.5m3.5 2.5l3-1 2 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>', cls:'btn-ausente', scls:'s-AUSENTE' },
 ];
 
 const STORE_KEY = 'prova_vida_3ronda_sumbe_2026';
@@ -3797,7 +3797,7 @@ async function _renderCoordPresencas() {
   if (!diaVer) { secEl.style.display = 'none'; return; }
 
   secEl.style.display = 'block';
-  secEl.innerHTML = `<div class="dash-presencas"><h3>🏃 Presenças — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">A carregar...</div></div>`;
+  secEl.innerHTML = `<div class="dash-presencas"><h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">A carregar...</div></div>`;
 
   const myCoord   = (APP_SESSION.coordenacao || '').toUpperCase().trim();
   const presencas = await fbGetPresencasDia(diaVer);
@@ -3813,7 +3813,7 @@ async function _renderCoordPresencas() {
   const cor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent2)' : '#e74c3c';
 
   secEl.innerHTML = `<div class="dash-presencas">
-    <h3>🏃 Presenças em Campo — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3>
+    <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças em Campo — ${CAMPANHA_LABELS[diaVer]||diaVer}</h3>
     <div class="dash-pres-grid">
       <div class="dash-pres-card dp-green"><div class="dpn">${presentes}</div><div class="dpl">Presentes</div></div>
       <div class="dash-pres-card dp-red"><div class="dpn">${ausentes}</div><div class="dpl">Ausentes</div></div>
@@ -4941,7 +4941,7 @@ function renderRhNovosList() {
 
     const btnConfirmar = (!r.confirmado2R)
       ? '<button class="btn-row-action" style="color:var(--green)" title="Confirmar para 3ª Ronda" ' +
-        'data-bi="' + r.bi + '" onclick="confirmarRhPara2R(this.dataset.bi)">⚽</button> '
+        'data-bi="' + r.bi + '" onclick="confirmarRhPara2R(this.dataset.bi)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 6.5l5 3-2 5-5-1-1-5z" fill="currentColor"/></svg></button> '
       : '';
 
     return '<tr>'+
@@ -5914,7 +5914,7 @@ function renderCoordCard(coordenacao) {
     ? '<span class="coord-pill coord-pill-warn">Sem equipas</span>'
     : allComplete
       ? '<span class="coord-pill coord-pill-ok">' + eqCompletas + '/' + eqTotal + ' <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-      : '<span class="coord-pill coord-pill-warn">' + eqCompletas + '/' + eqTotal + ' ⚡</span>';
+      : '<span class="coord-pill coord-pill-warn">' + eqCompletas + '/' + eqTotal + ' <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg></span>';
   const pillSups = '<span class="coord-pill coord-pill-inf">' + sups.length + ' sup' + (sups.length !== 1 ? 's' : '') + '</span>';
 
   const isExpanded = _hierExpanded.has(coordenacao);
@@ -6331,7 +6331,7 @@ function renderAssignList() {
   el.innerHTML = pool.slice(0, 60).map(r => {
     const biUpper  = (r.bi || '').toUpperCase();
     const isAuto   = r.coordenacao === coordenacao;
-    const icon     = r.sexo === 'F' ? '👩' : '👨';
+    const icon     = r.sexo === 'F' ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>';
     const fonte    = '<span class="origem-badge origem-' + r._fonte + '">' + escH(r._fonteLabel) + '</span>';
 
     // M-05: detectar se já está num slot de equipa
@@ -6341,7 +6341,7 @@ function renderAssignList() {
         'font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;' +
         'border:1px solid rgba(249,115,22,.25)" ' +
         'title="Actualmente na Eq.' + teamInfo.equipa_num + ' · ' + escAttr(teamInfo.coordenacao) + ' · ' + escAttr(teamInfo.supervisor_nome) + '">' +
-        '⚡ Mover de Eq.' + teamInfo.equipa_num + '</span>'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Mover de Eq.' + teamInfo.equipa_num + '</span>'
       : '';
 
     return '<div class="assign-item' + (isAuto ? ' auto-suggest' : '') + '" ' +
@@ -6374,7 +6374,7 @@ async function selectAssignItem(bi, inTeam, eqNum, eqCoord) {
   // M-05: confirmação ao mover alguém que já está numa equipa
   if (inTeam) {
     const ok = await showConfirmModal({
-      icon: '⚡',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg>',
       title: 'Mover ' + prof.nome.split(' ').slice(0,2).join(' '),
       body:  'Esta pessoa está actualmente na Equipa ' + eqNum +
              (eqCoord ? ' (' + eqCoord + ')' : '') + '.\n\n' +
@@ -6690,7 +6690,7 @@ function renderSupWithTeams(s, coordenacao) {
 
   const supHeader =
     '<div class="sup-slot filled" style="margin-bottom:6px">' +
-      '<span style="font-size:18px">' + (s.sexo==='F'?'👩':'👨') + '</span>' +
+      '<span style="font-size:18px">' + (s.sexo==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>') + '</span>' +
       '<div class="slot-info">' +
         '<div class="sup-slot-nome">' + escH((s.nome||'').split(' ').slice(0,3).join(' ')) + '</div>' +
         '<div class="sup-slot-coord" style="font-size:9px;color:var(--text3)">Supervisor equipa · ' + supTeams.length + ' equipa' + (supTeams.length!==1?'s':'') + '</div>' +
@@ -6709,7 +6709,7 @@ function renderSupWithTeams(s, coordenacao) {
 // ── Renderizar um card de equipa (4 slots) ────────────────────────────────────
 function renderTeamCard(eq) {
   const statusCls = { completa:'ts-completa', incompleta:'ts-incompleta', vazia:'ts-vazia' }[eq.status] || 'ts-vazia';
-  const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'⚡ Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[eq.status] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[eq.status] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
 
   const memberSlot = (role, icon, label) => {
     const m = eq[role];
@@ -6868,7 +6868,7 @@ function renderProgresso() {
     '<div style="overflow-x:auto"><table class="prog-table">' +
     '<thead><tr>' +
       '<th>Coordenação</th><th>Coord Área</th><th>Coord</th><th>Sups</th>' +
-      '<th>Equipas</th><th><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Comp.</th><th>⚡ Inc.</th><th><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vaz.</th>' +
+      '<th>Equipas</th><th><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Comp.</th><th><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Inc.</th><th><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vaz.</th>' +
       '<th style="min-width:130px">Progresso</th><th>Por Alocar</th>' +
     '</tr></thead>' +
     '<tbody>' + tRows + '</tbody>' +
@@ -6894,7 +6894,7 @@ function renderProgresso() {
         const prof = findProfissional(a.bi);
         const tel  = prof?.telefone || '';
         poolHtml += '<div class="por-alocar-item">' +
-          '<span style="font-size:18px">' + (a.sexo==='F'?'👩':'👨') + '</span>' +
+          '<span style="font-size:18px">' + (a.sexo==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>') + '</span>' +
           '<div style="flex:1">' +
             '<div class="por-alocar-nome">' + escH(a.nome) + '</div>' +
             '<div class="por-alocar-coord">' + escH(a.coordenacao||'—') + '</div>' +
@@ -8036,7 +8036,7 @@ function runConsistencyCheck() {
     if (incompletas.length > 5) detalhes.push('  ... e mais ' + (incompletas.length - 5) + ' equipa(s).');
     alertas.push({
       tipo: 'aviso',
-      icon: '⚡',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg>',
       titulo: incompletas.length + ' equipa(s) incompleta(s) com slots por preencher',
       desc: detalhes.join('\n'),
     });
@@ -8223,7 +8223,7 @@ function supRenderEquipas() {
   // Renderizar cada equipa
   el.innerHTML = _supTeamsCache.map(eq => {
     const statusCls = { completa:'st-completa', incompleta:'st-incompleta', vazia:'st-vazia' }[eq.status] || 'st-vazia';
-    const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'⚡ Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[eq.status] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+    const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[eq.status] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
 
     const memberRow = (role, icon, label, data) => {
       if (!data || !data.bi) {
@@ -8655,7 +8655,7 @@ function renderCard(r) {
     prevAlert +
     '<div class="result-card">'+
     '<div class="result-header">'+
-    '<div class="result-avatar '+(sexo==='F'?'avatar-f':'avatar-m')+'">'+(sexo==='F'?'👩':'👨')+'</div>'+
+    '<div class="result-avatar '+(sexo==='F'?'avatar-f':'avatar-m')+'">'+(sexo==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>')+'</div>'+
     '<div class="result-name"><h3>'+escH(r.nome)+'</h3>'+
     '<span class="funcao-badge '+funcaoBadgeCls(r.funcao)+'">'+escH(r.funcao)+'</span>'+
     ' <span style="font-size:11px;color:var(--text3)">· '+escH(r.fonte)+'</span>'+
@@ -8836,7 +8836,7 @@ async function _carregarEInjectarPresencas(dia, dashEl) {
 
   secEl.innerHTML = `<div class="dash-presencas">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <h3 style="margin:0">🏃 Presenças em Campo${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+      <h3 style="margin:0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças em Campo${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
       <div class="pres-day-bar" style="margin:0;padding:0;gap:6px">${dayBar}</div>
     </div>
     <div style="color:var(--text3);font-size:12px;padding:8px 0" class="pres-loading">A carregar ${CAMPANHA_LABELS[dia] || dia}...</div>
@@ -8898,7 +8898,7 @@ async function _carregarEInjectarPresencas(dia, dashEl) {
   secEl.innerHTML = `
     <div class="dash-presencas">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <h3 style="margin:0">🏃 Presenças em Campo — ${CAMPANHA_LABELS[dia] || dia}${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
+        <h3 style="margin:0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças em Campo — ${CAMPANHA_LABELS[dia] || dia}${edicaoActiva ? ' <span style="font-size:10px;color:var(--green);font-weight:400">● ao vivo</span>' : ''}</h3>
         <div class="pres-day-bar" style="margin:0;padding:0;gap:6px">${dayBar}</div>
       </div>
       <div class="dash-pres-grid">
@@ -9123,7 +9123,7 @@ function renderHistory() {
     const btn2R = is2REligible
       ? (isJa2R
           ? '<span class="badge-2r-ok" title="Já confirmado para a 3ª Ronda"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 2ª R</span>'
-          : '<button class="btn-2r-add" data-bi="'+r.bi+'" onclick="confirmarExistentePara2R(this.dataset.bi)" title="Confirmar para 3ª Ronda">⚽ 2ª R</button>')
+          : '<button class="btn-2r-add" data-bi="'+r.bi+'" onclick="confirmarExistentePara2R(this.dataset.bi)" title="Confirmar para 3ª Ronda"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 6.5l5 3-2 5-5-1-1-5z" fill="currentColor"/></svg> 2ª R</button>')
       : '';
 
     const actionBtns = canRealloc(r.status)
@@ -9403,7 +9403,7 @@ function openReallocModal(bi) {
   const conf = getConfs()[bi] || {};
   document.getElementById('realloc-modal-info').innerHTML =
     '<div class="pay-info-card">'+
-    '<div class="result-avatar '+((base.sexo||'M').toUpperCase()==='F'?'avatar-f':'avatar-m')+'" style="width:42px;height:42px;font-size:18px">'+((base.sexo||'M').toUpperCase()==='F'?'👩':'👨')+'</div>'+
+    '<div class="result-avatar '+((base.sexo||'M').toUpperCase()==='F'?'avatar-f':'avatar-m')+'" style="width:42px;height:42px;font-size:18px">'+((base.sexo||'M').toUpperCase()==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>')+'</div>'+
     '<div style="flex:1;min-width:0">'+
     '<div class="name">'+escH(base.nome)+'</div>'+
     '<div class="meta"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> 1ª Ronda: '+escH(base.funcao)+' · '+escH(base.coordenacao||'Nível Municipal')+'</div>'+
@@ -9486,7 +9486,7 @@ const PAY_STORE_KEY = 'pagamentos_1ronda_sumbe_2026';
 
 const PAY_STATUS = [
   { key:'PAGO', label:'Pago', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>', cls:'btn-sim' },
-  { key:'PENDENTE', label:'Pendente', icon:'🕒', cls:'btn-semctc' },
+  { key:'PENDENTE', label:'Pendente', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.5v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>', cls:'btn-semctc' },
   { key:'CONFLITO', label:'Em Conflito', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg>', cls:'btn-natende' },
   { key:'NAO_ELEGIVEL', label:'Não Elegível', icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--error)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>', cls:'btn-nao' },
 ];
@@ -9594,7 +9594,7 @@ function openPayModal(bi) {
 
   document.getElementById('pay-modal-info').innerHTML =
     '<div class="pay-info-card">'+
-    '<div class="result-avatar '+((r.sexo||'M').toUpperCase()==='F'?'avatar-f':'avatar-m')+'" style="width:42px;height:42px;font-size:18px">'+((r.sexo||'M').toUpperCase()==='F'?'👩':'👨')+'</div>'+
+    '<div class="result-avatar '+((r.sexo||'M').toUpperCase()==='F'?'avatar-f':'avatar-m')+'" style="width:42px;height:42px;font-size:18px">'+((r.sexo||'M').toUpperCase()==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>')+'</div>'+
     '<div style="flex:1;min-width:0">'+
     '<div class="name">'+escH(r.nome)+'</div>'+
     '<div class="meta">'+escH(r.funcao)+' · '+escH(r.coordenacao||'Nível Municipal')+'</div>'+
@@ -9755,7 +9755,7 @@ function generatePayReport(orientation) {
     '<tbody><tr><td><strong>'+total+'</strong></td><td><strong>'+cnt.pago+'</strong> ('+Math.round(cnt.pago/total*100)+'%)</td><td><strong>'+cnt.pend+'</strong></td><td><strong>'+cnt.conf+'</strong></td><td><strong>'+cnt.nelig+'</strong></td><td><strong>'+cnt.sem+'</strong></td></tr></tbody></table>'+
 
     buildSection('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> LISTA DE PAGOS', byStatus.PAGO, true)+
-    buildSection('🕒 LISTA DE PENDENTES — A Processar', byStatus.PENDENTE, false)+
+    buildSection('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.5v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> LISTA DE PENDENTES — A Processar', byStatus.PENDENTE, false)+
     buildSection('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg> LISTA DE CONFLITOS — A Resolver', byStatus.CONFLITO, false)+
     buildSection('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--error)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg> NÃO ELEGÍVEIS', byStatus.NAO_ELEGIVEL, false)+
     (cnt.sem > 0 ? buildSection('⏳ SEM REGISTO DE PAGAMENTO', byStatus.SEM_REGISTO, false) : '')+
@@ -10312,7 +10312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const conf = cs[r.bi];
       const statusDot = conf ? '<div class="status-dot" style="width:8px;height:8px;background:'+statusColor(conf.status)+'"></div>' : '';
       return '<div class="ac-item" data-bi="'+r.bi+'" onclick="acSelect(this.dataset.bi)">'+
-        '<div class="ac-avatar '+(sexo==='F'?'ac-avatar-f':'ac-avatar-m')+'">'+(sexo==='F'?'👩':'👨')+'</div>'+
+        '<div class="ac-avatar '+(sexo==='F'?'ac-avatar-f':'ac-avatar-m')+'">'+(sexo==='F'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>')+'</div>'+
         '<div style="flex:1;min-width:0">'+
         '<div class="ac-name">'+highlightMatch(r.nome, q)+'</div>'+
         '<div class="ac-meta">'+escH(r.funcao)+' &nbsp;·&nbsp; '+escH(r.coordenacao||'Nível Municipal')+'</div>'+
