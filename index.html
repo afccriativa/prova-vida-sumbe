@@ -2534,6 +2534,7 @@ function isPinExpired() {
 const GESTOR_PAV_INDEX = {
   // BI em MAIÚSCULAS → { nome, cargo }
   '005614888KS040': { nome: 'José Luciano Francisco', cargo: 'Supervisor Municipal do PAV' },
+  '006256904KS044': { nome: 'Serafim Chipuco Buti', cargo: 'Logístico Municipal do PAV' },
 };
 
 // PIN de cada Gestor PAV, guardado localmente por BI, com TTL de 24h (igual ao Admin).
@@ -3792,7 +3793,7 @@ function showAuthMsg(modal, tipo, texto) {
   const el = document.getElementById('auth-' + modal + '-msg');
   if (!el) return;
   el.className = 'auth-msg msg-' + tipo + ' on';
-  el.textContent = texto;
+  el.innerHTML = texto;
 }
 function resetAuthMsg(modal) {
   const el = document.getElementById('auth-' + modal + '-msg');
