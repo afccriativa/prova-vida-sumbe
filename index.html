@@ -2102,6 +2102,21 @@ input, textarea, select {
 
   <!-- Sub-painel: Progresso e Pool Por Alocar (FASE G) -->
   <div id="equipas-sub-progresso" class="equipas-subpanel" style="display:none">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+      <label style="font-size:11px;color:var(--text3);font-weight:700">FILTRAR DETALHE:</label>
+      <select id="prog-filtro-funcao" onchange="renderProgresso()"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none">
+        <option value="">Todas as funções</option>
+        <option value="Mobilizador">Mobilizador</option>
+        <option value="Vacinador">Vacinador</option>
+        <option value="Registador">Registador</option>
+        <option value="Vitaminador">Vitaminador</option>
+      </select>
+      <select id="prog-filtro-coord" onchange="renderProgresso()"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none">
+        <option value="">Todas as coordenações</option>
+      </select>
+    </div>
     <div id="progresso-content">
       <div style="text-align:center;padding:40px;color:var(--text3)">A carregar progresso...</div>
     </div>
@@ -7448,6 +7463,14 @@ function renderProgresso() {
   const totalSups  = new Set(flat.map(e => e.supBI)).size;
   const pct        = total > 0 ? Math.round(completas / total * 100) : 0;
 
+  // Popular o filtro de coordenação uma única vez
+  const selCoordFiltro = document.getElementById('prog-filtro-coord');
+  if (selCoordFiltro && selCoordFiltro.options.length <= 1) {
+    COORDENACOES_2R.forEach(c => selCoordFiltro.appendChild(new Option(c, c)));
+  }
+  const filtroFuncao = document.getElementById('prog-filtro-funcao')?.value || '';
+  const filtroCoord  = document.getElementById('prog-filtro-coord')?.value  || '';
+
   // ── Sumário ──────────────────────────────────────────────────────────────
   const sumHtml =
     '<div class="hier-summary" style="margin-bottom:20px">' +
@@ -7500,13 +7523,55 @@ function renderProgresso() {
     '<tbody>' + tRows + '</tbody>' +
     '</table></div></div>';
 
+  // ── Matriz detalhada: pessoas já colocadas vs por alocar, por coordenação × função ──
+  const FUNCOES_MATRIZ = ['Mobilizador', 'Vacinador', 'Registador', 'Vitaminador'];
+  const coordsParaMatriz = filtroCoord ? [filtroCoord] : COORDENACOES_2R;
+  const funcoesParaMatriz = filtroFuncao ? [filtroFuncao] : FUNCOES_MATRIZ;
+
+  const mRows = coordsParaMatriz.map(coord => {
+    const coordData    = getCoordsAreaDa(coord);
+    const nSups        = Object.values(_alocacoesCache).filter(a => a.status === 'supervisor' && a.coordenacao === coord).length;
+    const shortCoord    = coord.replace('ZONA ALTA ','ZA ').replace('CASA BRANCA, PRAIAS E HUAMBA','CASA BRANCA/PRAIAS');
+    const cells = funcoesParaMatriz.map(funcao => {
+      const key = { Mobilizador:'mobBI', Vacinador:'vacBI', Registador:'regBI', Vitaminador:'vitBI' }[funcao];
+      const colocados = flat.filter(e => e.coordenacao === coord && e[key]).length;
+      const pendentes = porAlocar.filter(a => a.coordenacao === coord && a.funcao === funcao).length;
+      const totalConf = colocados + pendentes;
+      return '<td style="text-align:center">' +
+        '<span style="font-weight:700;color:' + (colocados>0?'var(--green)':'var(--text3)') + '">' + colocados + '</span>' +
+        '<span style="color:var(--text3)"> / ' + totalConf + '</span>' +
+        (pendentes>0 ? '<div style="font-size:10px;color:var(--accent2);font-weight:700;margin-top:1px">+' + pendentes + ' por alocar</div>' : '') +
+      '</td>';
+    }).join('');
+    return '<tr>' +
+      '<td style="font-weight:700;font-size:11px">' + escH(shortCoord) + '</td>' +
+      '<td style="text-align:center">' + (coordData ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--red)">—</span>') + '</td>' +
+      '<td style="text-align:center">' + nSups + '</td>' +
+      cells +
+    '</tr>';
+  }).join('');
+
+  const matrixHtml =
+    '<div class="audit-card" style="margin-bottom:20px">' +
+    '<h3 style="margin-bottom:4px;font-size:13px">Detalhe por Coordenação e Função</h3>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">Cada célula mostra <strong>já colocados em equipa</strong> / <strong>total confirmado</strong> nessa função. Quando há gente à espera de equipa, aparece "+N por alocar".</div>' +
+    '<div style="overflow-x:auto"><table class="prog-table">' +
+    '<thead><tr><th>Coordenação</th><th>Coord</th><th>Sups</th>' +
+    funcoesParaMatriz.map(f => '<th>' + escH(f) + '</th>').join('') +
+    '</tr></thead><tbody>' + mRows + '</tbody></table></div></div>';
+
   // ── Pool Por Alocar ───────────────────────────────────────────────────────
-  let poolHtml = '<div class="por-alocar-hdr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="7.2" cy="6.5" r="2.8" fill="currentColor"/><path d="M1.8 17c0-3.3 2.4-5.5 5.4-5.5s5.4 2.2 5.4 5.5" fill="currentColor"/><circle cx="14" cy="7" r="2.2" fill="currentColor" opacity="0.55"/><path d="M12.6 11.7c2.7.2 4.6 2.2 4.6 5.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/></svg> Por Alocar (' + porAlocar.length + ')</div>';
-  if (porAlocar.length === 0) {
-    poolHtml += '<div class="pool-vazio"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Todos os profissionais confirmados estão alocados em equipas.</div>';
+  const porAlocarFiltrado = porAlocar.filter(a => {
+    if (filtroFuncao && a.funcao !== filtroFuncao) return false;
+    if (filtroCoord  && a.coordenacao !== filtroCoord) return false;
+    return true;
+  });
+  let poolHtml = '<div class="por-alocar-hdr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="7.2" cy="6.5" r="2.8" fill="currentColor"/><path d="M1.8 17c0-3.3 2.4-5.5 5.4-5.5s5.4 2.2 5.4 5.5" fill="currentColor"/><circle cx="14" cy="7" r="2.2" fill="currentColor" opacity="0.55"/><path d="M12.6 11.7c2.7.2 4.6 2.2 4.6 5.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/></svg> Por Alocar (' + porAlocarFiltrado.length + (porAlocarFiltrado.length !== porAlocar.length ? ' de ' + porAlocar.length : '') + ')</div>';
+  if (porAlocarFiltrado.length === 0) {
+    poolHtml += '<div class="pool-vazio"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ' + (porAlocar.length===0 ? 'Todos os profissionais confirmados estão alocados em equipas.' : 'Nenhum resultado para os filtros escolhidos.') + '</div>';
   } else {
     const byFuncao = {};
-    porAlocar.forEach(a => {
+    porAlocarFiltrado.forEach(a => {
       if (!byFuncao[a.funcao]) byFuncao[a.funcao] = [];
       byFuncao[a.funcao].push(a);
     });
@@ -7539,7 +7604,7 @@ function renderProgresso() {
   const el = document.getElementById('progresso-content');
   // FASE I: gerar relatório de consistência e actualizar badge
   const alertasHtml = renderAlertasConsistencia();
-  if (el) el.innerHTML = alertasHtml + sumHtml + tableHtml + poolHtml;
+  if (el) el.innerHTML = alertasHtml + sumHtml + tableHtml + matrixHtml + poolHtml;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
