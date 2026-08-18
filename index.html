@@ -7454,6 +7454,19 @@ async function loadProgresso() {
   renderProgresso();
 }
 
+// Meta (nº esperado) de profissionais por função, em cada coordenação — mesma
+// meta aplicada às 4 funções de equipa (Mobilizador/Vacinador/Registador/Vitaminador).
+// Coordenação sem entrada aqui = meta ainda não definida (mostrado como "—" na matriz).
+const META_POR_COORDENACAO = {
+  'CASA BRANCA, PRAIAS E HUAMBA':    2,
+  'CIDADE':                          7,
+  'CHINGO 1':                        25,
+  'CHINGO 2':                        29,
+  'ZONA ALTA 1':                     43,
+  'ZONA ALTA 2 ATUCO E POMBA NOVA':  45,
+  // 'KICOMBO SEDE': meta por definir
+};
+
 function renderProgresso() {
   const flat       = getEquipasFlat();
   const porAlocar  = getPorAlocar();
@@ -7536,11 +7549,27 @@ function renderProgresso() {
       const key = { Mobilizador:'mobBI', Vacinador:'vacBI', Registador:'regBI', Vitaminador:'vitBI' }[funcao];
       const colocados = flat.filter(e => e.coordenacao === coord && e[key]).length;
       const pendentes = porAlocar.filter(a => a.coordenacao === coord && a.funcao === funcao).length;
-      const totalConf = colocados + pendentes;
+      const confirmados = colocados + pendentes;
+      const meta = META_POR_COORDENACAO[coord];
+
+      if (meta === undefined) {
+        // Sem meta definida para esta coordenação — mostrar só o que já está confirmado
+        return '<td style="text-align:center">' +
+          '<span style="font-weight:700;color:' + (colocados>0?'var(--green)':'var(--text3)') + '">' + colocados + '</span>' +
+          '<span style="color:var(--text3)"> / ' + confirmados + '</span>' +
+          '<div style="font-size:9px;color:var(--text3);margin-top:1px">meta não definida</div>' +
+          (pendentes>0 ? '<div style="font-size:10px;color:var(--accent2);font-weight:700;margin-top:1px">+' + pendentes + ' por alocar</div>' : '') +
+        '</td>';
+      }
+
+      const falta = meta - confirmados;
+      const corPrincipal = colocados >= meta ? 'var(--green)' : (colocados > 0 ? 'var(--accent2)' : 'var(--text3)');
       return '<td style="text-align:center">' +
-        '<span style="font-weight:700;color:' + (colocados>0?'var(--green)':'var(--text3)') + '">' + colocados + '</span>' +
-        '<span style="color:var(--text3)"> / ' + totalConf + '</span>' +
+        '<span style="font-weight:700;color:' + corPrincipal + '">' + colocados + '</span>' +
+        '<span style="color:var(--text3)"> / ' + meta + '</span>' +
         (pendentes>0 ? '<div style="font-size:10px;color:var(--accent2);font-weight:700;margin-top:1px">+' + pendentes + ' por alocar</div>' : '') +
+        (falta>0 ? '<div style="font-size:10px;color:var(--error);font-weight:700;margin-top:1px">faltam ' + falta + '</div>' :
+         (confirmados>meta ? '<div style="font-size:10px;color:var(--blue);font-weight:700;margin-top:1px">+' + (confirmados-meta) + ' acima da meta</div>' : '')) +
       '</td>';
     }).join('');
     return '<tr>' +
@@ -7554,7 +7583,7 @@ function renderProgresso() {
   const matrixHtml =
     '<div class="audit-card" style="margin-bottom:20px">' +
     '<h3 style="margin-bottom:4px;font-size:13px">Detalhe por Coordenação e Função</h3>' +
-    '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">Cada célula mostra <strong>já colocados em equipa</strong> / <strong>total confirmado</strong> nessa função. Quando há gente à espera de equipa, aparece "+N por alocar".</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">Cada célula mostra <strong>já colocados em equipa</strong> / <strong>meta esperada</strong> nessa função. "+N por alocar" = já confirmados mas ainda sem equipa; "faltam N" = quantos ainda faltam recrutar/confirmar para atingir a meta.</div>' +
     '<div style="overflow-x:auto"><table class="prog-table">' +
     '<thead><tr><th>Coordenação</th><th>Coord</th><th>Sups</th>' +
     funcoesParaMatriz.map(f => '<th>' + escH(f) + '</th>').join('') +
