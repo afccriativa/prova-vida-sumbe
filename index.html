@@ -6393,7 +6393,7 @@ function hierSearchUpdate() {
         '<div style="font-size:11px;color:var(--text3);margin-top:2px">' +
           '<span style="background:var(--card);border-radius:4px;padding:1px 6px;margin-right:6px;' +
           'color:' + color + ';font-weight:600">' + escH(r.funcao) + '</span>' +
-          escH(r.onde) +
+          r.onde +
         '</div>' +
         '<div style="font-size:10px;color:var(--text3);margin-top:1px">BI: ' + escH(r.bi) + '</div>' +
       '</div>' +
@@ -7464,7 +7464,7 @@ const META_POR_COORDENACAO = {
   'CHINGO 2':                        29,
   'ZONA ALTA 1':                     43,
   'ZONA ALTA 2 ATUCO E POMBA NOVA':  45,
-  // 'KICOMBO SEDE': meta por definir
+  'KICOMBO SEDE':                    6,
 };
 
 function renderProgresso() {
