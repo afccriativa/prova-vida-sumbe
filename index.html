@@ -7546,9 +7546,12 @@ function renderProgresso() {
     const nSups        = Object.values(_alocacoesCache).filter(a => a.status === 'supervisor' && a.coordenacao === coord).length;
     const shortCoord    = coord.replace('ZONA ALTA ','ZA ').replace('CASA BRANCA, PRAIAS E HUAMBA','CASA BRANCA/PRAIAS');
     const cells = funcoesParaMatriz.map(funcao => {
-      const key = { Mobilizador:'mobBI', Vacinador:'vacBI', Registador:'regBI', Vitaminador:'vitBI' }[funcao];
-      const colocados = flat.filter(e => e.coordenacao === coord && e[key]).length;
-      const pendentes = porAlocar.filter(a => a.coordenacao === coord && a.funcao === funcao).length;
+      // Contar a partir de _alocacoesCache (fonte única de verdade para todos os confirmados)
+      const todosConf = Object.values(_alocacoesCache).filter(a =>
+        a.coordenacao === coord && a.funcao === funcao
+      );
+      const colocados  = todosConf.filter(a => a.status === 'alocado').length;
+      const pendentes  = todosConf.filter(a => a.status === 'por_alocar').length;
       const confirmados = colocados + pendentes;
       const meta = META_POR_COORDENACAO[coord];
 
