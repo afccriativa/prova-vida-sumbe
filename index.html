@@ -2921,6 +2921,82 @@ async function _migrarBI_oneTime(biAntigo, biNovo) {
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// CORRECÇÕES DE DADOS RH — persistidas no Firestore (colecção correcoes_rh)
+// Permite corrigir nome, telefone e BI de qualquer profissional do RH_DATA.
+// Carregadas automaticamente no firebase-ready e aplicadas ao RH_DATA em memória.
+// ═════════════════════════════════════════════════════════════════════════════
+let _correcoesCacheRH = {}; // { [BI_ORIGINAL_UPPER]: { nome, telefone, telefone_alt, bi_novo, autor, ... } }
+
+async function carregarCorrecoesRH() {
+  if (!fbReady()) return;
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('correcoes_rh'));
+    snap.forEach(ds => {
+      const d = ds.data();
+      _correcoesCacheRH[ds.id] = d;
+      _aplicarCorrecaoRH(ds.id, d);
+    });
+    if (snap.size) console.log('[Correcções RH] ' + snap.size + ' correcção(ões) carregadas e aplicadas.');
+  } catch (e) { console.warn('[Correcções RH] Erro ao carregar:', e); }
+}
+
+function _aplicarCorrecaoRH(biOriginal, c) {
+  const idx = biIndex[biOriginal];
+  if (idx === undefined) return;
+  const entry = RH_DATA[idx];
+  if (c.nome)                    entry.nome         = c.nome;
+  if (c.telefone !== undefined)  entry.telefone      = c.telefone;
+  if (c.telefone_alt !== undefined) entry.telefone_alt = c.telefone_alt;
+  // BI novo — actualizar índice em memória (a cascata Firestore faz-se
+  // via _migrarBI_oneTime, chamada separadamente quando o BI muda)
+  if (c.bi_novo && c.bi_novo.toUpperCase() !== biOriginal) {
+    const oldBI = biOriginal;
+    const newBI = c.bi_novo.toUpperCase();
+    entry.bi = c.bi_novo;
+    delete biIndex[oldBI];
+    biIndex[newBI] = idx;
+    if (SUPERVISORES_INDEX[oldBI]) {
+      SUPERVISORES_INDEX[newBI] = { ...SUPERVISORES_INDEX[oldBI], bi: c.bi_novo, nome: entry.nome };
+      delete SUPERVISORES_INDEX[oldBI];
+    }
+  }
+}
+
+async function perfilSalvarCorrecao(biOriginal, dados) {
+  if (!fbReady()) { showToast('Firebase indisponível — tente mais tarde.', 'error'); return false; }
+  if (!podeGerir()) { showToast('Sem permissão para editar dados.', 'error'); return false; }
+  const biOrig = biOriginal.toUpperCase();
+  try {
+    // 1. Persistir no Firestore
+    await window._FB.setDoc(window._FB.docRef('correcoes_rh/' + biOrig), {
+      ...dados,
+      autor: APP_SESSION.nome || APP_SESSION.bi,
+      timestamp: window._FB.serverTimestamp()
+    });
+    // 2. Se BI mudou, cascata completa via _migrarBI_oneTime
+    if (dados.bi_novo && dados.bi_novo.toUpperCase() !== biOrig) {
+      await _migrarBI_oneTime(biOrig, dados.bi_novo.toUpperCase());
+    }
+    // 3. Aplicar em memória (nome, telefone)
+    _correcoesCacheRH[biOrig] = dados;
+    _aplicarCorrecaoRH(biOrig, dados);
+    // 4. Auditoria
+    if (typeof registarAuditoria === 'function') {
+      registarAuditoria('correcao_dados_rh', {
+        bi_original: biOrig,
+        campos_alterados: dados,
+      });
+    }
+    showToast('Dados corrigidos com sucesso.', 'success');
+    return true;
+  } catch (e) {
+    console.error('[Correcções RH] Erro ao salvar:', e);
+    showToast('Erro ao salvar: ' + e.message, 'error');
+    return false;
+  }
+}
+
 // ─── Gravar Validação no Firestore ────────────────────────────────────────────
 // Retorna: { success: true } | { success: false, error: string }
 async function fbSaveValidacao(bi, estado, obs) {
@@ -5123,7 +5199,9 @@ function _perfilRenderCV(bi, container) {
     : '<span style="background:var(--green);color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px">PARTICIPOU EM ' + rondasTrabalhadas + ' RONDA' + (rondasTrabalhadas !== 1 ? 'S' : '') + '</span>';
 
   container.innerHTML =
-    '<div style="margin-bottom:8px"><button onclick="renderPerfil()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:12px">← Nova pesquisa</button></div>' +
+    '<div style="margin-bottom:8px"><button onclick="renderPerfil()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:12px">← Nova pesquisa</button>' +
+    (podeGerir() ? ' <button onclick="_perfilToggleEdit(\'' + escH(biUp) + '\')" id="perfil-btn-editar" style="padding:5px 14px;border-radius:6px;border:1px solid var(--accent2);color:var(--accent2);background:transparent;cursor:pointer;font-size:12px;margin-left:6px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M13.6 3.6l2.8 2.8-9.2 9.2H4.4v-2.8l9.2-9.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> Editar Dados</button>' : '') +
+    '</div>' +
     '<div class="audit-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px">' +
         '<div><h3 style="margin:0 0 4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> ' + escH(nome || biUp) + '</h3>' +
@@ -5163,6 +5241,112 @@ async function _perfilCarregarAvaliacao(bi, container) {
       _perfilRenderCV(bi, container);
     }
   } catch (e) { console.warn('[Perfil] Erro ao carregar avaliação:', e); }
+}
+
+// ── Edição inline de dados do profissional ──────────────────────────────────
+function _perfilToggleEdit(bi) {
+  const existing = document.getElementById('perfil-edit-form');
+  if (existing) { existing.remove(); return; } // toggle off
+
+  const biUp = bi.toUpperCase();
+  const base = findBI(biUp);
+  const novo = _rhNovosCache[biUp];
+  const rec  = base || novo || {};
+
+  const nome  = rec.nome || '';
+  const tel   = rec.telefone || '';
+  const tel2  = rec.telefone_alt || '';
+  const biVal = rec.bi || bi;
+  const isNovo = !base && !!novo;
+
+  const formHTML =
+    '<div id="perfil-edit-form" class="audit-card" style="margin:12px 0;border:2px solid var(--accent2)">' +
+      '<h3 style="color:var(--accent2);margin:0 0 12px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M13.6 3.6l2.8 2.8-9.2 9.2H4.4v-2.8l9.2-9.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> Corrigir Dados do Profissional</h3>' +
+      '<p style="font-size:11px;color:var(--text3);margin:0 0 14px">As alterações ficam guardadas permanentemente e são aplicadas em toda a base de dados. BI original de referência: <strong style="font-family:monospace">' + escH(biUp) + '</strong></p>' +
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:8px 12px;align-items:center;max-width:600px">' +
+        '<label style="font-weight:600;font-size:13px;color:var(--text3)">Nome</label>' +
+        '<input type="text" id="perfil-edit-nome" value="' + escH(nome) + '" style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">' +
+        '<label style="font-weight:600;font-size:13px;color:var(--text3)">Telefone</label>' +
+        '<input type="text" id="perfil-edit-tel" value="' + escH(tel) + '" style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">' +
+        '<label style="font-weight:600;font-size:13px;color:var(--text3)">Tel. Alternativo</label>' +
+        '<input type="text" id="perfil-edit-tel2" value="' + escH(tel2) + '" style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">' +
+        '<label style="font-weight:600;font-size:13px;color:var(--text3)">Nº do BI</label>' +
+        '<input type="text" id="perfil-edit-bi" value="' + escH(biVal) + '" style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:monospace;text-transform:uppercase">' +
+      '</div>' +
+      '<div style="margin-top:14px;display:flex;gap:8px">' +
+        '<button onclick="_perfilSaveEdit(\'' + escH(biUp) + '\',' + (isNovo ? 'true' : 'false') + ')" style="padding:8px 20px;border-radius:6px;background:var(--green);color:#fff;font-weight:700;border:none;cursor:pointer;font-size:13px">Salvar Correcções</button>' +
+        '<button onclick="document.getElementById(\'perfil-edit-form\').remove()" style="padding:8px 20px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Cancelar</button>' +
+      '</div>' +
+      '<div id="perfil-edit-msg" style="margin-top:8px"></div>' +
+    '</div>';
+
+  // Inserir o form logo depois do botão Nova pesquisa
+  const container = document.getElementById('perfil-results');
+  const firstCard = container?.querySelector('.audit-card');
+  if (firstCard) firstCard.insertAdjacentHTML('beforebegin', formHTML);
+  else container.insertAdjacentHTML('afterbegin', formHTML);
+
+  document.getElementById('perfil-edit-nome')?.focus();
+}
+
+async function _perfilSaveEdit(biOriginal, isNovo) {
+  const nome  = (document.getElementById('perfil-edit-nome')?.value || '').trim();
+  const tel   = (document.getElementById('perfil-edit-tel')?.value || '').trim();
+  const tel2  = (document.getElementById('perfil-edit-tel2')?.value || '').trim();
+  const biNovo = (document.getElementById('perfil-edit-bi')?.value || '').trim().toUpperCase();
+  const msgEl = document.getElementById('perfil-edit-msg');
+
+  if (!nome) { if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">O nome é obrigatório.</span>'; return; }
+  if (!biNovo) { if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">O BI é obrigatório.</span>'; return; }
+
+  // Verificar se o novo BI já pertence a outra pessoa
+  if (biNovo !== biOriginal) {
+    const existing = findBI(biNovo) || _rhNovosCache[biNovo];
+    if (existing) {
+      if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">O BI <strong>' + escH(biNovo) + '</strong> já pertence a <strong>' + escH(existing.nome) + '</strong>. Verifique antes de alterar.</span>';
+      return;
+    }
+  }
+
+  if (msgEl) msgEl.innerHTML = '<span style="color:var(--accent2)">A salvar...</span>';
+
+  if (isNovo) {
+    // ── Profissional novo (rh_novos_3r) — actualizar directamente no Firestore ──
+    try {
+      const oldDoc = _rhNovosCache[biOriginal] || {};
+      const updated = { ...oldDoc, nome: nome, telefone: tel, telefone_alt: tel2 };
+      if (biNovo !== biOriginal) {
+        updated.bi = biNovo;
+        // Criar novo doc, apagar antigo
+        await window._FB.setDoc(window._FB.docRef('rh_novos_3r/' + biNovo), updated);
+        await window._FB.deleteDoc(window._FB.docRef('rh_novos_3r/' + biOriginal));
+        delete _rhNovosCache[biOriginal];
+        _rhNovosCache[biNovo] = updated;
+        // Cascata BI
+        await _migrarBI_oneTime(biOriginal, biNovo);
+      } else {
+        await window._FB.setDoc(window._FB.docRef('rh_novos_3r/' + biOriginal), updated);
+        _rhNovosCache[biOriginal] = updated;
+      }
+      if (typeof registarAuditoria === 'function') {
+        registarAuditoria('correcao_dados_rh', { bi_original: biOriginal, campos_alterados: { nome, telefone: tel, telefone_alt: tel2, bi_novo: biNovo !== biOriginal ? biNovo : undefined } });
+      }
+      showToast('Dados corrigidos com sucesso.', 'success');
+      _perfilRenderCV(biNovo, document.getElementById('perfil-results'));
+    } catch (e) {
+      if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">Erro: ' + escH(e.message) + '</span>';
+    }
+    return;
+  }
+
+  // ── Profissional do RH_DATA — usar sistema de correcções persistentes ──
+  const dados = { nome, telefone: tel, telefone_alt: tel2 };
+  if (biNovo !== biOriginal) dados.bi_novo = biNovo;
+
+  const ok = await perfilSalvarCorrecao(biOriginal, dados);
+  if (ok) {
+    _perfilRenderCV(biNovo !== biOriginal ? biNovo : biOriginal, document.getElementById('perfil-results'));
+  }
 }
 
 // ─── ELIMINAR VALIDAÇÃO ───────────────────────────────────────────────────────
@@ -11718,6 +11902,8 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('firebase-ready', () => {
     fbUpdateStatusIndicator('online');
     console.log('[Fase 2] Firebase pronto — dual-write activado');
+    // Carregar correcções de dados RH antes de outras operações
+    carregarCorrecoesRH();
     // Migração automática: correcção do BI do Luís Calanda António (ZONA ALTA 2)
     _migrarBI_oneTime('002143900KS039', '008838256KS043');
   });
