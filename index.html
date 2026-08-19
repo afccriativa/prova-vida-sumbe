@@ -4402,15 +4402,13 @@ function supInit() {
   _supCoordCache    = null;
   supReset();
   supUpdateCounter();
-  // Garantir modo Validar activo (atribuição directa — DOM já existe)
+  // Modo "Validar Disponibilidade" desactivado nesta 3ª Ronda (botão oculto) —
+  // arranca directamente em "Minhas Equipas".
   const divValidar = document.getElementById('sup-validate-mode');
-  const divTeams   = document.getElementById('sup-teams-mode');
   const btnValidar = document.getElementById('sup-mode-validar');
-  const btnTeams   = document.getElementById('sup-mode-teams');
-  if (divValidar) divValidar.style.display = 'block';
-  if (divTeams)   divTeams.style.display   = 'none';
-  if (btnValidar) { btnValidar.classList.add('active'); }
-  if (btnTeams)   { btnTeams.classList.remove('active'); }
+  if (divValidar) divValidar.style.display = 'none';
+  if (btnValidar) btnValidar.classList.remove('active');
+  supSetMode('teams');
   // Info de sessão
   const info = document.getElementById('sup-session-info');
   if (info) {
@@ -4418,7 +4416,6 @@ function supInit() {
       '<strong>' + escH(APP_SESSION.nome || '') + '</strong>' +
       (APP_SESSION.coordenacao ? '<br><span>' + escH(APP_SESSION.coordenacao) + '</span>' : '');
   }
-  setTimeout(() => document.getElementById('sup-bi-input')?.focus(), 200);
 }
 
 function supUpdateCounter() {
@@ -11345,7 +11342,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <!-- FASE SUP-1: Selector de modo -->
   <div class="sup-mode-bar">
-    <button id="sup-mode-validar" class="sup-mode-btn active" onclick="supSetMode('validar')">
+    <button id="sup-mode-validar" class="sup-mode-btn active" onclick="supSetMode('validar')" style="display:none">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="3" y="6" width="14" height="12" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 6V3.5h7V6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="10" y1="9.3" x2="10" y2="14.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="7.5" y1="11.8" x2="12.5" y2="11.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Validar Disponibilidade
     </button>
     <button id="sup-mode-teams" class="sup-mode-btn mode-teams" onclick="supSetMode('teams')">
