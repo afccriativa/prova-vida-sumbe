@@ -1689,7 +1689,7 @@ input, textarea, select {
   <div class="tab active" data-panel="search"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="8.6" cy="8.6" r="5.6" fill="none" stroke="currentColor" stroke-width="1.8"/><line x1="12.7" y1="12.7" x2="17.5" y2="17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Pesquisa</div>
   <div class="tab" data-panel="dashboard"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><line x1="4.5" y1="17" x2="4.5" y2="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="4.5" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.5" y="11" width="2.4" height="6" fill="currentColor"/><rect x="10.3" y="7.5" width="2.4" height="9.5" fill="currentColor"/><rect x="14.1" y="4" width="2.4" height="13" fill="currentColor"/></svg> Dashboard</div>
   <div class="tab" data-panel="history"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Consolidação</div>
-  <div class="tab" data-panel="supervisors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="7.2" cy="6.5" r="2.8" fill="currentColor"/><path d="M1.8 17c0-3.3 2.4-5.5 5.4-5.5s5.4 2.2 5.4 5.5" fill="currentColor"/><circle cx="14" cy="7" r="2.2" fill="currentColor" opacity="0.55"/><path d="M12.6 11.7c2.7.2 4.6 2.2 4.6 5.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/></svg> Supervisores</div>
+  <div class="tab" data-panel="perfil"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> Perfil</div>
   <div class="tab" data-panel="ronda1">1️⃣ 1ª Ronda</div>
   <div class="tab" data-panel="ronda2">2️⃣ 2ª Ronda</div>
   <div class="tab" data-panel="equipas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M4 4h4.3a1.4 1.4 0 0 1 2.7 0H15v4.3a1.4 1.4 0 0 1 0 2.7V15h-4.3a1.4 1.4 0 0 0-2.7 0H4v-4.3a1.4 1.4 0 0 0 0-2.7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Compor RH 3ª Ronda</div>
@@ -2347,9 +2347,19 @@ input, textarea, select {
   </div>
 </div>
 
-<!-- FASE 8 — Painel Supervisores -->
-<div id="panel-supervisors" class="panel">
-  <div id="supervisors-content" style="padding:0 4px"></div>
+<!-- FASE 8 — Painel Perfil do Profissional (CV) -->
+<div id="panel-perfil" class="panel">
+  <div id="perfil-content" style="padding:0 4px">
+    <div class="audit-card" style="margin-bottom:16px">
+      <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> Pesquisa Global de Profissionais</h3>
+      <p style="font-size:12px;color:var(--text3);margin:0 0 12px">Pesquise por BI ou nome para ver o perfil completo: dados pessoais, histórico de rondas, funções, coordenações, supervisores e avaliação.</p>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="perfil-search-input" placeholder="Nº do BI ou nome do profissional" style="flex:1;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" onkeydown="if(event.key==='Enter')perfilPesquisar()">
+        <button onclick="perfilPesquisar()" style="padding:10px 24px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;border:none;cursor:pointer;font-size:14px;white-space:nowrap">Pesquisar</button>
+      </div>
+    </div>
+    <div id="perfil-results"></div>
+  </div>
 </div>
 
 <!-- FASE 8 — Modal de confirmação de eliminação de validação -->
@@ -4781,6 +4791,297 @@ function renderSupervisors() {
     '</div>';
 }
 
+// ─── PAINEL PERFIL (CV do Profissional) ──────────────────────────────────────
+function renderPerfil() {
+  // Painel já tem o HTML estático (campo de pesquisa) — apenas limpar resultados anteriores
+  const el = document.getElementById('perfil-results');
+  if (el && !el.innerHTML) el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Insira um BI ou nome para visualizar o perfil completo do profissional.</div>';
+  setTimeout(() => document.getElementById('perfil-search-input')?.focus(), 150);
+}
+
+function perfilPesquisar() {
+  const q = (document.getElementById('perfil-search-input').value || '').trim();
+  const el = document.getElementById('perfil-results');
+  if (!el) return;
+  if (!q) { el.innerHTML = '<div class="alert alert-error" style="margin:8px 0">Insira o nº do BI ou o nome do profissional.</div>'; return; }
+
+  // ── Pesquisa: por BI (exacto) ou por nome (parcial) ──
+  const qUp = q.toUpperCase();
+  let resultados = [];
+
+  // 1. Verificar RH_DATA
+  const directBI = findBI(qUp);
+  if (directBI) { resultados.push({ ...directBI, _fonte_perfil: 'rh_data' }); }
+
+  // 2. Verificar novos RH 3ª Ronda
+  if (_rhNovosCache[qUp] && !directBI) {
+    resultados.push({ ..._rhNovosCache[qUp], _fonte_perfil: 'rh_novo' });
+  }
+
+  // Se não encontrou por BI, pesquisar por nome em todas as fontes
+  if (!resultados.length) {
+    const ql = q.toLowerCase();
+    RH_DATA.forEach(r => { if (r.nome.toLowerCase().includes(ql)) resultados.push({ ...r, _fonte_perfil: 'rh_data' }); });
+    Object.values(_rhNovosCache).forEach(r => {
+      if ((r.nome || '').toLowerCase().includes(ql) && !resultados.find(x => x.bi === r.bi))
+        resultados.push({ ...r, _fonte_perfil: 'rh_novo' });
+    });
+    if (_ronda2ArquivoCache) {
+      _ronda2ArquivoCache.forEach(r => {
+        if ((r.nome || '').toLowerCase().includes(ql) && !resultados.find(x => x.bi === r.bi))
+          resultados.push({ ...r, _fonte_perfil: 'arquivo_2r' });
+      });
+    }
+  }
+
+  if (!resultados.length) {
+    el.innerHTML = '<div class="alert alert-error" style="margin:8px 0">Nenhum profissional encontrado para "<strong>' + escH(q) + '</strong>". Verifique a ortografia ou tente com o BI.</div>';
+    return;
+  }
+
+  if (resultados.length === 1) { _perfilRenderCV(resultados[0].bi, el); return; }
+
+  // Lista de múltiplos resultados
+  el.innerHTML = '<div class="audit-card"><h3>Resultados (' + resultados.length + ')</h3>' +
+    '<div style="overflow-x:auto"><table class="history-table"><thead><tr><th>#</th><th>Nome</th><th>BI</th><th>Função (base)</th><th>Coordenação</th><th></th></tr></thead><tbody>' +
+    resultados.slice(0, 50).map((r, i) =>
+      '<tr><td style="color:var(--text3);font-size:11px">' + (i + 1) + '</td>' +
+      '<td style="font-weight:700">' + escH(r.nome) + '</td>' +
+      '<td style="font-size:11px;font-family:monospace">' + escH(r.bi) + '</td>' +
+      '<td style="font-size:11px">' + escH(r.funcao || r.funcao_3r || '—') + '</td>' +
+      '<td style="font-size:11px">' + escH(r.coordenacao || r.coordenacao_3r || '—') + '</td>' +
+      '<td><button onclick="_perfilRenderCV(\'' + escH(r.bi) + '\',document.getElementById(\'perfil-results\'))" style="padding:4px 12px;border-radius:6px;border:1px solid var(--accent);color:var(--accent);background:transparent;cursor:pointer;font-size:11px;font-weight:700">Ver Perfil</button></td></tr>'
+    ).join('') +
+    (resultados.length > 50 ? '<tr><td colspan="6" style="text-align:center;color:var(--text3);font-size:11px">A mostrar 50 de ' + resultados.length + ' — refine a pesquisa.</td></tr>' : '') +
+    '</tbody></table></div></div>';
+}
+
+function _perfilRenderCV(bi, container) {
+  const biUp = bi.toUpperCase();
+
+  // ── Agregar dados de todas as fontes ──
+  const base = findBI(biUp);
+  const r2   = base ? getR2Record(biUp) : null;
+  const novo = _rhNovosCache[biUp] || null;
+  const aloc = _alocacoesCache[biUp] || null;
+  const conf = getMergedConfs()[biUp] || null;
+
+  // Nome e dados pessoais: priorizar RH_DATA, depois novo, depois arquivo 2R
+  let nome = '', sexo = '', telefone = '', telefone_alt = '', funcaoBase = '', coordBase = '', fonteBase = '';
+  if (base) {
+    nome = base.nome; sexo = base.sexo; telefone = base.telefone; telefone_alt = base.telefone_alt;
+    funcaoBase = base.funcao; coordBase = base.coordenacao; fonteBase = base.fonte;
+  } else if (novo) {
+    nome = novo.nome; sexo = novo.sexo || ''; telefone = novo.telefone || '';
+    telefone_alt = novo.telefone_alt || ''; funcaoBase = novo.funcao_3r || '';
+    coordBase = novo.coordenacao_3r || ''; fonteBase = 'Cadastro 3ª Ronda';
+  }
+
+  // 2ª Ronda Archive
+  let r2Arquivo = null;
+  if (_ronda2ArquivoCache) {
+    r2Arquivo = _ronda2ArquivoCache.find(r => r.bi === biUp);
+  }
+
+  // Equipas 3ª Ronda — em quais equipas está
+  const equipas3r = [];
+  for (const [eqId, eq] of Object.entries(_equipasCache)) {
+    if (!eq.membros) continue;
+    for (const m of eq.membros) {
+      if ((m.bi || '').toUpperCase() === biUp) {
+        equipas3r.push({ equipa: eq.nome || eqId, coordenacao: eq.coordenacao || '', supervisor_nome: eq.supervisor_nome || '', supervisor_bi: eq.supervisor_id || '', funcao: m.funcao || '' });
+      }
+    }
+    // Também verificar se É o supervisor
+    if ((eq.supervisor_id || '').toUpperCase() === biUp) {
+      equipas3r.push({ equipa: eq.nome || eqId, coordenacao: eq.coordenacao || '', supervisor_nome: '(É O SUPERVISOR)', supervisor_bi: biUp, funcao: 'Supervisor equipa' });
+    }
+  }
+
+  // Avaliação 3ª Ronda
+  const avalEl = document.getElementById('aval-nota-' + biUp); // pode não existir ainda
+  let avalInfo = null;
+  // Tentar ler da cache de avaliações se existir a função
+  if (typeof _avalCache !== 'undefined' && _avalCache[biUp]) {
+    avalInfo = _avalCache[biUp];
+  }
+
+  // ── Construir timeline de rondas ──
+  const timeline = [];
+
+  // 1ª RONDA
+  if (base) {
+    timeline.push({
+      ronda: '1ª Ronda',
+      funcao: funcaoBase,
+      coordenacao: coordBase,
+      fonte: fonteBase,
+      status: 'Cadastrado (base RH_DATA)',
+      supervisor: ''
+    });
+  }
+
+  // 2ª RONDA
+  if (r2 && r2._reallocated) {
+    timeline.push({
+      ronda: '2ª Ronda',
+      funcao: r2.funcao_r2 || funcaoBase,
+      coordenacao: r2.coordenacao_r2 || coordBase,
+      fonte: '',
+      status: 'Realocado',
+      supervisor: ''
+    });
+  } else if (r2Arquivo) {
+    timeline.push({
+      ronda: '2ª Ronda',
+      funcao: r2Arquivo.funcao || funcaoBase,
+      coordenacao: r2Arquivo.coordenacao || coordBase,
+      fonte: '',
+      status: r2Arquivo.status || 'Participou',
+      supervisor: r2Arquivo.supervisor_nome || ''
+    });
+  } else if (base) {
+    // Estava no RH_DATA mas pode não ter participado na 2ª
+    timeline.push({
+      ronda: '2ª Ronda',
+      funcao: funcaoBase,
+      coordenacao: coordBase,
+      fonte: '',
+      status: conf ? 'Validado' : 'Sem registo de participação activa',
+      supervisor: conf ? (conf.supervisorNome || '') : ''
+    });
+  }
+
+  // 3ª RONDA
+  if (aloc || novo || equipas3r.length > 0) {
+    const status3r = aloc ? (aloc.status === 'alocado' ? 'Alocado em equipa' : aloc.status === 'por_alocar' ? 'Confirmado, por alocar' : aloc.status || 'Registado') : (novo ? 'Cadastrado (novo)' : 'Em equipa');
+    const funcao3r = aloc ? (aloc.funcao || aloc.funcao_3r || '') : (novo ? (novo.funcao_3r || '') : '');
+    const coord3r  = aloc ? (aloc.coordenacao || aloc.coordenacao_3r || '') : (novo ? (novo.coordenacao_3r || '') : '');
+    timeline.push({
+      ronda: '3ª Ronda',
+      funcao: funcao3r || (equipas3r[0] ? equipas3r[0].funcao : ''),
+      coordenacao: coord3r || (equipas3r[0] ? equipas3r[0].coordenacao : ''),
+      fonte: '',
+      status: status3r,
+      supervisor: equipas3r.length ? equipas3r.map(e => e.supervisor_nome).filter(Boolean).join(', ') : ''
+    });
+  }
+
+  const rondasTrabalhadas = timeline.length;
+  const nuncaEnquadrado = rondasTrabalhadas === 0 || (rondasTrabalhadas === 1 && !aloc && equipas3r.length === 0 && !conf);
+
+  // ── Validação Pré-Campanha ──
+  let validacaoHTML = '';
+  if (conf) {
+    const statusIcon = conf.status === 'SIM'
+      ? '<span style="color:var(--green);font-weight:800">✅ SIM — Disponível</span>'
+      : '<span style="color:var(--red);font-weight:800">❌ NÃO — Indisponível</span>';
+    validacaoHTML =
+      '<tr><td style="font-weight:600;color:var(--text3)">Validação Pré-Campanha</td><td>' + statusIcon +
+      (conf.obs ? '<br><span style="font-size:11px;color:var(--text3)">Obs: ' + escH(conf.obs) + '</span>' : '') +
+      '<br><span style="font-size:11px;color:var(--text3)">' + escH(conf.data || '') + ' ' + escH(conf.hora || '') +
+      (conf.supervisorNome ? ' — por ' + escH(conf.supervisorNome) : '') + '</span></td></tr>';
+  }
+
+  // ── Avaliação ──
+  let avalHTML = '';
+  if (avalInfo) {
+    const nota = avalInfo.nota != null ? avalInfo.nota : '—';
+    const sit  = nota !== '—' ? (nota < 10 ? '🚫 EXCLUÍDO' : '✅ ADMITIDO') : '—';
+    const cor  = nota !== '—' ? (nota < 10 ? 'var(--red)' : 'var(--green)') : 'var(--text3)';
+    avalHTML =
+      '<tr><td style="font-weight:600;color:var(--text3)">Avaliação 3ª Ronda</td><td>' +
+      '<span style="font-weight:800;color:' + cor + '">' + nota + '/20 — ' + sit + '</span>' +
+      (avalInfo.observacao ? '<br><span style="font-size:11px;color:var(--text3)">' + escH(avalInfo.observacao) + '</span>' : '') +
+      (avalInfo.autor ? '<br><span style="font-size:11px;color:var(--text3)">Por: ' + escH(avalInfo.autor) + '</span>' : '') +
+      '</td></tr>';
+  }
+
+  // ── Equipas 3ª Ronda ──
+  let equipasHTML = '';
+  if (equipas3r.length) {
+    equipasHTML = '<tr><td style="font-weight:600;color:var(--text3);vertical-align:top">Equipas 3ª Ronda</td><td>' +
+      equipas3r.map(e =>
+        '<div style="margin-bottom:4px"><strong>' + escH(e.equipa) + '</strong> — ' + escH(e.funcao) +
+        '<br><span style="font-size:11px;color:var(--text3)">' + escH(e.coordenacao) +
+        (e.supervisor_nome && e.supervisor_nome !== '(É O SUPERVISOR)' ? ' · Sup: ' + escH(e.supervisor_nome) : '') +
+        (e.supervisor_nome === '(É O SUPERVISOR)' ? ' · <strong style="color:var(--accent2)">É o Supervisor desta equipa</strong>' : '') +
+        '</span></div>'
+      ).join('') + '</td></tr>';
+  }
+
+  // ── Timeline visual ──
+  let timelineHTML = '';
+  if (timeline.length) {
+    timelineHTML = timeline.map((t, i) => {
+      const isLast = i === timeline.length - 1;
+      const dotColor = t.ronda.includes('3') ? 'var(--green)' : t.ronda.includes('2') ? 'var(--accent2)' : 'var(--accent)';
+      return '<div style="display:flex;gap:12px;position:relative;padding-bottom:' + (isLast ? '0' : '16px') + '">' +
+        '<div style="display:flex;flex-direction:column;align-items:center;min-width:20px">' +
+          '<div style="width:12px;height:12px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:2px"></div>' +
+          (!isLast ? '<div style="width:2px;flex:1;background:var(--border);margin-top:4px"></div>' : '') +
+        '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:800;color:var(--text);font-size:13px">' + escH(t.ronda) + '</div>' +
+          '<div style="font-size:12px;color:var(--text2)">' + escH(t.funcao || '—') + ' · ' + escH(t.coordenacao || '—') + '</div>' +
+          '<div style="font-size:11px;color:var(--text3)">' + escH(t.status) + (t.supervisor ? ' · Sup: ' + escH(t.supervisor) : '') + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  // ── Telefone(s) ──
+  let telHTML = escH(telefone || '—');
+  if (telefone_alt) telHTML += ' / ' + escH(telefone_alt);
+  if (r2 && r2.telefone_r2 && r2.telefone_r2 !== telefone) telHTML += ' <span style="font-size:11px;color:var(--text3)">(2ª R: ' + escH(r2.telefone_r2) + ')</span>';
+
+  // ── Render final ──
+  const statusGeral = nuncaEnquadrado
+    ? '<span style="background:var(--warning);color:#000;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px">APENAS CADASTRADO — NUNCA ENQUADRADO EM EQUIPA</span>'
+    : '<span style="background:var(--green);color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px">PARTICIPOU EM ' + rondasTrabalhadas + ' RONDA' + (rondasTrabalhadas !== 1 ? 'S' : '') + '</span>';
+
+  container.innerHTML =
+    '<div style="margin-bottom:8px"><button onclick="document.getElementById(\'perfil-results\').innerHTML=\'\';renderPerfil()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:12px">← Nova pesquisa</button></div>' +
+    '<div class="audit-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px">' +
+        '<div><h3 style="margin:0 0 4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> ' + escH(nome || biUp) + '</h3>' +
+        '<span style="font-family:monospace;font-size:12px;color:var(--text3)">BI: ' + escH(biUp) + '</span></div>' +
+        '<div>' + statusGeral + '</div>' +
+      '</div>' +
+
+      '<table class="history-table" style="margin-bottom:16px">' +
+      '<tbody>' +
+        '<tr><td style="font-weight:600;color:var(--text3);width:180px">Sexo</td><td>' + escH(sexo === 'M' ? 'Masculino' : sexo === 'F' ? 'Feminino' : sexo || '—') + '</td></tr>' +
+        '<tr><td style="font-weight:600;color:var(--text3)">Telefone(s)</td><td>' + telHTML + '</td></tr>' +
+        '<tr><td style="font-weight:600;color:var(--text3)">Função (base)</td><td>' + escH(funcaoBase || '—') + '</td></tr>' +
+        '<tr><td style="font-weight:600;color:var(--text3)">Coordenação (base)</td><td>' + escH(coordBase || '—') + '</td></tr>' +
+        '<tr><td style="font-weight:600;color:var(--text3)">Fonte de Registo</td><td>' + escH(fonteBase || (novo ? 'Cadastro 3ª Ronda' : '—')) + '</td></tr>' +
+        validacaoHTML +
+        avalHTML +
+        equipasHTML +
+      '</tbody></table>' +
+
+      '<h3 style="font-size:14px;margin:0 0 12px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="3" y="4" width="14" height="13" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="3" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.6"/><line x1="6.5" y1="2.3" x2="6.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="13.5" y1="2.3" x2="13.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Histórico de Rondas</h3>' +
+      (timelineHTML || '<div style="font-size:12px;color:var(--text3)">Sem histórico de participação registado.</div>') +
+    '</div>';
+
+  // Tentar carregar avaliação do Firestore se não estiver em cache
+  if (!avalInfo && fbReady()) {
+    _perfilCarregarAvaliacao(biUp, container);
+  }
+}
+
+async function _perfilCarregarAvaliacao(bi, container) {
+  try {
+    const docSnap = await window._FB.getDoc(window._FB.docRef('avaliacoes_3r/' + bi));
+    if (docSnap.exists()) {
+      const d = docSnap.data();
+      if (typeof _avalCache !== 'undefined') _avalCache[bi] = d;
+      // Re-renderizar o CV com a avaliação carregada
+      _perfilRenderCV(bi, container);
+    }
+  } catch (e) { console.warn('[Perfil] Erro ao carregar avaliação:', e); }
+}
+
 // ─── ELIMINAR VALIDAÇÃO ───────────────────────────────────────────────────────
 let _delPendingBI = null;
 
@@ -4852,7 +5153,7 @@ async function confirmDeleteValidacao() {
     const panel = activeTab.getAttribute('data-panel');
     if      (panel === 'history')     renderHistory();
     else if (panel === 'dashboard')   renderDashboard();
-    else if (panel === 'supervisors') renderSupervisors();
+    else if (panel === 'perfil')      renderPerfil();
   }
 }
 
@@ -9257,7 +9558,7 @@ function switchTab(name) {
   if (name === 'dashboard')   renderDashboard();
   if (name === 'history')     renderHistory();
   if (name === 'payments')    renderPayments();
-  if (name === 'supervisors') renderSupervisors();
+  if (name === 'perfil')      renderPerfil();
   if (name === 'ronda1')      renderRonda1Table();
   if (name === 'ronda2')      { if (_ronda2ArquivoCache) renderRonda2Table(); else carregarRonda2Arquivo(); }
   if (name === 'equipas')     renderEquipasTab(); // FASES A+B
