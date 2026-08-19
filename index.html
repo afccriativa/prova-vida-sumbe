@@ -4878,6 +4878,9 @@ function renderPerfil() {
   perfilAcClose();
   const el = document.getElementById('perfil-results');
   if (el) el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Insira um BI ou nome para visualizar o perfil completo do profissional.</div>';
+  // Garantir que todas as fontes de dados estão carregadas para pesquisa global
+  if (!_ronda2ArquivoCache) carregarRonda2Arquivo().catch(() => {});
+  if (Object.keys(_rhNovosCache).length === 0 && fbReady()) fbGetRhNovos().then(updateRhNovosCache).catch(() => {});
   setTimeout(() => inp?.focus(), 150);
 }
 
@@ -4908,18 +4911,33 @@ function perfilAcRender() {
   if (q.length < 2 || /^\d/.test(q)) { perfilAcClose(); return; }
 
   const MAX = 8;
-  // RH_DATA + novos RH
   const starts = [], contains = [];
+  const seenBIs = new Set();
+
+  // Fonte 1: RH_DATA (base 1ª Ronda)
   RH_DATA.forEach(r => {
     if (r.nome.toLowerCase().startsWith(ql)) starts.push(r);
     else if (r.nome.toLowerCase().includes(ql)) contains.push(r);
+    seenBIs.add(r.bi);
   });
-  const seenBIs = new Set([...starts, ...contains].map(r => r.bi));
+
+  // Fonte 2: Novos RH 3ª Ronda
   Object.values(_rhNovosCache).forEach(r => {
     if (seenBIs.has(r.bi)) return;
+    seenBIs.add(r.bi);
     if ((r.nome || '').toLowerCase().startsWith(ql)) starts.push(r);
     else if ((r.nome || '').toLowerCase().includes(ql)) contains.push(r);
   });
+
+  // Fonte 3: Arquivo 2ª Ronda (pode conter profissionais que não estão no RH_DATA)
+  if (_ronda2ArquivoCache) {
+    _ronda2ArquivoCache.forEach(r => {
+      if (seenBIs.has(r.bi)) return;
+      seenBIs.add(r.bi);
+      if ((r.nome || '').toLowerCase().startsWith(ql)) starts.push(r);
+      else if ((r.nome || '').toLowerCase().includes(ql)) contains.push(r);
+    });
+  }
 
   const all = [...starts, ...contains];
   if (!all.length) { perfilAcClose(); return; }
@@ -4947,7 +4965,8 @@ function perfilAcRender() {
 
 function perfilAcSelect(bi) {
   const inp = document.getElementById('perfil-search-input');
-  const r = findBI(bi) || _rhNovosCache[bi.toUpperCase()];
+  const biUp = bi.toUpperCase();
+  const r = findBI(biUp) || _rhNovosCache[biUp] || (_ronda2ArquivoCache ? _ronda2ArquivoCache.find(x => x.bi === biUp) : null);
   if (r && inp) inp.value = r.nome || bi;
   perfilAcClose();
   _perfilRenderCV(bi, document.getElementById('perfil-results'));
@@ -4977,18 +4996,27 @@ function perfilPesquisar() {
     resultados.push({ ..._rhNovosCache[qUp], _fonte_perfil: 'rh_novo' });
   }
 
+  // 3. Verificar arquivo 2ª Ronda (pode conter profissionais fora do RH_DATA)
+  if (!resultados.length && _ronda2ArquivoCache) {
+    const r2Hit = _ronda2ArquivoCache.find(r => r.bi === qUp);
+    if (r2Hit) resultados.push({ ...r2Hit, _fonte_perfil: 'arquivo_2r' });
+  }
+
   // Se não encontrou por BI, pesquisar por nome em todas as fontes
   if (!resultados.length) {
     const ql = q.toLowerCase();
-    RH_DATA.forEach(r => { if (r.nome.toLowerCase().includes(ql)) resultados.push({ ...r, _fonte_perfil: 'rh_data' }); });
+    const seenBIs = new Set();
+    RH_DATA.forEach(r => { if (r.nome.toLowerCase().includes(ql)) { resultados.push({ ...r, _fonte_perfil: 'rh_data' }); seenBIs.add(r.bi); } });
     Object.values(_rhNovosCache).forEach(r => {
-      if ((r.nome || '').toLowerCase().includes(ql) && !resultados.find(x => x.bi === r.bi))
-        resultados.push({ ...r, _fonte_perfil: 'rh_novo' });
+      if ((r.nome || '').toLowerCase().includes(ql) && !seenBIs.has(r.bi)) {
+        resultados.push({ ...r, _fonte_perfil: 'rh_novo' }); seenBIs.add(r.bi);
+      }
     });
     if (_ronda2ArquivoCache) {
       _ronda2ArquivoCache.forEach(r => {
-        if ((r.nome || '').toLowerCase().includes(ql) && !resultados.find(x => x.bi === r.bi))
-          resultados.push({ ...r, _fonte_perfil: 'arquivo_2r' });
+        if ((r.nome || '').toLowerCase().includes(ql) && !seenBIs.has(r.bi)) {
+          resultados.push({ ...r, _fonte_perfil: 'arquivo_2r' }); seenBIs.add(r.bi);
+        }
       });
     }
   }
