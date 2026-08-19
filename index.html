@@ -8134,17 +8134,43 @@ function renderProgresso() {
   const coordsParaMatriz = filtroCoord ? [filtroCoord] : COORDENACOES_2R;
   const funcoesParaMatriz = filtroFuncao ? [filtroFuncao] : FUNCOES_MATRIZ;
 
+  // Mapear nomes de função para chaves de slot em _equipasCache
+  const FUNCAO_SLOT = { 'Mobilizador':'mobilizador', 'Vacinador':'vacinador', 'Registador':'registador', 'Vitaminador':'vitaminador' };
+
+  // Pré-calcular colocados por coordenação × função a partir de _equipasCache
+  // (fonte de verdade absoluta para quem está de facto num slot de equipa)
+  const _colocadosMap = {};  // { 'coord|funcao': count }
+  const _colocadosBIs = {};  // { 'coord|funcao': Set<bi> }
+  Object.values(_equipasCache).forEach(eq => {
+    const coord = eq.coordenacao || '';
+    FUNCOES_MATRIZ.forEach(funcao => {
+      const slot = FUNCAO_SLOT[funcao];
+      const key  = coord + '|' + funcao;
+      if (!_colocadosMap[key]) { _colocadosMap[key] = 0; _colocadosBIs[key] = new Set(); }
+      if (eq[slot] && eq[slot].bi) {
+        _colocadosMap[key]++;
+        _colocadosBIs[key].add((eq[slot].bi).toUpperCase());
+      }
+    });
+  });
+
+  // Pré-calcular "por alocar" (confirmados mas sem equipa) por coordenação × função
+  const _pendentesMap = {};
+  Object.values(_alocacoesCache).forEach(a => {
+    if (a.status !== 'por_alocar') return;
+    const key = (a.coordenacao || '') + '|' + (a.funcao || '');
+    if (!_pendentesMap[key]) _pendentesMap[key] = 0;
+    _pendentesMap[key]++;
+  });
+
   const mRows = coordsParaMatriz.map(coord => {
     const coordData    = getCoordsAreaDa(coord);
     const nSups        = Object.values(_alocacoesCache).filter(a => a.status === 'supervisor' && a.coordenacao === coord).length;
     const shortCoord    = coord.replace('ZONA ALTA ','ZA ').replace('CASA BRANCA, PRAIAS E HUAMBA','CASA BRANCA/PRAIAS');
     const cells = funcoesParaMatriz.map(funcao => {
-      // Contar a partir de _alocacoesCache (fonte única de verdade para todos os confirmados)
-      const todosConf = Object.values(_alocacoesCache).filter(a =>
-        a.coordenacao === coord && a.funcao === funcao
-      );
-      const colocados  = todosConf.filter(a => a.status === 'alocado').length;
-      const pendentes  = todosConf.filter(a => a.status === 'por_alocar').length;
+      const key        = coord + '|' + funcao;
+      const colocados  = _colocadosMap[key]  || 0;
+      const pendentes  = _pendentesMap[key]  || 0;
       const confirmados = colocados + pendentes;
       const meta = META_POR_COORDENACAO[coord];
 
