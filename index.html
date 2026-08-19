@@ -2354,7 +2354,10 @@ input, textarea, select {
       <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> Pesquisa Global de Profissionais</h3>
       <p style="font-size:12px;color:var(--text3);margin:0 0 12px">Pesquise por BI ou nome para ver o perfil completo: dados pessoais, histórico de rondas, funções, coordenações, supervisores e avaliação.</p>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="perfil-search-input" placeholder="Nº do BI ou nome do profissional" style="flex:1;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" onkeydown="if(event.key==='Enter')perfilPesquisar()">
+        <div id="perfil-ac-wrap" style="flex:1;position:relative">
+          <input type="text" id="perfil-search-input" placeholder="Nº do BI ou nome do profissional" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" autocomplete="off" autocorrect="off" spellcheck="false">
+          <div id="perfil-ac-dropdown" class="ac-dropdown" style="display:none"></div>
+        </div>
         <button onclick="perfilPesquisar()" style="padding:10px 24px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;border:none;cursor:pointer;font-size:14px;white-space:nowrap">Pesquisar</button>
       </div>
     </div>
@@ -4793,10 +4796,90 @@ function renderSupervisors() {
 
 // ─── PAINEL PERFIL (CV do Profissional) ──────────────────────────────────────
 function renderPerfil() {
-  // Painel já tem o HTML estático (campo de pesquisa) — apenas limpar resultados anteriores
+  // Limpar campo de pesquisa e resultados anteriores
+  const inp = document.getElementById('perfil-search-input');
+  if (inp) inp.value = '';
+  perfilAcClose();
   const el = document.getElementById('perfil-results');
-  if (el && !el.innerHTML) el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Insira um BI ou nome para visualizar o perfil completo do profissional.</div>';
-  setTimeout(() => document.getElementById('perfil-search-input')?.focus(), 150);
+  if (el) el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Insira um BI ou nome para visualizar o perfil completo do profissional.</div>';
+  setTimeout(() => inp?.focus(), 150);
+}
+
+// ── Autocomplete do Perfil ──────────────────────────────────────────────────
+let _perfilAcIdx = -1;
+
+function perfilAcClose() {
+  const dd = document.getElementById('perfil-ac-dropdown');
+  if (dd) dd.style.display = 'none';
+  _perfilAcIdx = -1;
+}
+
+function _perfilHighlight(text, query) {
+  if (!query) return escH(text);
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) return escH(text);
+  return escH(text.slice(0, idx)) + '<mark>' + escH(text.slice(idx, idx + query.length)) + '</mark>' + escH(text.slice(idx + query.length));
+}
+
+function perfilAcRender() {
+  const dd  = document.getElementById('perfil-ac-dropdown');
+  const inp = document.getElementById('perfil-search-input');
+  if (!dd || !inp) return;
+  const q = inp.value.trim();
+  const ql = q.toLowerCase();
+
+  // Só sugerir com 2+ caracteres e se não parecer BI (numérico)
+  if (q.length < 2 || /^\d/.test(q)) { perfilAcClose(); return; }
+
+  const MAX = 8;
+  // RH_DATA + novos RH
+  const starts = [], contains = [];
+  RH_DATA.forEach(r => {
+    if (r.nome.toLowerCase().startsWith(ql)) starts.push(r);
+    else if (r.nome.toLowerCase().includes(ql)) contains.push(r);
+  });
+  const seenBIs = new Set([...starts, ...contains].map(r => r.bi));
+  Object.values(_rhNovosCache).forEach(r => {
+    if (seenBIs.has(r.bi)) return;
+    if ((r.nome || '').toLowerCase().startsWith(ql)) starts.push(r);
+    else if ((r.nome || '').toLowerCase().includes(ql)) contains.push(r);
+  });
+
+  const all = [...starts, ...contains];
+  if (!all.length) { perfilAcClose(); return; }
+
+  const items = all.slice(0, MAX).map(r => {
+    const sexo = (r.sexo || 'M').toUpperCase();
+    const avatarCls = sexo === 'F' ? 'ac-avatar-f' : 'ac-avatar-m';
+    const icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg>';
+    return '<div class="ac-item" data-bi="' + escH(r.bi) + '" onclick="perfilAcSelect(this.dataset.bi)">' +
+      '<div class="ac-avatar ' + avatarCls + '">' + icon + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="ac-name">' + _perfilHighlight(r.nome, q) + '</div>' +
+        '<div class="ac-meta">' + escH(r.funcao || r.funcao_3r || '—') + ' &nbsp;·&nbsp; ' + escH(r.coordenacao || r.coordenacao_3r || '—') + '</div>' +
+      '</div></div>';
+  }).join('');
+
+  const footer = all.length > MAX
+    ? '<div class="ac-count">' + all.length + ' resultados — continue a digitar ou prima Enter</div>'
+    : '';
+
+  dd.innerHTML = items + footer;
+  dd.style.display = 'block';
+  _perfilAcIdx = -1;
+}
+
+function perfilAcSelect(bi) {
+  const inp = document.getElementById('perfil-search-input');
+  const r = findBI(bi) || _rhNovosCache[bi.toUpperCase()];
+  if (r && inp) inp.value = r.nome || bi;
+  perfilAcClose();
+  _perfilRenderCV(bi, document.getElementById('perfil-results'));
+}
+
+function _perfilAcHighlight(idx) {
+  const items = document.querySelectorAll('#perfil-ac-dropdown .ac-item');
+  items.forEach((el, i) => el.classList.toggle('ac-active', i === idx));
 }
 
 function perfilPesquisar() {
@@ -5040,7 +5123,7 @@ function _perfilRenderCV(bi, container) {
     : '<span style="background:var(--green);color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px">PARTICIPOU EM ' + rondasTrabalhadas + ' RONDA' + (rondasTrabalhadas !== 1 ? 'S' : '') + '</span>';
 
   container.innerHTML =
-    '<div style="margin-bottom:8px"><button onclick="document.getElementById(\'perfil-results\').innerHTML=\'\';renderPerfil()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:12px">← Nova pesquisa</button></div>' +
+    '<div style="margin-bottom:8px"><button onclick="renderPerfil()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:12px">← Nova pesquisa</button></div>' +
     '<div class="audit-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px">' +
         '<div><h3 style="margin:0 0 4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> ' + escH(nome || biUp) + '</h3>' +
@@ -11546,7 +11629,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // Close autocomplete when clicking outside
   document.addEventListener('click', e => {
     if (!document.getElementById('autocomplete-wrap').contains(e.target)) acClose();
+    // Perfil autocomplete
+    const pWrap = document.getElementById('perfil-ac-wrap');
+    if (pWrap && !pWrap.contains(e.target)) perfilAcClose();
   });
+
+  // ── Perfil autocomplete listeners ──
+  const _pInp = document.getElementById('perfil-search-input');
+  if (_pInp) {
+    _pInp.addEventListener('input', perfilAcRender);
+    _pInp.addEventListener('keydown', e => {
+      const dd = document.getElementById('perfil-ac-dropdown');
+      const isOpen = dd && dd.style.display !== 'none';
+      if (isOpen) {
+        const items = dd.querySelectorAll('.ac-item');
+        if (e.key === 'ArrowDown') { e.preventDefault(); _perfilAcIdx = Math.min(_perfilAcIdx + 1, items.length - 1); _perfilAcHighlight(_perfilAcIdx); return; }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); _perfilAcIdx = Math.max(_perfilAcIdx - 1, -1); _perfilAcHighlight(_perfilAcIdx); return; }
+        if (e.key === 'Enter' && _perfilAcIdx >= 0 && items[_perfilAcIdx]) { e.preventDefault(); perfilAcSelect(items[_perfilAcIdx].dataset.bi); return; }
+        if (e.key === 'Escape') { perfilAcClose(); return; }
+      }
+      if (e.key === 'Enter') perfilPesquisar();
+    });
+  }
   ['filter-coord','filter-funcao','filter-status'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilters));
   // History
