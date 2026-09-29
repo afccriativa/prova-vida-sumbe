@@ -2526,6 +2526,17 @@ const RONDA_ID   = '3R2026';
 const MUNICIPIO  = 'SUMBE';
 const PROVINCIA  = 'CUANZA_SUL';
 
+// Identificador da 4ª Ronda — usado pelas novas funções _4r (ainda por criar).
+// RONDA_ID acima fica tal como está: está espalhado por funções que só
+// escrevem nas colecções _3r (validações, alocações, equipas, presenças da
+// 3ª Ronda), por isso continua a identificar correctamente esses registos.
+const RONDA_ID_4R = '4R2026';
+
+// Colecção de auditoria unificada entre rondas (a partir da 4ª Ronda).
+// Histórico da 3ª Ronda e anteriores fica em 'auditoria_3r' (não migrado);
+// loadAuditLog() lê as duas e junta por ordem cronológica.
+const AUDITORIA_COL = 'auditoria';
+
 // ─── Modo de Armazenamento ────────────────────────────────────────────────────
 // 'offline'  → apenas localStorage (Fase 1)
 // 'firebase' → Firebase Firestore  (Fase 2 — ACTIVO)
@@ -2666,11 +2677,13 @@ async function registarAuditoria(accao, detalhe = {}) {
     antes:    detalhe.antes  !== undefined ? detalhe.antes  : null,
     depois:   detalhe.depois !== undefined ? detalhe.depois : null,
     sessaoId: _auditSessaoId || '',
+    ronda:    RONDA_ID,
     quando:   window._FB ? window._FB.serverTimestamp() : new Date().toISOString(),
   };
   try {
-    // addDoc gera ID automático — nunca colide, mantém histórico completo
-    await window._FB.addDoc(window._FB.colRef('auditoria_3r'), evento);
+    // addDoc gera ID automático — nunca colide, mantém histórico completo.
+    // Colecção unificada (AUDITORIA_COL) a partir da 4ª Ronda — ver nota acima.
+    await window._FB.addDoc(window._FB.colRef(AUDITORIA_COL), evento);
   } catch(e) {
     console.error('[Auditoria] Falha ao registar evento:', e);
   }
@@ -7916,6 +7929,220 @@ async function _assignMemberToTeam(equipaId, memberRole, prof) {
   showToast(prof.nome.split(' ')[0] + ' adicionado à Equipa ' + eq.equipa_num + '. ✅', 'success');
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 4ª RONDA — FORMAÇÃO DE EQUIPAS (aditivo, isolado da 3ª Ronda)
+// Firebase: /alocacoes_4r/ | /equipas_4r/
+// Duas formas de equipa nesta ronda (sem Vitaminador):
+//   ORAL:       mobilizador, vacinador, registador           (3 slots)
+//   INJECTAVEL: vacinador_tecnico_1, vacinador_tecnico_2, registador (3 slots)
+// Caches e funções em paralelo às da 3ª Ronda, por decisão deliberada de não
+// generalizar agora (ver conversa) — a fundir depois da campanha.
+// ═════════════════════════════════════════════════════════════════════════════
+
+let _equipasCache4R   = {}; // { [equipa_id]: doc }
+let _alocacoesCache4R = {}; // { [BI]: doc }
+
+// ── Firebase: alocações 4ª Ronda ─────────────────────────────────────────────
+async function fbGetAlocacoes4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('alocacoes_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetAlocacoes4R:', e); return []; }
+}
+
+async function fbSaveAlocacao4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(
+      window._FB.docRef('alocacoes_4r/' + (data.bi||data.id).toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+async function fbRemoveAlocacao4R(bi) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('alocacoes_4r/' + bi.toUpperCase()));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ── Firebase: equipas 4ª Ronda ───────────────────────────────────────────────
+async function fbGetEquipas4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('equipas_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetEquipas4R:', e); return []; }
+}
+
+async function fbSaveEquipa4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('equipas_4r/' + data.id), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+async function fbDeleteEquipa4R(id) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('equipas_4r/' + id));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+function updateEquipasCache4R(docs) {
+  _equipasCache4R = {};
+  docs.forEach(doc => { const id = doc.id || doc._id; if (id) _equipasCache4R[id] = doc; });
+}
+
+// Status: 3 slots em qualquer dos dois tipos de equipa desta ronda.
+function updateEquipaStatus4R(eq) {
+  const slots = eq.tipo_equipa === 'INJECTAVEL'
+    ? [eq.vacinador_tecnico_1, eq.vacinador_tecnico_2, eq.registador]
+    : [eq.mobilizador, eq.vacinador, eq.registador];
+  const filled = slots.filter(Boolean).length;
+  eq.status = filled === 3 ? 'completa' : filled === 0 ? 'vazia' : 'incompleta';
+}
+
+// ── Utilitário: guardar equipa com retry e rollback (mesmo padrão da 3ª Ronda) ──
+async function _fbSaveEquipa4RWithRetry(eq) {
+  let result = await fbSaveEquipa4R(eq);
+  if (!result.success) {
+    await new Promise(res => setTimeout(res, 1200));  // backoff 1.2s
+    result = await fbSaveEquipa4R(eq);
+  }
+  return result;
+}
+
+// ── Criar nova equipa sob um Supervisor — tipoEquipa: 'ORAL' | 'INJECTAVEL' ──
+async function criarNovaEquipa4R(supervisorBI, coordenacao, tipoEquipa) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const sup = _alocacoesCache4R[supervisorBI.toUpperCase()] || {};
+  const supsTeams = Object.values(_equipasCache4R).filter(e =>
+    e.supervisor_id === supervisorBI.toUpperCase() && e.tipo_equipa === tipoEquipa);
+  const maxNum = supsTeams.reduce((m, e) => Math.max(m, e.equipa_num || 0), 0);
+  const num    = maxNum + 1;
+  const id     = supervisorBI.toUpperCase() + '_' + tipoEquipa + '_E' + Date.now();
+  const eq = {
+    id, ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+    coordenacao, supervisor_id: supervisorBI.toUpperCase(),
+    supervisor_nome: sup.nome || '',
+    tipo_equipa: tipoEquipa, equipa_num: num,
+    ...(tipoEquipa === 'INJECTAVEL'
+      ? { vacinador_tecnico_1: null, vacinador_tecnico_2: null, registador: null }
+      : { mobilizador: null, vacinador: null, registador: null }),
+    status: 'vazia',
+    createdAt: window._FB ? window._FB.serverTimestamp() : null,
+    updatedBy: APP_SESSION.bi || '',
+  };
+  const result = await _fbSaveEquipa4RWithRetry(eq);
+  if (result.success) {
+    _equipasCache4R[id] = eq;
+    _invalidatePickerCache();
+    registarAuditoria('criar_equipa_4r', {
+      alvoBI: supervisorBI, alvoNome: sup.nome || '', modulo: 'equipas_4r', coordenacao,
+      antes: null, depois: { tipo_equipa: tipoEquipa, equipa_num: num, equipa_id: id },
+    });
+    if (typeof renderHierarquia4R === 'function') renderHierarquia4R();
+    showToast((tipoEquipa === 'INJECTAVEL' ? 'Equipa Inj. ' : 'Equipa ') + num + ' criada. ✅', 'success');
+  } else {
+    showToast('Erro ao criar equipa: ' + result.error, 'error');
+  }
+}
+
+// ── Atribuir membro a um slot de equipa (4ª Ronda) ───────────────────────────
+// memberRole: 'mobilizador'|'vacinador'|'registador'|'vacinador_tecnico_1'|'vacinador_tecnico_2'
+async function _assignMemberToTeam4R(equipaId, memberRole, prof) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const bloqueio = checkAvaliacaoBloqueio(prof.bi);
+  if (bloqueio.blocked) {
+    showToast('🚫 ' + prof.nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) nesta avaliação e não pode ser atribuído(a) à 4ª Ronda.', 'error');
+    return;
+  }
+  const eq = _equipasCache4R[equipaId];
+  if (!eq) return;
+
+  const prevSlot   = eq[memberRole];
+  const prevStatus = eq.status;
+  const biUpper    = (prof.bi || '').toUpperCase();
+
+  // Limpar qualquer slot anterior desta pessoa nas equipas da 4ª Ronda
+  const slotRoles = ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2'];
+  for (const [otherId, otherEq] of Object.entries(_equipasCache4R)) {
+    for (const role of slotRoles) {
+      if ((otherEq[role]?.bi || '').toUpperCase() === biUpper) {
+        const prevOther       = otherEq[role];
+        const prevStatusOther = otherEq.status;
+        otherEq[role] = null;
+        updateEquipaStatus4R(otherEq);
+        const r = await _fbSaveEquipa4RWithRetry(otherEq);
+        if (!r.success) {
+          otherEq[role]  = prevOther;
+          otherEq.status = prevStatusOther;
+          _equipasCache4R[otherId] = otherEq;
+          showToast('Erro ao limpar slot anterior: ligação instável. Tente novamente.', 'error');
+          return;
+        }
+        _equipasCache4R[otherId] = otherEq;
+      }
+    }
+  }
+  // Limpar alocacoes_4r anterior (se existir)
+  if (_alocacoesCache4R[biUpper]) {
+    await fbRemoveAlocacao4R(prof.bi).catch(() => {});
+    delete _alocacoesCache4R[biUpper];
+  }
+
+  const now = new Date();
+  const doc = {
+    bi: prof.bi, nome: prof.nome, funcao: prof.funcao,
+    coordenacao: eq.coordenacao, sexo: prof.sexo || 'M',
+    fonte: prof._fonte || 'rh_data', status: 'alocado',
+    supervisor_id: eq.supervisor_id, equipa_id: equipaId,
+    tipo_equipa: eq.tipo_equipa, role_na_equipa: memberRole,
+    confirmadoPor: APP_SESSION.bi || '',
+    confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
+    dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
+    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+  };
+  const alocResult = await fbSaveAlocacao4R(doc);
+  if (!alocResult.success) {
+    showToast('Erro ao gravar alocação: ligação instável. Tente novamente.', 'error');
+    return;
+  }
+  _alocacoesCache4R[biUpper] = doc;
+
+  eq[memberRole] = { bi: prof.bi, nome: prof.nome };
+  updateEquipaStatus4R(eq);
+  const eqResult = await _fbSaveEquipa4RWithRetry(eq);
+  if (!eqResult.success) {
+    // ROLLBACK: reverter slot e remover alocação já gravada
+    eq[memberRole] = prevSlot;
+    eq.status      = prevStatus;
+    _equipasCache4R[equipaId] = eq;
+    await fbRemoveAlocacao4R(prof.bi).catch(() => {});
+    delete _alocacoesCache4R[biUpper];
+    if (typeof renderHierarquia4R === 'function') renderHierarquia4R();
+    showToast('Erro ao gravar equipa: ligação instável. Operação revertida.', 'error');
+    return;
+  }
+
+  _equipasCache4R[equipaId] = eq;
+  _invalidatePickerCache();
+  registarAuditoria('atribuir_membro_4r', {
+    alvoBI: prof.bi, alvoNome: prof.nome, modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: null,
+    depois: { tipo_equipa: eq.tipo_equipa, equipa_num: eq.equipa_num, role: memberRole },
+  });
+  if (typeof renderHierarquia4R === 'function') renderHierarquia4R();
+  showToast(prof.nome.split(' ')[0] + ' adicionado à ' + (eq.tipo_equipa==='INJECTAVEL'?'Equipa Inj. ':'Equipa ') + eq.equipa_num + '. ✅', 'success');
+}
+
 // ── Renderizar Supervisor com as suas equipas ────────────────────────────────
 function renderSupWithTeams(s, coordenacao) {
   const supTeams = Object.values(_equipasCache)
@@ -10608,8 +10835,15 @@ async function loadAuditLog() {
     return;
   }
   try {
-    const snap = await window._FB.getDocs(window._FB.colRef('auditoria_3r'));
-    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    // Lê a colecção unificada (4ª Ronda em diante) + o histórico da 3ª Ronda
+    // (auditoria_3r, nunca migrado) e junta por ordem cronológica.
+    const [snapNovo, snap3r] = await Promise.all([
+      window._FB.getDocs(window._FB.colRef(AUDITORIA_COL)),
+      window._FB.getDocs(window._FB.colRef('auditoria_3r')),
+    ]);
+    const docs = [];
+    snapNovo.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    snap3r.forEach(d => docs.push({ _id: d.id, ...d.data() }));
     // Ordenar por 'quando' desc (serverTimestamp → toMillis; fallback string ISO)
     docs.sort((a, b) => _auditMillis(b.quando) - _auditMillis(a.quando));
     _auditLogCache = docs;
