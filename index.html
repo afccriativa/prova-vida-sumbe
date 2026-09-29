@@ -1692,7 +1692,8 @@ input, textarea, select {
   <div class="tab" data-panel="perfil"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> Perfil</div>
   <div class="tab" data-panel="ronda1">1️⃣ 1ª Ronda</div>
   <div class="tab" data-panel="ronda2">2️⃣ 2ª Ronda</div>
-  <div class="tab" data-panel="equipas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M4 4h4.3a1.4 1.4 0 0 1 2.7 0H15v4.3a1.4 1.4 0 0 1 0 2.7V15h-4.3a1.4 1.4 0 0 0-2.7 0H4v-4.3a1.4 1.4 0 0 0 0-2.7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Compor RH 3ª Ronda</div>
+  <div class="tab" data-panel="equipas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M4 4h4.3a1.4 1.4 0 0 1 2.7 0H15v4.3a1.4 1.4 0 0 1 0 2.7V15h-4.3a1.4 1.4 0 0 0-2.7 0H4v-4.3a1.4 1.4 0 0 0 0-2.7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Compor RH 3ª Ronda — Arquivo</div>
+  <div class="tab" data-panel="equipas4r"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M4 4h4.3a1.4 1.4 0 0 1 2.7 0H15v4.3a1.4 1.4 0 0 1 0 2.7V15h-4.3a1.4 1.4 0 0 0-2.7 0H4v-4.3a1.4 1.4 0 0 0 0-2.7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Compor RH 4ª Ronda</div>
   <div class="tab" data-panel="payments"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.5v9M12.3 7.3c0-1-1-1.6-2.3-1.6-1.5 0-2.4.7-2.4 1.8 0 2.6 4.9 1.3 4.9 3.9 0 1.1-1 1.8-2.5 1.8-1.3 0-2.4-.6-2.4-1.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Pagamentos</div>
   <div class="tab" id="tab-audit" data-panel="audit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg> Auditoria</div>
 </div>
@@ -2286,6 +2287,37 @@ input, textarea, select {
                font-weight:700;cursor:pointer;transition:opacity .15s">
         Confirmar
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- 4ª RONDA — Compor RH (Etapa 1: Hierarquia) -->
+<div id="panel-equipas4r" class="panel">
+  <div class="alert alert-info" style="margin-bottom:14px">
+    4.ª Ronda · 8 a 12 de Outubro de 2026 — Campanha integrada (Pólio, Sarampo, Vitamina A, Febre Amarela).
+    Cada Supervisor de Vacinação gere equipas <strong>Orais</strong> (Mobilizador, Vacinador, Registador) e
+    equipas <strong>Injectáveis</strong> (2 Vacinadores Técnicos, Registador) em separado. Distribuição manual,
+    não igualitária entre coordenações — monte conforme a população-alvo de cada uma.
+  </div>
+  <div id="hier4r-summary-bar" class="hier-summary"></div>
+  <div id="hier4r-grid" class="hier-grid"></div>
+</div>
+
+<!-- 4ª RONDA — Modal de Atribuição (DOM próprio, isolado do da 3ª Ronda) -->
+<div id="assign-modal-4r" class="assign-modal" style="display:none">
+  <div class="assign-box">
+    <div class="assign-box-hdr">
+      <h3 id="assign-modal-title-4r">Atribuir Profissional</h3>
+      <p id="assign-modal-sub-4r"></p>
+    </div>
+    <div class="assign-search">
+      <input id="assign-search-inp-4r" type="text"
+             placeholder="Pesquisar por nome ou BI (1ª, 2ª Ronda e novos RH)..."
+             oninput="renderAssignList4R()" autocomplete="off">
+    </div>
+    <div class="assign-list" id="assign-list-content-4r"></div>
+    <div class="assign-box-ftr">
+      <button class="btn-assign-cancel" onclick="closeAssignModal4R()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -8143,6 +8175,530 @@ async function _assignMemberToTeam4R(equipaId, memberRole, prof) {
   showToast(prof.nome.split(' ')[0] + ' adicionado à ' + (eq.tipo_equipa==='INJECTAVEL'?'Equipa Inj. ':'Equipa ') + eq.equipa_num + '. ✅', 'success');
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 4ª RONDA — HIERARQUIA (Etapa 1: criar equipas + atribuir RH)
+// Interface própria, paralela à Hierarquia da 3ª Ronda. Reutiliza apenas
+// utilitários genéricos e campanha-agnósticos (showToast, showConfirmModal,
+// escH, escAttr, guardEliminacao, podeGerir, checkAvaliacaoBloqueio,
+// carregarRonda2Arquivo, fbGetRhNovos/_rhNovosCache — universo histórico de
+// RH partilhado entre rondas) — nunca toca nas caches/funções _3r.
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function loadHierarquia4R() {
+  const [alocDocs, eqDocs, novosDocs] = await Promise.all([
+    fbGetAlocacoes4R(),
+    fbGetEquipas4R(),
+    fbGetRhNovos(), // rh_novos_3r — universo histórico, válido também para a 4ª Ronda
+  ]);
+  updateAlocacoesCache4R(alocDocs);
+  updateEquipasCache4R(eqDocs);
+  updateRhNovosCache(novosDocs);
+  if (!_ronda2ArquivoCache) await carregarRonda2Arquivo().catch(() => {});
+  renderHierarquia4R();
+}
+
+function updateAlocacoesCache4R(docs) {
+  _alocacoesCache4R = {};
+  docs.forEach(doc => { const bi = (doc.bi || doc._id || '').toUpperCase(); if (bi) _alocacoesCache4R[bi] = doc; });
+}
+
+// Pool universal de pesquisa — mesma base histórica da 3ª Ronda (RH_DATA +
+// arquivo 2ª Ronda + rh_novos_3r), mas bloqueia só quem já está alocado NA
+// 4ª RONDA — uma pessoa pode ter sido coord/supervisor/equipa na 3ª e
+// continuar disponível para a 4ª (não são a mesma coisa).
+function getUniversalSearchPool4R() {
+  const blocked = new Set();
+  Object.values(_equipasCache4R).forEach(eq => {
+    ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2'].forEach(role => {
+      if (eq[role]?.bi) blocked.add(eq[role].bi.toUpperCase());
+    });
+  });
+  Object.values(_alocacoesCache4R).forEach(a => {
+    if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) blocked.add(a.bi.toUpperCase());
+  });
+
+  const map = {};
+  RH_DATA.forEach(r => {
+    const bi = r.bi.toUpperCase();
+    map[bi] = {
+      bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      _fonte: 'rh_data', _fonteLabel: '1ª Ronda',
+    };
+  });
+  if (_ronda2ArquivoCache) {
+    _ronda2ArquivoCache.forEach(r => {
+      const bi = (r.bi || '').toUpperCase();
+      if (!bi) return;
+      map[bi] = {
+        bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+        telefone: r.telefone || '', sexo: map[bi]?.sexo || 'M',
+        _fonte: 'ronda2', _fonteLabel: '2ª Ronda',
+      };
+    });
+  }
+  Object.values(_rhNovosCache).forEach(r => {
+    const bi = (r.bi || '').toUpperCase();
+    if (!bi) return;
+    map[bi] = {
+      bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      _fonte: 'rh_novo', _fonteLabel: 'Novo RH',
+    };
+  });
+
+  return Object.values(map).filter(r => !blocked.has(r.bi.toUpperCase()));
+}
+
+// ── Alocar Coordenador/Supervisor — 4ª Ronda ─────────────────────────────────
+async function _alocarProfissional4R(bi, nome, funcao, coordenacao, sexo, status, fonte, skipRender = false) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const bloqueio = checkAvaliacaoBloqueio(bi);
+  if (bloqueio.blocked) {
+    showToast('🚫 ' + nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) nesta avaliação e não pode ser atribuído(a) à 4ª Ronda.', 'error');
+    return { success: false, blocked: true };
+  }
+  const now = new Date();
+  const doc = {
+    bi, nome, funcao, coordenacao, sexo: sexo || 'M',
+    fonte: fonte || 'rh_data', status,
+    supervisor_id: null, equipa_id: null, role_na_equipa: null,
+    confirmadoPor: APP_SESSION.bi || '',
+    confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
+    dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),
+    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+  };
+  const result = await fbSaveAlocacao4R(doc);
+  if (result.success) {
+    _alocacoesCache4R[bi.toUpperCase()] = doc;
+    registarAuditoria('alocar_4r', {
+      alvoBI: bi, alvoNome: nome, modulo: 'hierarquia_4r', coordenacao,
+      antes: null, depois: { status, funcao, coordenacao },
+    });
+    if (!skipRender) {
+      renderHierarquia4R();
+      showToast(nome.split(' ')[0] + ' atribuído com sucesso. ✅', 'success');
+    }
+    return { success: true };
+  } else {
+    showToast('Erro ao atribuir: ' + result.error, 'error');
+    return { success: false };
+  }
+}
+
+// ── Remover Coordenador/Supervisor (com cascata, se supervisor) — 4ª Ronda ──
+async function removerAlocacao4R(bi) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const biUpper = bi.toUpperCase();
+  const a = _alocacoesCache4R[biUpper];
+  const nome = a ? a.nome : bi;
+  const isSupervisor = a && a.status === 'supervisor';
+  const isCoord       = a && a.status === 'coord';
+
+  let modalTitle, modalBody;
+  if (isSupervisor) {
+    const supTeams = Object.values(_equipasCache4R).filter(e => e.supervisor_id === biUpper);
+    const nTeams   = supTeams.length;
+    const nMembers = supTeams.reduce((acc, e) =>
+      acc + ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2']
+        .filter(r => e[r]?.bi).length, 0);
+    modalTitle = 'Remover Supervisor — ' + nome.split(' ').slice(0,3).join(' ');
+    modalBody  = nTeams > 0
+      ? nTeams + ' equipa(s) e ' + nMembers + ' membro(s) serão libertados para o pool disponível.'
+      : 'O supervisor será removido da hierarquia da 4ª Ronda.';
+  } else if (isCoord) {
+    modalTitle = 'Remover Coordenador de Área';
+    modalBody  = nome + ' será removido(a) do slot de Coord área/Comuna.';
+  } else {
+    modalTitle = 'Remover da Hierarquia';
+    modalBody  = nome + ' será removido(a) da hierarquia da 4ª Ronda.';
+  }
+  const ok = await showConfirmModal({ title: modalTitle, body: modalBody, confirmLabel: 'Remover', danger: isSupervisor });
+  if (!ok) return;
+
+  if (isSupervisor) {
+    const supTeams = Object.values(_equipasCache4R).filter(e => e.supervisor_id === biUpper);
+    for (const eq of supTeams) {
+      for (const role of ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2']) {
+        if (eq[role]?.bi) {
+          delete _alocacoesCache4R[eq[role].bi.toUpperCase()];
+          await fbRemoveAlocacao4R(eq[role].bi).catch(() => {});
+        }
+      }
+      delete _equipasCache4R[eq.id || eq._id];
+      await fbDeleteEquipa4R(eq.id || eq._id).catch(() => {});
+    }
+  }
+
+  const snapshotAntes = a ? { status: a.status, funcao: a.funcao, coordenacao: a.coordenacao } : null;
+  const result = await fbRemoveAlocacao4R(bi);
+  if (result.success) {
+    delete _alocacoesCache4R[biUpper];
+    _invalidatePickerCache();
+    registarAuditoria('remover_alocacao_4r', {
+      alvoBI: bi, alvoNome: nome, modulo: 'hierarquia_4r',
+      coordenacao: a ? a.coordenacao : '', antes: snapshotAntes, depois: null,
+    });
+    renderHierarquia4R();
+    showToast(nome + ' removido da hierarquia.' + (isSupervisor ? ' Membros devolvidos ao pool.' : ''), 'warn');
+  } else {
+    showToast('Erro ao remover: ' + result.error, 'error');
+  }
+}
+
+// ── Eliminar equipa inteira — 4ª Ronda ───────────────────────────────────────
+async function removerEquipa4R(equipaId) {
+  if (!guardEliminacao('esta equipa')) return;
+  const eq = _equipasCache4R[equipaId];
+  if (!eq) return;
+  const ok = await showConfirmModal({
+    title: 'Eliminar ' + (eq.tipo_equipa === 'INJECTAVEL' ? 'Equipa Inj. ' : 'Equipa ') + eq.equipa_num,
+    body: 'Supervisor: ' + (eq.supervisor_nome || '—') + '\n\nOs membros voltam ao pool disponível.',
+    confirmLabel: 'Eliminar Equipa', danger: true,
+  });
+  if (!ok) return;
+  const slotRoles = eq.tipo_equipa === 'INJECTAVEL'
+    ? ['vacinador_tecnico_1','vacinador_tecnico_2','registador']
+    : ['mobilizador','vacinador','registador'];
+  const removals = slotRoles.filter(r => eq[r]?.bi).map(r => {
+    delete _alocacoesCache4R[(eq[r].bi||'').toUpperCase()];
+    return fbRemoveAlocacao4R(eq[r].bi).catch(() => {});
+  });
+  await Promise.all(removals);
+  let result = await fbDeleteEquipa4R(equipaId);
+  if (!result.success) {
+    await new Promise(res => setTimeout(res, 1200));
+    result = await fbDeleteEquipa4R(equipaId);
+    if (!result.success) { showToast('Erro ao eliminar equipa: ' + result.error, 'error'); return; }
+  }
+  delete _equipasCache4R[equipaId];
+  _invalidatePickerCache();
+  renderHierarquia4R();
+  showToast('Equipa eliminada. Membros devolvidos ao pool.', 'warn');
+}
+
+// ── Remover um membro de um slot — 4ª Ronda ──────────────────────────────────
+async function removerMembroEquipa4R(equipaId, role) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const eq = _equipasCache4R[equipaId];
+  if (!eq || !eq[role]?.bi) return;
+  const bi = eq[role].bi, nome = eq[role].nome;
+  const prevSlot = eq[role], prevStatus = eq.status;
+  eq[role] = null;
+  updateEquipaStatus4R(eq);
+  const eqResult = await _fbSaveEquipa4RWithRetry(eq);
+  if (!eqResult.success) {
+    eq[role] = prevSlot; eq.status = prevStatus; _equipasCache4R[equipaId] = eq;
+    renderHierarquia4R();
+    showToast('Erro ao gravar: ligação instável. ' + (nome||'').split(' ')[0] + ' não foi removido.', 'error');
+    return;
+  }
+  await fbRemoveAlocacao4R(bi).catch(() => {});
+  delete _alocacoesCache4R[(bi||'').toUpperCase()];
+  _equipasCache4R[equipaId] = eq;
+  _invalidatePickerCache();
+  registarAuditoria('remover_membro_4r', {
+    alvoBI: bi, alvoNome: nome, modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: { tipo_equipa: eq.tipo_equipa, equipa_num: eq.equipa_num, role }, depois: null,
+  });
+  renderHierarquia4R();
+  showToast((nome||'').split(' ')[0] + ' removido da equipa.', 'warn');
+}
+
+// ── Modal de atribuição — 4ª Ronda (DOM próprio: #assign-modal-4r, isolado
+//    do modal da 3ª Ronda para nunca interferir com os handlers existentes) ─
+let _assignContext4R   = null;
+let _assignPoolIndex4R = {};
+
+async function openAssignModal4R(coordenacao, role, equipaId, memberRole) {
+  _assignContext4R = { coordenacao, role, equipaId: equipaId || null, memberRole: memberRole || null };
+  const isCoord  = role === 'coord';
+  const isMember = role === 'member';
+  const memberTitles = {
+    mobilizador: 'Atribuir Mobilizador', vacinador: 'Atribuir Vacinador', registador: 'Atribuir Registador',
+    vacinador_tecnico_1: 'Atribuir Vacinador Técnico (1)', vacinador_tecnico_2: 'Atribuir Vacinador Técnico (2)',
+  };
+  document.getElementById('assign-modal-title-4r').textContent = isMember
+    ? (memberTitles[memberRole] || 'Atribuir Membro')
+    : isCoord ? 'Atribuir Coord área/Comuna' : 'Atribuir Supervisor de Vacinação';
+  document.getElementById('assign-modal-sub-4r').textContent = isMember
+    ? 'Equipa — ' + coordenacao : 'Coordenação: ' + coordenacao;
+  document.getElementById('assign-search-inp-4r').value = '';
+  document.getElementById('assign-modal-4r').style.display = 'flex';
+  document.getElementById('assign-list-content-4r').innerHTML =
+    '<div class="assign-empty" style="color:var(--text3)">⟳ A carregar...</div>';
+
+  try {
+    const fetches = [fbGetAlocacoes4R(), fbGetEquipas4R(), fbGetRhNovos()];
+    if (!_ronda2ArquivoCache) fetches.push(carregarRonda2Arquivo());
+    const [alocDocs, eqDocs, novosDocs] = await Promise.all(fetches);
+    updateAlocacoesCache4R(alocDocs);
+    updateEquipasCache4R(eqDocs);
+    updateRhNovosCache(novosDocs);
+  } catch(e) { console.warn('[4R picker] erro ao actualizar caches:', e); }
+
+  renderAssignList4R();
+  setTimeout(() => document.getElementById('assign-search-inp-4r').focus(), 100);
+}
+
+function closeAssignModal4R() {
+  document.getElementById('assign-modal-4r').style.display = 'none';
+  _assignContext4R = null;
+}
+
+function renderAssignList4R() {
+  if (!_assignContext4R) return;
+  const { coordenacao } = _assignContext4R;
+  const q = (document.getElementById('assign-search-inp-4r')?.value || '').trim().toLowerCase();
+  const el = document.getElementById('assign-list-content-4r');
+  if (!el) return;
+
+  if (q.length < 2) {
+    el.innerHTML = '<div class="assign-empty"><div class="empty-state"><p>Pesquise por nome ou BI</p>' +
+      '<small>A pesquisa cobre a 1ª Ronda, a 2ª Ronda e os novos RH já registados.</small></div></div>';
+    return;
+  }
+
+  let pool = getUniversalSearchPool4R();
+  pool = pool.filter(r => (r.nome||'').toLowerCase().includes(q) || (r.bi||'').toLowerCase().includes(q));
+  pool.sort((a, b) => {
+    const aM = a.coordenacao === coordenacao ? -1 : 0;
+    const bM = b.coordenacao === coordenacao ? -1 : 0;
+    return aM - bM || (a.nome||'').localeCompare(b.nome||'');
+  });
+
+  if (pool.length === 0) {
+    el.innerHTML = '<div class="assign-empty"><div class="empty-state"><p>Nenhum resultado para &ldquo;' + escH(q) + '&rdquo;</p>' +
+      '<small>Se a pessoa é totalmente nova, registe-a primeiro em "Registar Novo RH" (3ª Ronda).</small></div></div>';
+    return;
+  }
+
+  const inTeamMap = {};
+  Object.values(_equipasCache4R).forEach(eq => {
+    ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2'].forEach(role => {
+      if (!eq[role]?.bi) return;
+      const biU = eq[role].bi.toUpperCase();
+      const supEntry = _alocacoesCache4R[(eq.supervisor_id||'').toUpperCase()];
+      inTeamMap[biU] = {
+        equipa_num: eq.equipa_num, tipo_equipa: eq.tipo_equipa,
+        supervisor_nome: supEntry ? supEntry.nome.split(' ').slice(0,2).join(' ') : '—',
+        coordenacao: eq.coordenacao || '—',
+      };
+    });
+  });
+
+  _assignPoolIndex4R = {};
+  pool.forEach(r => { _assignPoolIndex4R[r.bi.toUpperCase()] = r; });
+
+  el.innerHTML = pool.slice(0, 60).map(r => {
+    const biUpper = (r.bi || '').toUpperCase();
+    const isAuto  = r.coordenacao === coordenacao;
+    const fonte   = '<span class="origem-badge origem-' + r._fonte + '">' + escH(r._fonteLabel) + '</span>';
+    const bloqueio = checkAvaliacaoBloqueio(r.bi);
+    const exclBadge = bloqueio.blocked
+      ? ' <span style="background:rgba(231,76,60,.15);color:var(--error);font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;border:1px solid rgba(231,76,60,.3)" title="Marcado como Excluído na Avaliação de Desempenho">🚫 EXCLUÍDO</span>'
+      : '';
+    const teamInfo = inTeamMap[biUpper];
+    const moveBadge = teamInfo
+      ? ' <span style="background:rgba(249,115,22,.15);color:var(--accent2);font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;border:1px solid rgba(249,115,22,.25)" ' +
+        'title="Actualmente na ' + (teamInfo.tipo_equipa==='INJECTAVEL'?'Equipa Inj. ':'Equipa ') + teamInfo.equipa_num + ' · ' + escAttr(teamInfo.coordenacao) + ' · ' + escAttr(teamInfo.supervisor_nome) + '">' +
+        'Mover de ' + (teamInfo.tipo_equipa==='INJECTAVEL'?'Eq.Inj.':'Eq.') + teamInfo.equipa_num + '</span>'
+      : '';
+    return '<div class="assign-item' + (isAuto ? ' auto-suggest' : '') + '" ' +
+      'data-bi="' + escAttr(r.bi) + '" data-in-team="' + (teamInfo ? '1' : '0') + '" ' +
+      'data-eq-num="' + (teamInfo ? teamInfo.equipa_num : '') + '" data-eq-coord="' + escAttr(teamInfo ? teamInfo.coordenacao : '') + '" ' +
+      'onclick="selectAssignItem4R(this.dataset.bi, this.dataset.inTeam === \'1\', this.dataset.eqNum, this.dataset.eqCoord)">' +
+      '<div class="assign-item-info">' +
+        '<div class="assign-item-nome">' + escH(r.nome) + fonte + exclBadge + moveBadge +
+          (isAuto ? ' <span class="auto-badge">✦ Mesma coord.</span>' : '') + '</div>' +
+        '<div class="assign-item-sub">' + escH(r.funcao||'—') + ' · ' + escH(r.coordenacao||'—') + ' · ' + escH(r.bi) + '</div>' +
+      '</div></div>';
+  }).join('') + (pool.length > 60
+    ? '<div style="text-align:center;padding:8px;font-size:11px;color:var(--text3)">' + (pool.length - 60) + ' resultado(s) adicional(is) — refine a pesquisa</div>'
+    : '');
+}
+
+async function selectAssignItem4R(bi, inTeam, eqNum, eqCoord) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  if (!_assignContext4R) return;
+  const { coordenacao, role, equipaId, memberRole } = _assignContext4R;
+  const prof = _assignPoolIndex4R[(bi||'').toUpperCase()] || findProfissional(bi);
+  if (!prof) return;
+
+  if (inTeam) {
+    const ok = await showConfirmModal({
+      title: 'Mover ' + prof.nome.split(' ').slice(0,2).join(' '),
+      body:  'Esta pessoa está actualmente na Equipa ' + eqNum + (eqCoord ? ' (' + eqCoord + ')' : '') +
+             '.\n\nAo confirmar, será removida dessa equipa e adicionada à equipa actual.',
+      confirmLabel: 'Confirmar Mover', danger: false,
+    });
+    if (!ok) return;
+  }
+
+  closeAssignModal4R();
+  const MEMBER_LABELS = {
+    mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador',
+    vacinador_tecnico_1:'Vacinador Técnico', vacinador_tecnico_2:'Vacinador Técnico',
+  };
+  if (role === 'member') {
+    const profParaEquipa = { ...prof, funcao: MEMBER_LABELS[memberRole] || prof.funcao };
+    await _assignMemberToTeam4R(equipaId, memberRole, profParaEquipa);
+  } else {
+    const funcaoEf = role === 'coord' ? 'Coord area/ Comuna' : 'Supervisor equipa';
+    await _alocarProfissional4R(prof.bi, prof.nome, funcaoEf, coordenacao, prof.sexo || 'M', role, prof._fonte || 'rh_data');
+  }
+}
+
+// ── Renderização: sumário, cards de coordenação, supervisores, equipas ──────
+let _hier4rExpanded = new Set();
+
+function renderHierarquia4R() {
+  const totalCoords = COORDENACOES_2R.length;
+  const coordsOk    = COORDENACOES_2R.filter(c =>
+    Object.values(_alocacoesCache4R).some(a => a.status === 'coord' && a.coordenacao === c)).length;
+  const totalSups    = Object.values(_alocacoesCache4R).filter(a => a.status === 'supervisor').length;
+  const totalEquipas = Object.keys(_equipasCache4R).length;
+  const equipasComp  = Object.values(_equipasCache4R).filter(e => e.status === 'completa').length;
+
+  const sumEl = document.getElementById('hier4r-summary-bar');
+  if (sumEl) sumEl.innerHTML =
+    hierSumCard(coordsOk + '/' + totalCoords, 'Coords Definidos', coordsOk === totalCoords ? 'var(--green)' : 'var(--accent2)') +
+    hierSumCard(totalSups, 'Supervisores', 'var(--blue)') +
+    hierSumCard(equipasComp + '/' + totalEquipas, 'Equipas Completas', equipasComp === totalEquipas && totalEquipas > 0 ? 'var(--green)' : 'var(--accent2)') +
+    hierSumCard(Object.keys(_alocacoesCache4R).length, 'Total Alocados', 'var(--text3)');
+
+  const grid = document.getElementById('hier4r-grid');
+  if (!grid) return;
+  grid.innerHTML = COORDENACOES_2R.map(coord => renderCoordCard4R(coord)).join('');
+}
+
+function getCoordsAreaDa4R(coordenacao) {
+  return Object.values(_alocacoesCache4R).find(a => a.status === 'coord' && a.coordenacao === coordenacao) || null;
+}
+function getSupsDa4R(coordenacao) {
+  return Object.values(_alocacoesCache4R).filter(a => a.status === 'supervisor' && a.coordenacao === coordenacao);
+}
+
+function toggleCoordCard4R(coordenacao, event) {
+  if (event && event.target.closest('button')) return;
+  if (_hier4rExpanded.has(coordenacao)) _hier4rExpanded.delete(coordenacao);
+  else _hier4rExpanded.add(coordenacao);
+  renderHierarquia4R();
+}
+
+function renderCoordCard4R(coordenacao) {
+  const coordArea  = getCoordsAreaDa4R(coordenacao);
+  const sups       = getSupsDa4R(coordenacao);
+  const shortCoord = coordenacao.replace('ZONA ALTA ', 'ZA ').replace('CASA BRANCA, PRAIAS E HUAMBA', 'CASA BRANCA / PRAIAS');
+  const eqs        = Object.values(_equipasCache4R).filter(e => e.coordenacao === coordenacao);
+  const eqCompletas = eqs.filter(e => e.status === 'completa').length;
+  const cardId     = 'cc4r-' + coordenacao.replace(/[^a-z0-9]/gi, '_');
+  const isExpanded = _hier4rExpanded.has(coordenacao);
+
+  const pillCoord = coordArea
+    ? '<span class="coord-pill coord-pill-ok">Coord ✓</span>'
+    : '<span class="coord-pill coord-pill-warn">! Coord</span>';
+  const pillEqs = eqs.length === 0
+    ? '<span class="coord-pill coord-pill-warn">Sem equipas</span>'
+    : '<span class="coord-pill ' + (eqCompletas===eqs.length?'coord-pill-ok':'coord-pill-warn') + '">' + eqCompletas + '/' + eqs.length + '</span>';
+  const pillSups = '<span class="coord-pill coord-pill-inf">' + sups.length + ' sup' + (sups.length!==1?'s':'') + '</span>';
+
+  const hdr = '<div class="coord-card-hdr" onclick="toggleCoordCard4R(\'' + escAttr(coordenacao) + '\', event)">' +
+    '<h3>' + escH(shortCoord) + '</h3>' +
+    '<div class="coord-card-hdr-pills">' + pillCoord + pillSups + pillEqs + '</div>' +
+    '<span class="coord-card-toggle">' + (isExpanded ? '▾' : '▸') + '</span></div>';
+
+  let slotCoord;
+  if (coordArea) {
+    slotCoord = '<div class="slot-coord-area filled">' +
+      '<div class="slot-info"><div class="slot-nome">' + escH(coordArea.nome.split(' ').slice(0,3).join(' ')) + '</div>' +
+      '<div class="slot-sub">Coord área/Comuna</div></div>' +
+      '<button class="btn-slot-remove" onclick="removerAlocacao4R(\'' + escAttr(coordArea.bi) + '\')" title="Remover">✕</button></div>';
+  } else {
+    slotCoord = '<div class="slot-coord-area">' +
+      '<span class="slot-empty-lbl">Coord área/Comuna não definido</span>' +
+      '<button class="btn-slot-add" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'coord\')">+ Atribuir</button></div>';
+  }
+
+  const supsHtml = sups.length > 0
+    ? sups.map(s => renderSupWithTeams4R(s, coordenacao)).join('')
+    : '<div class="pool-empty">Nenhum supervisor atribuído</div>';
+
+  const supsSection = '<div class="sup-section-lbl"><span>Supervisores de Vacinação (' + sups.length + ')</span>' +
+    '<button class="btn-slot-add" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'supervisor\')">+ Adicionar</button></div>' +
+    '<div class="sup-list">' + supsHtml + '</div>';
+
+  return '<div class="coord-card' + (isExpanded ? '' : ' collapsed') + '" id="' + cardId + '">' +
+    hdr + '<div class="coord-card-body">' + slotCoord + supsSection + '</div></div>';
+}
+
+function renderSupWithTeams4R(s, coordenacao) {
+  const biUpper = (s.bi||'').toUpperCase();
+  const eqsOral = Object.values(_equipasCache4R).filter(e => e.supervisor_id === biUpper && e.tipo_equipa === 'ORAL')
+    .sort((a,b) => (a.equipa_num||0) - (b.equipa_num||0));
+  const eqsInj  = Object.values(_equipasCache4R).filter(e => e.supervisor_id === biUpper && e.tipo_equipa === 'INJECTAVEL')
+    .sort((a,b) => (a.equipa_num||0) - (b.equipa_num||0));
+
+  const supHeader =
+    '<div class="sup-slot filled" style="margin-bottom:6px">' +
+      '<div class="slot-info">' +
+        '<div class="sup-slot-nome">' + escH((s.nome||'').split(' ').slice(0,3).join(' ')) + '</div>' +
+        '<div class="sup-slot-coord">Supervisor de Vacinação · ' + eqsOral.length + ' oral · ' + eqsInj.length + ' inj.</div>' +
+      '</div>' +
+      '<button class="btn-slot-remove" onclick="removerAlocacao4R(\'' + escAttr(s.bi) + '\')" title="Remover supervisor">✕</button>' +
+    '</div>';
+
+  const groupLbl = (texto) =>
+    '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 4px">' + texto + '</div>';
+
+  const eqOralHtml = eqsOral.map(eq => renderEquipaCard4R(eq)).join('');
+  const eqInjHtml  = eqsInj.map(eq => renderEquipaCard4R(eq)).join('');
+
+  const btnNovaOral = '<button class="btn-nova-equipa" onclick="criarNovaEquipa4R(\'' + escAttr(s.bi) + '\',\'' + escAttr(coordenacao) + '\',\'ORAL\')">+ Nova Equipa Oral</button>';
+  const btnNovaInj  = '<button class="btn-nova-equipa" onclick="criarNovaEquipa4R(\'' + escAttr(s.bi) + '\',\'' + escAttr(coordenacao) + '\',\'INJECTAVEL\')">+ Nova Equipa Injectável</button>';
+
+  return '<div style="margin-bottom:12px">' + supHeader +
+    groupLbl('Equipas Orais') + eqOralHtml + btnNovaOral +
+    groupLbl('Equipas Injectáveis') + eqInjHtml + btnNovaInj +
+  '</div>';
+}
+
+// ── Renderizar um card de equipa 4ª Ronda (3 slots: oral ou injectável) ──────
+function renderEquipaCard4R(eq) {
+  const isInj = eq.tipo_equipa === 'INJECTAVEL';
+  const statusCls = { completa:'ts-completa', incompleta:'ts-incompleta', vazia:'ts-vazia' }[eq.status] || 'ts-vazia';
+  const statusLbl = { completa:'Completa', incompleta:'Incompleta', vazia:'Vazia' }[eq.status] || 'Vazia';
+
+  const memberSlot = (role, label) => {
+    const m = eq[role];
+    return m?.bi
+      ? '<div class="team-slot filled">' +
+          '<span class="team-slot-role">' + label + '</span>' +
+          '<span class="team-slot-name">' + escH((m.nome||'').split(' ')[0]) + '</span>' +
+          '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" ' +
+            'onclick="removerMembroEquipa4R(\'' + escAttr(eq.id) + '\',\'' + role + '\')" title="Remover">✕</button>' +
+        '</div>'
+      : '<div class="team-slot">' +
+          '<span class="team-slot-role">' + label + '</span>' +
+          '<button class="btn-slot-add" style="padding:3px 8px;font-size:10px" ' +
+            'onclick="openAssignModal4R(\'' + escAttr(eq.coordenacao) + '\',\'member\',\'' + escAttr(eq.id) + '\',\'' + role + '\')">+ ' + label + '</button>' +
+        '</div>';
+  };
+
+  const slots = isInj
+    ? memberSlot('vacinador_tecnico_1','Vac.Téc.1') + memberSlot('vacinador_tecnico_2','Vac.Téc.2') + memberSlot('registador','Reg')
+    : memberSlot('mobilizador','Mob') + memberSlot('vacinador','Vac') + memberSlot('registador','Reg');
+
+  return '<div class="team-card">' +
+    '<div class="team-header">' +
+      (isInj ? 'Equipa Inj. ' : 'Equipa ') + eq.equipa_num +
+      '<span class="team-status ' + statusCls + '">' + statusLbl + '</span>' +
+      '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" ' +
+        'onclick="removerEquipa4R(\'' + escAttr(eq.id) + '\')" title="Eliminar equipa">🗑</button>' +
+    '</div>' + slots +
+  '</div>';
+}
+
 // ── Renderizar Supervisor com as suas equipas ────────────────────────────────
 function renderSupWithTeams(s, coordenacao) {
   const supTeams = Object.values(_equipasCache)
@@ -10110,6 +10666,7 @@ function switchTab(name) {
   if (name === 'ronda1')      renderRonda1Table();
   if (name === 'ronda2')      { if (_ronda2ArquivoCache) renderRonda2Table(); else carregarRonda2Arquivo(); }
   if (name === 'equipas')     renderEquipasTab(); // FASES A+B
+  if (name === 'equipas4r')   loadHierarquia4R(); // 4ª Ronda — Etapa 1
   if (name === 'audit')       { auditSubtab('dados'); renderAudit(); }
 }
 
