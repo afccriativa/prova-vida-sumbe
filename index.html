@@ -1343,6 +1343,14 @@ input, textarea, select {
   touch-action:manipulation; }
 .btn-nova-equipa:hover { border-color:#3498db; color:#3498db; background:rgba(52,152,219,.05); }
 
+/* 3ª Ronda arquivada — esconde toda a UI de escrita da Hierarquia (não afecta
+   os mesmos nomes de classe usados pela 4ª Ronda, scoped a #panel-equipas). */
+#panel-equipas.arquivo-3r .btn-slot-add,
+#panel-equipas.arquivo-3r .btn-slot-remove,
+#panel-equipas.arquivo-3r .btn-nova-equipa,
+#panel-equipas.arquivo-3r .btn-row-action,
+#panel-equipas.arquivo-3r .btn-del-val { display:none !important; }
+
 /* ═══════════════════════════════════════════════════════════════════════
    FASES G + H — PROGRESSO, EXPORTAÇÃO E IMPRESSÃO
    ═══════════════════════════════════════════════════════════════════════ */
@@ -2023,14 +2031,19 @@ input, textarea, select {
 </div>
 
 <!-- FASES A+B — Painel: Equipas 3ª Ronda -->
-<div id="panel-equipas" class="panel">
+<div id="panel-equipas" class="panel arquivo-3r">
+
+  <div class="alert alert-info" style="margin-bottom:14px">
+    3.ª Ronda encerrada — consulta apenas. A composição de equipas, atribuições e registo de novo RH
+    estão desactivados; use "Compor RH 4ª Ronda" para a campanha em curso.
+  </div>
 
   <!-- Sub-navegação -->
   <div class="equipas-subtab-bar">
     <div class="equipas-subtab active" data-subtab="rh-list"    onclick="equipasSubtab('rh-list')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> RH Registados</div>
     <div class="equipas-subtab"        data-subtab="hierarquia" onclick="equipasSubtab('hierarquia')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M2.5 6.5h5l1.5 2h8.5v8H2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2.5 6.5V4.8c0-.7.6-1.3 1.3-1.3H7l1.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>️ Hierarquia</div>
     <div class="equipas-subtab"        data-subtab="progresso"  onclick="equipasSubtab('progresso')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><line x1="4.5" y1="17" x2="4.5" y2="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="4.5" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.5" y="11" width="2.4" height="6" fill="currentColor"/><rect x="10.3" y="7.5" width="2.4" height="9.5" fill="currentColor"/><rect x="14.1" y="4" width="2.4" height="13" fill="currentColor"/></svg> Progresso<span id="prog-badge" class="subtab-badge" style="display:none">0</span></div>
-    <div class="equipas-subtab"        data-subtab="rh-novo"    onclick="equipasSubtab('rh-novo')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Registar Novo RH</div>
+    <div class="equipas-subtab" style="display:none" data-subtab="rh-novo"    onclick="equipasSubtab('rh-novo')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Registar Novo RH</div>
     <div class="equipas-subtab"        data-subtab="avaliacao"  onclick="equipasSubtab('avaliacao')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> Avaliação</div>
   </div>
 
@@ -5729,6 +5742,7 @@ async function fbGetRhNovos() {
 
 // ── Firebase: gravar novo RH (usa BI como document ID) ───────────────────────
 async function fbSaveRhNovo(data) {
+  if (RONDA_3R_ARQUIVADA) return { success: false, archived: true, error: '3ª Ronda arquivada' };
   if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
   try {
     await window._FB.setDoc(
@@ -5749,6 +5763,7 @@ async function fbCheckBiExists(bi) {
 
 // ── Firebase: actualizar campo(s) de um novo RH ───────────────────────────────
 async function fbUpdateRhNovo(bi, updates) {
+  if (RONDA_3R_ARQUIVADA) return { success: false, archived: true, error: '3ª Ronda arquivada' };
   if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
   try {
     const existing = _rhNovosCache[bi.toUpperCase()] || {};
@@ -5761,6 +5776,7 @@ async function fbUpdateRhNovo(bi, updates) {
 
 // ── Firebase: eliminar novo RH ───────────────────────────────────────────────
 async function fbDeleteRhNovo(bi) {
+  if (RONDA_3R_ARQUIVADA) return { success: false, archived: true, error: '3ª Ronda arquivada' };
   if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
   try {
     await window._FB.deleteDoc(window._FB.docRef('rh_novos_3r/' + bi.toUpperCase()));
