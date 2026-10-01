@@ -2324,9 +2324,45 @@ input, textarea, select {
   <!-- Sub-painel: Hierarquia -->
   <div id="equipas4r-sub-hierarquia" class="equipas4r-subpanel">
     <div class="hier-toolbar">
-      <span class="hier-toolbar-lbl">Cards:</span>
+      <span class="hier-toolbar-lbl">Exportar:</span>
+      <button class="btn-hier-action" onclick="exportarCSVEquipas4R()" title="Uma linha por pessoa (formato longo) — bom para análise"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> CSV</button>
+      <button class="btn-hier-action" onclick="exportarExcelEquipas4R(this)" title="Excel com 5 folhas: Equipas Orais, Injectáveis, Coord e Supervisores, Resumo, Disponíveis"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Excel</button>
+      <span class="hier-toolbar-lbl" style="margin-left:8px">Presenças:</span>
+      <button class="btn-hier-action" id="btn-lista-pres4r-toggle" onclick="toggleListaPresencaPanel4R()"
+        title="Lista de presença de campo por supervisor (equipas orais e injectáveis)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M5 2h7l3 3v13H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="7.3" y1="9.5" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.3" y1="12.5" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Lista Presença</button>
+      <button class="btn-hier-action" onclick="gerarListaSupervisoresImpressao4R()"
+        title="Lista de presença de todos os Supervisores de Vacinação"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Lista Supervisores</button>
+      <button class="btn-hier-action" onclick="gerarListaCoordenadoresImpressao4R()"
+        title="Lista de presença de todos os Coordenadores de Área"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Lista Coordenadores</button>
+      <span class="hier-toolbar-lbl" style="margin-left:8px">Cards:</span>
       <button class="btn-hier-action" onclick="hier4rExpandAll()" title="Expandir todas as coordenações">⊞ Expandir tudo</button>
       <button class="btn-hier-action" onclick="hier4rCollapseAll()" title="Colapsar todas as coordenações">⊟ Colapsar tudo</button>
+    </div>
+
+    <!-- Painel: Lista de Presença de Campo (4ª Ronda) -->
+    <div id="lista-pres4r-panel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:8px">
+      <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M5 2h7l3 3v13H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="7.3" y1="9.5" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.3" y1="12.5" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Gerar Lista de Presença — Toda a Equipa (Mobilizador, Vacinador, Registador, Vitaminador)
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:260px">
+          <label style="font-size:11px;color:var(--text3);font-weight:700;display:block;margin-bottom:6px">SUPERVISOR</label>
+          <select id="sel-lista-pres4r-sup"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;
+                   padding:8px 10px;color:var(--text);font-size:13px;outline:none">
+            <option value="">— Seleccione o Supervisor —</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="gerarListaPresenca4R()"
+          style="padding:8px 18px;font-size:12px;white-space:nowrap;align-self:flex-end">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="5" y="7.5" width="10" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 7.5V3h8v4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="6.5" y="12" width="7" height="5" fill="currentColor"/></svg> Gerar &amp; Abrir
+        </button>
+        <button class="btn btn-secondary" onclick="toggleListaPresencaPanel4R()"
+          style="padding:8px 12px;font-size:12px;align-self:flex-end"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">
+        Abre uma nova aba pronta a imprimir (A4 paisagem): equipas Orais (Mobilizadores, Vacinadores, Registadores) e equipas Injectáveis (Vacinadores Técnicos, Registadores) desse supervisor. Com "Todos os supervisores" gera as listas de uma só vez.
+      </div>
     </div>
     <div style="padding:10px 0 4px 0;display:flex;align-items:center;gap:8px">
       <input id="hier4r-search-inp" type="text" placeholder="🔍  Pesquisar por nome, BI ou coordenação..."
@@ -9209,6 +9245,350 @@ function irParaRegistarNovoRH4R() {
     if (pareceBI) { const b = document.getElementById('rh4-f-bi'); b.value = q.toUpperCase(); biInlineValidate4R(b); }
     else document.getElementById('rh4-f-nome').value = q;
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ETAPA 3 — Impressões e exportações da 4ª Ronda
+// ════════════════════════════════════════════════════════════════════════
+// Dados oficiais da campanha impressos nas listas — CONFIRMAR com o ofício.
+const CAMPANHA_4R = {
+  titulo: 'CAMPANHA INTEGRADA DE VACINAÇÃO (POLIOMIELITE, SARAMPO, VITAMINA A E FEBRE AMARELA) — 4ª RONDA',
+  datas:  '8 a 12 de Outubro 2026',
+  mes:    '10',
+};
+const _ROLE_LABEL_4R = {
+  mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador',
+  vacinador_tecnico_1: 'Vacinador Técnico', vacinador_tecnico_2: 'Vacinador Técnico',
+};
+const _cmp4R = (a, b) => (a || '').localeCompare(b || '', 'pt');
+
+function _mapaTel4R() {
+  const m = {};
+  try { getUniversalSearchPool4R(true).forEach(r => { if (r.bi && r.telefone) m[r.bi.toUpperCase()] = r.telefone; }); } catch(e) {}
+  return m;
+}
+function _tel4R(bi, tm, extra) {
+  const k = (bi || '').toUpperCase();
+  if (!k) return '';
+  if (tm && tm[k]) return tm[k];
+  if (_rhNovos4RCache[k]?.telefone) return _rhNovos4RCache[k].telefone;
+  const p = findProfissional(k);
+  return (p && (p.telefone || p.telefone_r2)) || extra || '';
+}
+function _supNome4R(eq) {
+  const a = _alocacoesCache4R[(eq.supervisor_id || '').toUpperCase()];
+  return (a && a.nome) || eq.supervisor_nome || '—';
+}
+function _coordNome4R(coordenacao) {
+  const n = s => (s || '').toUpperCase().trim();
+  const a = Object.values(_alocacoesCache4R).find(x => x.status === 'coord' && n(x.coordenacao) === n(coordenacao));
+  return a ? a.nome : '';
+}
+function getEquipasOrdenadas4R() {
+  return Object.values(_equipasCache4R).sort((a, b) =>
+    _cmp4R(a.coordenacao, b.coordenacao) || _cmp4R(_supNome4R(a), _supNome4R(b)) ||
+    ((a.tipo_equipa === 'INJECTAVEL') - (b.tipo_equipa === 'INJECTAVEL')) || (a.equipa_num || 0) - (b.equipa_num || 0));
+}
+function _rolesDe4R(eq) { return eq.tipo_equipa === 'INJECTAVEL' ? ROLES_INJ_4R : ROLES_ORAL_4R; }
+function _tipoLabel4R(eq) { return eq.tipo_equipa === 'INJECTAVEL' ? 'Injectável' : 'Oral'; }
+function _abrirJanela4R(html, msgOk) {
+  const w = window.open('', '_blank');
+  if (!w) { showToast('O browser bloqueou a nova aba. Permita popups para este site.', 'error'); return false; }
+  w.document.write(html); w.document.close();
+  showToast(msgOk, 'success');
+  return true;
+}
+
+// ── Exportar CSV (formato longo: uma linha por pessoa) ───────────────────────
+function getLinhasPessoas4R() {
+  const tm = _mapaTel4R(), rows = [];
+  Object.values(_alocacoesCache4R)
+    .filter(a => a.status === 'coord' || a.status === 'supervisor')
+    .sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.status === 'coord' ? -1 : 1) - (b.status === 'coord' ? -1 : 1) || _cmp4R(a.nome, b.nome))
+    .forEach(a => rows.push({
+      coordenacao: a.coordenacao || '', tipo: '', num: '', estado: '', supervisor: '',
+      funcao: a.status === 'coord' ? 'Coordenador de área' : 'Supervisor de Vacinação',
+      nome: a.nome || '', bi: a.bi || '', tel: _tel4R(a.bi, tm, a.telefone),
+    }));
+  getEquipasOrdenadas4R().forEach(eq => {
+    _rolesDe4R(eq).forEach(role => {
+      const m = eq[role];
+      if (!m?.bi) return;
+      rows.push({
+        coordenacao: eq.coordenacao || '', tipo: _tipoLabel4R(eq), num: eq.equipa_num || '', estado: eq.status || 'vazia',
+        supervisor: _supNome4R(eq), funcao: _ROLE_LABEL_4R[role],
+        nome: m.nome || '', bi: m.bi, tel: _tel4R(m.bi, tm, m.telefone),
+      });
+    });
+  });
+  return rows;
+}
+function exportarCSVEquipas4R() {
+  const rows = getLinhasPessoas4R();
+  if (!rows.length) { showToast('Nada para exportar na 4ª Ronda.', 'warn'); return; }
+  const hdr = 'Coordenação;Tipo de equipa;Nº Equipa;Estado;Supervisor;Função;Nome;BI;Telefone';
+  const body = rows.map(r => [r.coordenacao, r.tipo, r.num, r.estado, r.supervisor, r.funcao, r.nome, r.bi, r.tel]
+    .map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + hdr + '\n' + body.join('\n')], { type: 'text/csv;charset=utf-8;' }));
+  a.download = 'Equipas_4R_Sumbe_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  showToast('CSV exportado — ' + rows.length + ' pessoas.', 'success');
+}
+
+// ── Exportar Excel (5 folhas) ────────────────────────────────────────────────
+async function exportarExcelEquipas4R(btn) {
+  const eqs = getEquipasOrdenadas4R();
+  const alocs = Object.values(_alocacoesCache4R).filter(a => a.status === 'coord' || a.status === 'supervisor');
+  if (!eqs.length && !alocs.length) { showToast('Nada para exportar na 4ª Ronda.', 'warn'); return; }
+  const htmlOrig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ A gerar...'; }
+  const restaurar = () => { if (btn) { btn.disabled = false; btn.innerHTML = htmlOrig; } };
+  try { await loadSheetJS(); } catch(e) {
+    showToast('Erro ao carregar motor Excel. Verifique a ligação.', 'error'); restaurar(); return;
+  }
+  try {
+    const X = window.XLSX, wb = X.utils.book_new(), tm = _mapaTel4R();
+    const mem = (eq, role) => { const m = eq[role]; return m?.bi ? [m.nome || '', m.bi, _tel4R(m.bi, tm, m.telefone)] : ['', '', '']; };
+    const supTel = eq => _tel4R(eq.supervisor_id, tm, _alocacoesCache4R[(eq.supervisor_id || '').toUpperCase()]?.telefone);
+    const addSheet = (nome, aoa, wch) => { const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = wch.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, nome); };
+
+    const orais = eqs.filter(e => e.tipo_equipa !== 'INJECTAVEL');
+    addSheet('Equipas Orais', [
+      ['Coordenação','Supervisor','Tel. Supervisor','Nº Equipa','Estado','Mobilizador','BI Mob','Tel. Mob','Vacinador','BI Vac','Tel. Vac','Registador','BI Reg','Tel. Reg'],
+      ...orais.map(e => [e.coordenacao, _supNome4R(e), supTel(e), e.equipa_num, e.status || 'vazia',
+        ...mem(e, 'mobilizador'), ...mem(e, 'vacinador'), ...mem(e, 'registador')]),
+    ], [28,28,13,9,12,28,16,13,28,16,13,28,16,13]);
+
+    const injs = eqs.filter(e => e.tipo_equipa === 'INJECTAVEL');
+    addSheet('Equipas Injectáveis', [
+      ['Coordenação','Supervisor','Tel. Supervisor','Nº Equipa','Estado','Vacinador Técnico 1','BI VT1','Tel. VT1','Vacinador Técnico 2','BI VT2','Tel. VT2','Registador','BI Reg','Tel. Reg'],
+      ...injs.map(e => [e.coordenacao, _supNome4R(e), supTel(e), e.equipa_num, e.status || 'vazia',
+        ...mem(e, 'vacinador_tecnico_1'), ...mem(e, 'vacinador_tecnico_2'), ...mem(e, 'registador')]),
+    ], [28,28,13,9,12,28,16,13,28,16,13,28,16,13]);
+
+    addSheet('Coord e Supervisores', [
+      ['Coordenação','Função','Nome','BI','Telefone'],
+      ...alocs.sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.status === 'coord' ? -1 : 1) - (b.status === 'coord' ? -1 : 1) || _cmp4R(a.nome, b.nome))
+        .map(a => [a.coordenacao || '', a.status === 'coord' ? 'Coordenador de área' : 'Supervisor de Vacinação', a.nome || '', a.bi || '', _tel4R(a.bi, tm, a.telefone)]),
+    ], [32,24,34,18,14]);
+
+    const pessoas = (lista) => lista.reduce((n, e) => n + _rolesDe4R(e).reduce((k, r) => k + (e[r]?.bi ? 1 : 0), 0), 0);
+    const resumo = [['Coordenação','Coordenador','Supervisores','Eq. Orais','Pessoas Orais','Eq. Injectáveis','Pessoas Inj.','Completas','Incompletas','Vazias']];
+    const T = { sup: 0, eo: 0, po: 0, ei: 0, pi: 0, c: 0, i: 0, v: 0, coord: 0 };
+    COORDENACOES_2R.forEach(c => {
+      const ce = eqs.filter(e => e.coordenacao === c), o = ce.filter(e => e.tipo_equipa !== 'INJECTAVEL'), j = ce.filter(e => e.tipo_equipa === 'INJECTAVEL');
+      const sups = alocs.filter(a => a.status === 'supervisor' && a.coordenacao === c).length;
+      const cn = _coordNome4R(c);
+      const row = [c, cn || '—', sups, o.length, pessoas(o), j.length, pessoas(j),
+        ce.filter(e => e.status === 'completa').length, ce.filter(e => e.status === 'incompleta').length, ce.filter(e => (e.status || 'vazia') === 'vazia').length];
+      resumo.push(row);
+      T.coord += cn ? 1 : 0; T.sup += sups; T.eo += o.length; T.po += pessoas(o); T.ei += j.length; T.pi += pessoas(j);
+      T.c += row[7]; T.i += row[8]; T.v += row[9];
+    });
+    resumo.push(['TOTAL', T.coord + '/' + META_4R.coords, T.sup + '/' + META_4R.sups, T.eo + '/' + META_4R.eqOral, T.po + '/' + META_4R.pessoasOral,
+                 T.ei + '/' + META_4R.eqInj, T.pi + '/' + META_4R.pessoasInj, T.c, T.i, T.v]);
+    addSheet('Resumo', resumo, [32,30,13,11,14,15,13,11,13,9]);
+
+    addSheet('Disponíveis', [
+      ['Nome Completo','Função','Coordenação','BI','Contacto'],
+      ...getDisponiveis4R().map(r => [r.nome, r.funcao, r.coordenacao, r.bi, r.telefone || '']),
+    ], [34,22,32,18,14]);
+
+    X.writeFile(wb, 'Equipas_4R_Sumbe_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    showToast('Excel exportado — 5 folhas.', 'success');
+  } catch(e) {
+    console.error('[4R] exportarExcel:', e);
+    showToast('Erro ao gerar o Excel: ' + e.message, 'error');
+  }
+  restaurar();
+}
+
+// ── Listas de presença (A4 paisagem) ─────────────────────────────────────────
+function _css4R() {
+  return `
+  @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000; background: #fff; width: 277mm; }
+  .btn-print { position: fixed; top: 10px; right: 14px; background: #1a4fa8; color: #fff; border: none; border-radius: 6px;
+    padding: 8px 16px; font-size: 11pt; cursor: pointer; font-family: Arial, sans-serif; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+  @media print { .btn-print { display: none; } }
+  .pagina { width: 100%; page-break-after: always; }
+  .pagina:last-child { page-break-after: auto; }
+  .topo { display: flex; align-items: flex-start; justify-content: center; position: relative; margin-bottom: 2px; }
+  .topo-insignia { text-align: center; flex: 1; }
+  .insignia { width: 58px; height: 58px; object-fit: contain; display: block; margin: 0 auto; background: #fff; border-radius: 2px; }
+  .visto-box { position: absolute; right: 0; top: 0; border: 1px solid #000; width: 140px; padding: 4px 6px; font-size: 7.5pt; text-align: center; }
+  .visto-titulo { font-weight: bold; font-size: 8pt; }
+  .visto-sub { font-size: 7pt; margin-bottom: 14px; }
+  .visto-linha { border-bottom: 1px solid #000; margin: 0 10px 3px; }
+  .visto-data { font-size: 7pt; }
+  .cab { text-align: center; font-size: 8.5pt; line-height: 1.35; margin-bottom: 3px; }
+  .cab-campanha { font-weight: bold; }
+  .titulo-lista { text-align: center; font-size: 10pt; font-weight: bold; margin: 5px 0 4px; }
+  .campos-row { display: flex; justify-content: space-between; font-size: 8.5pt; font-weight: bold; margin: 3px 0 8px; gap: 4px; }
+  .campos-row span { white-space: nowrap; }
+  .campo-linha { display: inline-block; border-bottom: 1px solid #000; min-width: 120px; vertical-align: bottom; margin-left: 2px; font-weight: normal; padding: 0 3px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  th { border: 1px solid #000; padding: 3px; font-size: 8pt; font-weight: bold; text-align: center; vertical-align: middle;
+    background: #d9d9d9; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  td { border: 1px solid #000; padding: 2px 4px; font-size: 8.5pt; height: 22px; vertical-align: middle; }
+  .tc { text-align: center; }
+  .col-num { width: 22px; } .col-eq { width: 52px; } .col-func { width: 96px; } .col-tel { width: 84px; }
+  .col-dia { width: 62px; text-align: center; font-size: 7.5pt; }
+  .dia-data { font-size: 6.5pt; font-weight: normal; display: block; margin-top: 1px; }
+  tbody tr:nth-child(even) td { background: #f2f2f2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rodape-texto { margin-top: 16px; font-size: 9pt; font-weight: bold; text-align: center; }
+  .assinaturas { display: flex; justify-content: center; margin-top: 12px; }
+  .assinatura { text-align: center; }
+  .linha-ass { border-bottom: 1px solid #000; width: 180px; margin: 0 auto 4px; height: 20px; }
+  .ass-label-top { font-size: 8pt; text-align: center; margin-bottom: 4px; font-weight: bold; }
+  .ass-label { font-size: 8pt; line-height: 1.5; }`;
+}
+function _cab4R() {
+  return `<div class="topo">
+      <div class="topo-insignia"><img src="${INSIGNIA_PNG_B64}" class="insignia" alt=""></div>
+      <div class="visto-box"><div class="visto-titulo">VISTO</div><div class="visto-sub">O DIRECTOR MUNICIPAL</div>
+        <div class="visto-linha"></div><div class="visto-data">DATA: ________/________/2026</div></div>
+    </div>
+    <div class="cab">
+      <div>REPÚBLICA DE ANGOLA</div><div>DIREÇÃO NACIONAL DE SAÚDE PÚBLICA</div><div>GOVERNO DA PROVÍNCIA DO CUANZA SUL</div>
+      <div>ADMINISTRAÇÃO MUNICIPAL DO SUMBE</div><div style="margin-bottom:5px">DIRECÇÃO DE SAÚDE</div>
+      <div class="cab-campanha">${_escHTML(CAMPANHA_4R.titulo)}</div><div>${_escHTML(CAMPANHA_4R.datas)}</div>
+    </div>`;
+}
+function _diasTh4R() {
+  return ['1º dia','2º dia','3º dia','4º dia','5º dia','Repescagem']
+    .map(d => `<th class="col-dia">${d}<br><span class="dia-data">____/${CAMPANHA_4R.mes}/2026</span></th>`).join('');
+}
+function _rodape4R() {
+  return `<div class="rodape-texto">DIRECÇÃO MUNICIPAL DA SAÚDE, AOS _______ DE ______________________ DE 2026</div>
+    <div class="assinaturas"><div class="assinatura">
+      <div class="ass-label-top">A Chefe de Secção de Saúde Pública</div><div class="linha-ass"></div>
+      <div class="ass-label">Maria Júlia Domingos da Silva<br><em>Msc. em Saúde Pública</em></div></div></div>`;
+}
+function _doc4R(titulo, corpo) {
+  return `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>${_escHTML(titulo)}</title><style>${_css4R()}</style></head>
+<body><button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>${corpo}</body></html>`;
+}
+const _TD_DIAS4R = '<td></td>'.repeat(6);
+
+// Uma página por função (e por modalidade) de um supervisor
+function _paginasSupervisor4R(supBI, tm) {
+  const biU = supBI.toUpperCase();
+  const sup = _alocacoesCache4R[biU];
+  const coordenacao = sup?.coordenacao || '';
+  const coordNome = _coordNome4R(coordenacao);
+  const eqs = Object.values(_equipasCache4R)
+    .filter(e => (e.supervisor_id || '').toUpperCase() === biU)
+    .sort((a, b) => (a.equipa_num || 0) - (b.equipa_num || 0));
+  const orais = eqs.filter(e => e.tipo_equipa !== 'INJECTAVEL');
+  const injs  = eqs.filter(e => e.tipo_equipa === 'INJECTAVEL');
+  const linhas = (lista, roles) => lista.flatMap(eq => roles.map(role => {
+    const m = eq[role];
+    return { eq: (eq.tipo_equipa === 'INJECTAVEL' ? 'Inj. ' : 'Oral ') + (eq.equipa_num || '?'),
+             nome: m?.bi ? _toTitleCase(m.nome || (findProfissional(m.bi)?.nome) || '') : '',
+             tel:  m?.bi ? _tel4R(m.bi, tm, m.telefone) : '' };
+  }));
+  const defs = [];
+  if (orais.length) {
+    defs.push({ t: 'EQUIPAS ORAIS', f: 'Mobilizador', l: linhas(orais, ['mobilizador']) });
+    defs.push({ t: 'EQUIPAS ORAIS', f: 'Vacinador',   l: linhas(orais, ['vacinador']) });
+    defs.push({ t: 'EQUIPAS ORAIS', f: 'Registador',  l: linhas(orais, ['registador']) });
+  }
+  if (injs.length) {
+    defs.push({ t: 'EQUIPAS INJECTÁVEIS', f: 'Vacinador Técnico', l: linhas(injs, ['vacinador_tecnico_1', 'vacinador_tecnico_2']) });
+    defs.push({ t: 'EQUIPAS INJECTÁVEIS', f: 'Registador',        l: linhas(injs, ['registador']) });
+  }
+  return defs.map(d => {
+    const trs = d.l.map((m, i) => `<tr><td class="tc">${i + 1}</td><td class="tc">${_escHTML(m.eq)}</td><td>${_escHTML(m.nome)}</td>` +
+      `<td class="tc">${_escHTML(d.f)}</td><td>${_escHTML(m.tel)}</td>${_TD_DIAS4R}</tr>`).join('');
+    return `<div class="pagina">${_cab4R()}
+      <div class="titulo-lista">LISTA DE PRESENÇA — ${d.t}</div>
+      <div class="campos-row">
+        <span>Nome da Coordenação: <strong>${_escHTML(coordenacao || '—')}</strong></span>
+        <span>Nome do Coordenador: <span class="campo-linha">${_escHTML(_toTitleCase(coordNome))}</span></span>
+        <span>Nome do Supervisor: <span class="campo-linha">${_escHTML(_toTitleCase(sup?.nome || ''))}</span></span>
+      </div>
+      <table><thead><tr><th class="col-num">Nº</th><th class="col-eq">EQUIPA</th><th>NOME COMPLETO</th>
+        <th class="col-func">FUNÇÃO</th><th class="col-tel">CONTACTO</th>${_diasTh4R()}</tr></thead>
+        <tbody>${trs}</tbody></table>
+      ${_rodape4R()}</div>`;
+  });
+}
+
+function toggleListaPresencaPanel4R() {
+  const panel = document.getElementById('lista-pres4r-panel');
+  const btn   = document.getElementById('btn-lista-pres4r-toggle');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (btn) { btn.style.borderColor = open ? '' : 'var(--accent2)'; btn.style.color = open ? '' : 'var(--accent2)'; }
+  if (!open) _popularSelectListaPresenca4R();
+}
+function _popularSelectListaPresenca4R() {
+  const sel = document.getElementById('sel-lista-pres4r-sup');
+  if (!sel) return;
+  const nEq = bi => Object.values(_equipasCache4R).filter(e => (e.supervisor_id || '').toUpperCase() === bi.toUpperCase()).length;
+  const sups = Object.values(_alocacoesCache4R).filter(a => a.status === 'supervisor' && a.bi && a.nome)
+    .sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || _cmp4R(a.nome, b.nome));
+  sel.innerHTML = '<option value="">— Seleccione o Supervisor —</option>' +
+    (sups.length ? '<option value="__TODOS__">★ Todos os supervisores (' + sups.filter(s => nEq(s.bi) > 0).length + ' com equipas)</option>' : '') +
+    sups.map(s => '<option value="' + escAttr(s.bi) + '">[' + escH(s.coordenacao || '—') + '] ' + escH(s.nome) + ' — ' + nEq(s.bi) + ' eq.</option>').join('');
+}
+function gerarListaPresenca4R() {
+  const v = (document.getElementById('sel-lista-pres4r-sup')?.value || '').trim();
+  if (!v) { showToast('Seleccione um supervisor primeiro.', 'warn'); return; }
+  const tm = _mapaTel4R();
+  let biList;
+  if (v === '__TODOS__') {
+    biList = Object.values(_alocacoesCache4R).filter(a => a.status === 'supervisor' && a.bi)
+      .sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || _cmp4R(a.nome, b.nome)).map(a => a.bi);
+  } else {
+    if (!_alocacoesCache4R[v.toUpperCase()]) { showToast('Supervisor não encontrado na 4ª Ronda.', 'error'); return; }
+    biList = [v];
+  }
+  const paginas = biList.flatMap(bi => _paginasSupervisor4R(bi, tm));
+  if (!paginas.length) { showToast(v === '__TODOS__' ? 'Nenhum supervisor tem equipas atribuídas.' : 'Este supervisor não tem equipas atribuídas.', 'warn'); return; }
+  const nome = v === '__TODOS__' ? 'Todos os supervisores' : (_alocacoesCache4R[v.toUpperCase()].nome || '');
+  _abrirJanela4R(_doc4R('Lista de Presença — ' + nome + ' — 4ª Ronda', paginas.join('\n')),
+                 'Lista aberta em nova aba (' + paginas.length + ' página(s)). Use Ctrl+P para imprimir.');
+}
+
+// Lista contínua (Supervisores / Coordenadores), agrupada por coordenação
+function _docListaGeral4R(membros, funcaoLabel, tituloLista) {
+  let atual = null, linhas = '';
+  membros.forEach((s, idx) => {
+    if (s.coordenacao !== atual) {
+      atual = s.coordenacao;
+      linhas += `<tr><td colspan="10" style="background:#d9d9d9;font-weight:bold;font-size:8pt;padding:3px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${_escHTML(atual)}</td></tr>`;
+    }
+    linhas += `<tr><td class="tc">${idx + 1}</td><td>${_escHTML(s.nome)}</td><td class="tc">${_escHTML(funcaoLabel)}</td><td>${_escHTML(s.telefone)}</td>${_TD_DIAS4R}</tr>`;
+  });
+  const corpo = `<div class="pagina">${_cab4R()}<div class="titulo-lista">${_escHTML(tituloLista)}</div>
+    <table><thead><tr><th class="col-num">Nº</th><th>NOME COMPLETO</th><th style="width:110px">FUNÇÃO</th>
+      <th class="col-tel">CONTACTO</th>${_diasTh4R()}</tr></thead><tbody>${linhas}</tbody></table>
+    ${_rodape4R()}</div>`;
+  return _doc4R(tituloLista + ' — 4ª Ronda', corpo);
+}
+function _listaPessoas4R(status) {
+  const tm = _mapaTel4R();
+  return Object.values(_alocacoesCache4R).filter(a => a.status === status && a.bi && a.nome)
+    .map(a => ({ nome: _toTitleCase(a.nome), coordenacao: a.coordenacao || '—', telefone: _tel4R(a.bi, tm, a.telefone) }))
+    .sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || _cmp4R(a.nome, b.nome));
+}
+function gerarListaSupervisoresImpressao4R() {
+  const l = _listaPessoas4R('supervisor');
+  if (!l.length) { showToast('Nenhum supervisor na 4ª Ronda. Atribua os supervisores primeiro.', 'warn'); return; }
+  _abrirJanela4R(_docListaGeral4R(l, 'Supervisor de Vacinação', 'LISTA DE PRESENÇA — SUPERVISORES DE VACINAÇÃO'),
+                 'Lista de ' + l.length + ' supervisores aberta em nova aba.');
+}
+function gerarListaCoordenadoresImpressao4R() {
+  const l = _listaPessoas4R('coord');
+  if (!l.length) { showToast('Nenhum Coordenador de Área na 4ª Ronda. Atribua os coordenadores primeiro.', 'warn'); return; }
+  _abrirJanela4R(_docListaGeral4R(l, 'Coordenador de Área', 'LISTA DE PRESENÇA — COORDENADORES DE ÁREA'),
+                 'Lista de ' + l.length + ' coordenadores aberta em nova aba.');
 }
 
 let _hier4rExpanded = new Set();
