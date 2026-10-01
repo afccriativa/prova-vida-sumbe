@@ -2312,8 +2312,107 @@ input, textarea, select {
     equipas <strong>Injectáveis</strong> (2 Vacinadores Técnicos, Registador) em separado. Distribuição manual,
     não igualitária entre coordenações — monte conforme a população-alvo de cada uma.
   </div>
-  <div id="hier4r-summary-bar" class="hier-summary"></div>
-  <div id="hier4r-grid" class="hier-grid"></div>
+
+  <!-- Sub-navegação (igual à da 3ª Ronda e anteriores) -->
+  <div class="equipas-subtab-bar">
+    <div class="equipas-subtab" data-subtab4r="rh-list" onclick="equipasSubtab4R('rh-list')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> RH Registados</div>
+    <div class="equipas-subtab active" data-subtab4r="hierarquia" onclick="equipasSubtab4R('hierarquia')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M2.5 6.5h5l1.5 2h8.5v8H2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2.5 6.5V4.8c0-.7.6-1.3 1.3-1.3H7l1.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>️ Hierarquia</div>
+    <div class="equipas-subtab" data-subtab4r="progresso" onclick="equipasSubtab4R('progresso')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><line x1="4.5" y1="17" x2="4.5" y2="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="4.5" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.5" y="11" width="2.4" height="6" fill="currentColor"/><rect x="10.3" y="7.5" width="2.4" height="9.5" fill="currentColor"/><rect x="14.1" y="4" width="2.4" height="13" fill="currentColor"/></svg> Progresso<span id="prog-badge" class="subtab-badge" style="display:none">0</span></div>
+    <div class="equipas-subtab" data-subtab4r="rh-novo" onclick="equipasSubtab4R('rh-novo')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Registar Novo RH</div>
+  </div>
+
+  <!-- Sub-painel: Hierarquia -->
+  <div id="equipas4r-sub-hierarquia" class="equipas4r-subpanel">
+    <div class="hier-toolbar">
+      <span class="hier-toolbar-lbl">Cards:</span>
+      <button class="btn-hier-action" onclick="hier4rExpandAll()" title="Expandir todas as coordenações">⊞ Expandir tudo</button>
+      <button class="btn-hier-action" onclick="hier4rCollapseAll()" title="Colapsar todas as coordenações">⊟ Colapsar tudo</button>
+    </div>
+    <div style="padding:10px 0 4px 0;display:flex;align-items:center;gap:8px">
+      <input id="hier4r-search-inp" type="text" placeholder="🔍  Pesquisar por nome, BI ou coordenação..."
+        oninput="hier4rSearchUpdate()"
+        style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:8px;
+               padding:9px 14px;color:var(--text);font-size:13px;outline:none"/>
+      <button onclick="document.getElementById('hier4r-search-inp').value='';hier4rSearchUpdate()"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;
+               padding:9px 12px;color:var(--text3);cursor:pointer;font-size:12px">✕ Limpar</button>
+    </div>
+    <div id="hier4r-search-results" style="display:none;padding:4px 0 8px"></div>
+    <div id="hier4r-summary-bar" class="hier-summary"></div>
+    <div id="hier4r-grid" class="hier-grid"></div>
+  </div>
+
+  <!-- Sub-painel: Progresso -->
+  <div id="equipas4r-sub-progresso" class="equipas4r-subpanel" style="display:none">
+    <div id="progresso4r-content">
+      <div style="text-align:center;padding:40px;color:var(--text3)">A carregar progresso...</div>
+    </div>
+  </div>
+
+  <!-- Sub-painel: RH Registados (novos RH da 4ª Ronda) -->
+  <div id="equipas4r-sub-rh-list" class="equipas4r-subpanel" style="display:none">
+    <div class="rh-list-header">
+      <input id="rh4r-list-search" class="search-input"
+             style="max-width:280px;font-size:13px;padding:8px 12px"
+             placeholder="Filtrar por nome, BI ou função..."
+             oninput="renderRhList4R()">
+      <span class="rh-list-count" id="rh4r-list-count">0 registados</span>
+    </div>
+    <div id="rh4r-list-content"></div>
+  </div>
+
+  <!-- Sub-painel: Registar Novo RH (página, como nas rondas anteriores) -->
+  <div id="equipas4r-sub-rh-novo" class="equipas4r-subpanel" style="display:none">
+    <div class="rh-form-card">
+      <h3 id="rh4-form-title">Registar Novo RH — 4ª Ronda</h3>
+      <div class="rh-form-grid">
+        <div class="rh-form-full">
+          <label class="rh-field-lbl">Nome Completo <span class="req">*</span></label>
+          <input id="rh4-f-nome" class="rh-field-inp" type="text" placeholder="Nome completo do profissional"
+                 autocomplete="off" autocapitalize="words">
+        </div>
+        <div>
+          <label class="rh-field-lbl">Bilhete de Identidade <span class="req">*</span></label>
+          <input id="rh4-f-bi" class="rh-field-inp" type="text" placeholder="Ex: 006185927KS046"
+                 autocomplete="off" autocapitalize="characters" inputmode="text" style="letter-spacing:1px"
+                 oninput="biInlineValidate4R(this)">
+          <div id="rh4-bi-hint" style="font-size:10px;margin-top:4px;min-height:14px;transition:color .15s"></div>
+        </div>
+        <div>
+          <label class="rh-field-lbl">Contacto / Telefone</label>
+          <input id="rh4-f-tel" class="rh-field-inp" type="tel" placeholder="9XXXXXXXX" inputmode="numeric">
+        </div>
+        <div>
+          <label class="rh-field-lbl">Função <span class="req">*</span></label>
+          <select id="rh4-f-funcao" class="rh-field-inp">
+            <option value="">— Seleccionar —</option>
+            <option>Coord area/ Comuna</option>
+            <option>Supervisor equipa</option>
+            <option>Mobilizador</option>
+            <option>Vacinador</option>
+            <option>Vacinador Técnico</option>
+            <option>Registador</option>
+          </select>
+        </div>
+        <div>
+          <label class="rh-field-lbl">Coordenação <span class="req">*</span></label>
+          <select id="rh4-f-coord" class="rh-field-inp"></select>
+        </div>
+        <div>
+          <label class="rh-field-lbl">Sexo</label>
+          <select id="rh4-f-sexo" class="rh-field-inp">
+            <option value="M">Masculino</option>
+            <option value="F">Feminino</option>
+          </select>
+        </div>
+      </div>
+      <div id="rh4-form-msg" class="rh-form-msg"></div>
+      <div class="rh-form-actions">
+        <button class="btn-rh-cancel" onclick="rh4FormReset()">Limpar</button>
+        <button class="btn-rh-save" id="btn-rh4-save" onclick="saveRhNovo4R()">Guardar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 4ª RONDA — Modal de Atribuição (DOM próprio, isolado do da 3ª Ronda) -->
@@ -2330,35 +2429,8 @@ input, textarea, select {
     </div>
     <div class="assign-list" id="assign-list-content-4r"></div>
     <div class="assign-box-ftr">
-      <button class="btn-assign-cancel" style="border-color:var(--accent2);color:var(--accent2)" onclick="abrirRhNovo4R()">+ Registar pessoa nova</button>
+      <button class="btn-assign-cancel" style="border-color:var(--accent2);color:var(--accent2)" onclick="irParaRegistarNovoRH4R()">+ Registar pessoa nova</button>
       <button class="btn-assign-cancel" onclick="closeAssignModal4R()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- LOTE B — Modal: Registar pessoa nova (4ª Ronda) -->
-<div id="rh-novo-modal-4r" class="assign-modal" style="display:none">
-  <div class="assign-box">
-    <div class="assign-box-hdr">
-      <h3>Registar pessoa nova — 4ª Ronda</h3>
-      <p id="rh-n4-sub"></p>
-    </div>
-    <div style="padding:6px 18px 14px;display:grid;gap:10px;overflow-y:auto">
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Nome completo *</label>
-        <input id="rh-n4-nome" type="text" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box" autocomplete="off"></div>
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Bilhete de Identidade *</label>
-        <input id="rh-n4-bi" type="text" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;text-transform:uppercase" placeholder="ex: 006185927KS046" autocomplete="off"></div>
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Telefone</label>
-        <input id="rh-n4-tel" type="tel" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box" autocomplete="off"></div>
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Coordenação *</label>
-        <select id="rh-n4-coord" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"></select></div>
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Sexo</label>
-        <select id="rh-n4-sexo" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
-      <div id="rh-n4-msg" style="display:none;color:var(--error);font-size:12px;font-weight:600"></div>
-    </div>
-    <div class="assign-box-ftr">
-      <button class="btn-assign-cancel" onclick="fecharRhNovo4R(true)">Voltar</button>
-      <button class="btn-assign-cancel" id="btn-rh-n4-save" style="border-color:var(--accent2);color:var(--accent2)" onclick="guardarRhNovo4R()">Guardar e atribuir</button>
     </div>
   </div>
 </div>
@@ -8282,7 +8354,6 @@ function updateAlocacoesCache4R(docs) {
 // ════════════════════════════════════════════════════════════════════════
 let _avaliacoesCache4R = {}; // { [BI_UPPER]: doc }
 let _rhNovos4RCache    = {}; // { [BI_UPPER]: doc }
-let _rhNovo4RCtx       = null;
 
 async function fbGetAvaliacoes4R() {
   if (!fbReady()) return [];
@@ -8342,103 +8413,6 @@ async function recarregarAvalENovos4R() {
     updateAvaliacoesCache4R(avDocs);
     updateRhNovos4RCache(novDocs);
   } catch(e) { console.warn('[4R] erro ao carregar avaliações/novos RH:', e); }
-}
-
-// ── Registar pessoa nova (4ª Ronda) — aberto a partir do picker ──────────────
-const _MEMBER_LABELS_4R = {
-  mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador',
-  vacinador_tecnico_1:'Vacinador Técnico', vacinador_tecnico_2:'Vacinador Técnico',
-};
-function _rhN4Msg(txt) {
-  const el = document.getElementById('rh-n4-msg');
-  if (!el) return;
-  el.textContent = txt || '';
-  el.style.display = txt ? 'block' : 'none';
-}
-function abrirRhNovo4R() {
-  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  if (!_assignContext4R) return;
-  _rhNovo4RCtx = { ..._assignContext4R };
-  const q = (document.getElementById('assign-search-inp-4r').value || '').trim();
-  const pareceBI = /\d/.test(q) && !/\s/.test(q);
-  document.getElementById('rh-n4-nome').value = pareceBI ? '' : q;
-  document.getElementById('rh-n4-bi').value   = pareceBI ? q.toUpperCase() : '';
-  document.getElementById('rh-n4-tel').value  = '';
-  document.getElementById('rh-n4-sexo').value = 'M';
-  const sel = document.getElementById('rh-n4-coord');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
-    COORDENACOES_2R.map(c => '<option value="' + escAttr(c) + '">' + escH(c) + '</option>').join('');
-  sel.value = _rhNovo4RCtx.coordenacao || '';
-  const papel = _rhNovo4RCtx.role === 'coord' ? 'Coord. de área'
-              : _rhNovo4RCtx.role === 'supervisor' ? 'Supervisor de Vacinação'
-              : (_MEMBER_LABELS_4R[_rhNovo4RCtx.memberRole] || 'Membro de equipa');
-  document.getElementById('rh-n4-sub').textContent = 'Será atribuído(a) a seguir como: ' + papel + ' — ' + (_rhNovo4RCtx.coordenacao || '');
-  _rhN4Msg('');
-  document.getElementById('btn-rh-n4-save').disabled = false;
-  document.getElementById('assign-modal-4r').style.display = 'none';
-  document.getElementById('rh-novo-modal-4r').style.display = 'flex';
-  setTimeout(() => document.getElementById(pareceBI ? 'rh-n4-nome' : 'rh-n4-bi').focus(), 100);
-}
-function fecharRhNovo4R(voltar) {
-  document.getElementById('rh-novo-modal-4r').style.display = 'none';
-  if (voltar && _assignContext4R) document.getElementById('assign-modal-4r').style.display = 'flex';
-}
-async function guardarRhNovo4R() {
-  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  if (!_rhNovo4RCtx) return;
-  const g = id => (document.getElementById(id).value || '').trim();
-  const nome  = g('rh-n4-nome').replace(/\s+/g, ' ');
-  const bi    = g('rh-n4-bi').toUpperCase().replace(/\s/g, '');
-  const tel   = g('rh-n4-tel');
-  const sexo  = g('rh-n4-sexo') || 'M';
-  const coord = g('rh-n4-coord');
-  const btn   = document.getElementById('btn-rh-n4-save');
-
-  if (nome.length < 5 || !/\s/.test(nome)) { _rhN4Msg('Indique o nome completo.'); return; }
-  const biVal = validarFormatoBI(bi);
-  if (!biVal.ok) { _rhN4Msg(biVal.msg); return; }
-  if (!coord) { _rhN4Msg('Coordenação obrigatória.'); return; }
-
-  // Duplicados: RH_DATA + 2ª Ronda + novos RH 3ª + novos RH 4ª (cache local) e Firestore (multi-dispositivo)
-  const existente = getUniversalSearchPool4R(true).find(r => (r.bi || '').toUpperCase() === bi);
-  if (existente) {
-    _rhN4Msg('O BI ' + bi + ' já existe no sistema (' + existente.nome + ' · ' + existente._fonteLabel +
-             '). Volte à pesquisa e procure-o pelo BI.');
-    return;
-  }
-  btn.disabled = true;
-  if (await fbCheckBiExists4R(bi)) {
-    await recarregarAvalENovos4R();
-    btn.disabled = false;
-    _rhN4Msg('Este BI acabou de ser registado por outro operador. Volte à pesquisa e procure-o pelo BI.');
-    return;
-  }
-
-  const { role, memberRole } = _rhNovo4RCtx;
-  const funcao = role === 'coord' ? 'Coord area/ Comuna'
-               : role === 'supervisor' ? 'Supervisor equipa'
-               : (_MEMBER_LABELS_4R[memberRole] || 'Membro de equipa');
-  const now = new Date();
-  const doc = {
-    bi, nome, funcao, coordenacao: coord, telefone: tel, sexo,
-    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
-    registadoPor: APP_SESSION.bi || '',
-    registadoEm:  window._FB ? window._FB.serverTimestamp() : null,
-    dataRegisto:  now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-  };
-  const result = await fbSaveRhNovo4R(doc);
-  btn.disabled = false;
-  if (!result.success) { _rhN4Msg('Erro ao guardar: ' + result.error); return; }
-
-  _rhNovos4RCache[bi] = doc;
-  // Atribuir logo ao lugar de onde partiu o pedido — mesmo caminho do picker (mesmas validações)
-  _assignContext4R = { ..._rhNovo4RCtx };
-  _assignPoolIndex4R[bi] = {
-    bi, nome, funcao, coordenacao: coord, telefone: tel, sexo,
-    _fonte: 'rh_novo', _fonteLabel: 'Novo RH 4ª', _bloqueado: false,
-  };
-  fecharRhNovo4R(false);
-  await selectAssignItem4R(bi);
 }
 
 // Pool universal de pesquisa — mesma base histórica da 3ª Ronda (RH_DATA +
@@ -8836,6 +8810,407 @@ async function selectAssignItem4R(bi) {
 }
 
 // ── Renderização: sumário, cards de coordenação, supervisores, equipas ──────
+// ════════════════════════════════════════════════════════════════════════
+// PAINEL "COMPOR RH 4ª RONDA" — estrutura igual à da 3ª Ronda
+// Sub-abas: RH Registados · Hierarquia · Progresso · Registar Novo RH
+// ════════════════════════════════════════════════════════════════════════
+// Metas globais da 4ª Ronda (ofício / handoff) — editar aqui se mudarem.
+const META_4R = { coords: 7, sups: 19, eqOral: 74, eqInj: 74, pessoasOral: 222, pessoasInj: 222, postos: 19 };
+const ROLES_ORAL_4R = ['mobilizador', 'vacinador', 'registador'];
+const ROLES_INJ_4R  = ['vacinador_tecnico_1', 'vacinador_tecnico_2', 'registador'];
+let _sub4R = 'hierarquia';
+
+async function fbDeleteRhNovo4R(bi) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('rh_novos_4r/' + bi.toUpperCase()));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+function equipasSubtab4R(name) {
+  _sub4R = name;
+  const root = document.getElementById('panel-equipas4r');
+  if (!root) return;
+  root.querySelectorAll('.equipas-subtab').forEach(t => t.classList.toggle('active', t.dataset.subtab4r === name));
+  root.querySelectorAll('.equipas4r-subpanel').forEach(p => p.style.display = 'none');
+  const pn = document.getElementById('equipas4r-sub-' + name);
+  if (pn) pn.style.display = 'block';
+  if (name === 'rh-novo') {
+    rh4PrepararFormulario();
+    setTimeout(() => document.getElementById('rh4-f-nome')?.focus(), 100);
+  } else {
+    loadHierarquia4R(); // recarrega as caches e redesenha todas as sub-abas
+  }
+}
+
+// Conjunto de BIs já alocados na 4ª Ronda (coord, supervisor, membros de equipa)
+function getBisAlocados4R() {
+  const set = new Set();
+  Object.values(_equipasCache4R).forEach(eq => {
+    [...ROLES_ORAL_4R, ...ROLES_INJ_4R].forEach(r => { if (eq[r]?.bi) set.add(eq[r].bi.toUpperCase()); });
+  });
+  Object.values(_alocacoesCache4R).forEach(a => {
+    if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) set.add(a.bi.toUpperCase());
+  });
+  return set;
+}
+// Registados na 4ª Ronda (rh_novos_4r) ainda sem lugar
+function getDisponiveis4R() {
+  const alocados = getBisAlocados4R();
+  return Object.values(_rhNovos4RCache).filter(r => r.bi && !alocados.has(r.bi.toUpperCase()));
+}
+// Onde está uma pessoa na 4ª Ronda (ou null)
+function getLugar4R(bi) {
+  const biU = (bi || '').toUpperCase();
+  const a = _alocacoesCache4R[biU];
+  if (a && a.status === 'coord')      return { tipo: 'coord', txt: 'Coord. de área · ' + (a.coordenacao || '—') };
+  if (a && a.status === 'supervisor') return { tipo: 'supervisor', txt: 'Supervisor · ' + (a.coordenacao || '—') };
+  for (const eq of Object.values(_equipasCache4R)) {
+    for (const role of [...ROLES_ORAL_4R, ...ROLES_INJ_4R]) {
+      if ((eq[role]?.bi || '').toUpperCase() === biU) {
+        const sup = _alocacoesCache4R[(eq.supervisor_id || '').toUpperCase()];
+        return { tipo: 'equipa',
+          txt: (eq.tipo_equipa === 'INJECTAVEL' ? 'Eq. Injectável ' : 'Eq. Oral ') + eq.equipa_num + ' · ' + (eq.coordenacao || '—') +
+               (sup ? ' · Sup ' + sup.nome.split(' ').slice(0, 2).join(' ') : '') };
+      }
+    }
+  }
+  return null;
+}
+
+// ── Cards: expandir/colapsar tudo ────────────────────────────────────────────
+function hier4rExpandAll()   { COORDENACOES_2R.forEach(c => _hier4rExpanded.add(c)); renderHierarquia4R(); }
+function hier4rCollapseAll() { _hier4rExpanded.clear(); renderHierarquia4R(); }
+
+// ── Pesquisa na hierarquia 4ª Ronda ──────────────────────────────────────────
+function hier4rSearchUpdate() {
+  const q      = (document.getElementById('hier4r-search-inp')?.value || '').toLowerCase().trim();
+  const resEl  = document.getElementById('hier4r-search-results');
+  const gridEl = document.getElementById('hier4r-grid');
+  const sumEl  = document.getElementById('hier4r-summary-bar');
+  if (!resEl || !gridEl) return;
+  if (!q) {
+    resEl.style.display = 'none'; resEl.innerHTML = '';
+    gridEl.style.display = ''; if (sumEl) sumEl.style.display = '';
+    return;
+  }
+  gridEl.style.display = 'none'; if (sumEl) sumEl.style.display = 'none';
+  resEl.style.display = 'block';
+
+  const match = (...p) => p.join(' ').toLowerCase().includes(q);
+  const results = [], pool = [];
+  const FL = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador',
+               vacinador_tecnico_1:'Vacinador Técnico', vacinador_tecnico_2:'Vacinador Técnico' };
+
+  Object.values(_alocacoesCache4R).forEach(a => {
+    if ((a.status !== 'coord' && a.status !== 'supervisor') || !match(a.nome, a.bi, a.coordenacao)) return;
+    results.push({ nome: a.nome, bi: a.bi, funcao: a.status === 'coord' ? 'Coord área/Comuna' : 'Supervisor de Vacinação',
+                   cor: a.status === 'coord' ? 'var(--accent2)' : 'var(--blue)', onde: a.coordenacao || '—' });
+  });
+  Object.values(_equipasCache4R).forEach(eq => {
+    const roles = eq.tipo_equipa === 'INJECTAVEL' ? ROLES_INJ_4R : ROLES_ORAL_4R;
+    roles.forEach(role => {
+      const m = eq[role];
+      if (!m?.bi || !match(m.nome, m.bi, eq.coordenacao)) return;
+      const sup = _alocacoesCache4R[(eq.supervisor_id || '').toUpperCase()];
+      results.push({ nome: m.nome, bi: m.bi, funcao: FL[role], cor: 'var(--green)',
+        onde: (eq.tipo_equipa === 'INJECTAVEL' ? 'Eq. Injectável ' : 'Eq. Oral ') + eq.equipa_num + ' · ' + (eq.coordenacao || '—') +
+              (sup ? ' · Sup ' + sup.nome.split(' ').slice(0, 2).join(' ') : '') });
+    });
+  });
+  getDisponiveis4R().forEach(r => {
+    if (!match(r.nome, r.bi, r.funcao, r.coordenacao)) return;
+    pool.push({ nome: r.nome, bi: r.bi, funcao: r.funcao, cor: 'var(--text2)', onde: r.coordenacao || '—' });
+  });
+
+  const total = results.length + pool.length;
+  if (!total) {
+    resEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">Nenhum resultado para "<b>' + escH(q) + '</b>"</div>';
+    return;
+  }
+  const card = (r, isPool) =>
+    '<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px">' +
+      '<div style="font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + escH(r.nome) +
+        (isPool ? '<span style="background:rgba(245,200,66,.12);color:var(--yellow);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;border:1px solid rgba(245,200,66,.2)">DISPONÍVEL</span>' : '') +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px"><span style="background:var(--card);border-radius:4px;padding:1px 6px;margin-right:6px;color:' + r.cor + ';font-weight:600">' + escH(r.funcao) + '</span>' + escH(r.onde) + '</div>' +
+      '<div style="font-size:10px;color:var(--text3);margin-top:1px">BI: ' + escH(r.bi) + '</div>' +
+    '</div>';
+  resEl.innerHTML =
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;padding:0 2px">' + total + ' resultado(s) para "<b>' + escH(q) + '</b>"' +
+      (pool.length ? ' · <span style="color:var(--yellow)">' + pool.length + ' disponível(eis)</span>' : '') + '</div>' +
+    results.map(r => card(r, false)).join('') +
+    (pool.length && results.length ? '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin:10px 2px 6px;padding-top:8px;border-top:1px solid var(--border)">Disponíveis (registados, sem lugar)</div>' : '') +
+    pool.map(r => card(r, true)).join('');
+}
+
+// ── Progresso ────────────────────────────────────────────────────────────────
+function renderProgresso4R() {
+  const el = document.getElementById('progresso4r-content');
+  if (!el) return;
+  const cnt = (eq, roles) => roles.reduce((n, r) => n + (eq[r]?.bi ? 1 : 0), 0);
+  const linhas = COORDENACOES_2R.map(c => {
+    const eqs   = Object.values(_equipasCache4R).filter(e => e.coordenacao === c);
+    const oral  = eqs.filter(e => e.tipo_equipa === 'ORAL');
+    const inj   = eqs.filter(e => e.tipo_equipa === 'INJECTAVEL');
+    return {
+      c,
+      coord:  getCoordsAreaDa4R(c) ? 1 : 0,
+      sups:   getSupsDa4R(c).length,
+      eqOral: oral.length, pOral: oral.reduce((n, e) => n + cnt(e, ROLES_ORAL_4R), 0),
+      eqInj:  inj.length,  pInj:  inj.reduce((n, e) => n + cnt(e, ROLES_INJ_4R), 0),
+      comp:   eqs.filter(e => e.status === 'completa').length, totEq: eqs.length,
+    };
+  });
+  const T = linhas.reduce((t, l) => {
+    ['coord','sups','eqOral','pOral','eqInj','pInj','comp','totEq'].forEach(k => t[k] += l[k]); return t;
+  }, { coord:0, sups:0, eqOral:0, pOral:0, eqInj:0, pInj:0, comp:0, totEq:0 });
+
+  const card = (n, meta, lbl) => hierSumCard(n + '/' + meta, lbl, n === meta ? 'var(--green)' : (n > meta ? 'var(--error)' : 'var(--accent2)'));
+  const cards =
+    '<div class="hier-summary" style="margin-bottom:14px">' +
+      card(T.coord, META_4R.coords, 'Coordenadores') +
+      card(T.sups, META_4R.sups, 'Supervisores') +
+      card(T.eqOral, META_4R.eqOral, 'Equipas Orais') +
+      card(T.pOral, META_4R.pessoasOral, 'Pessoas Orais') +
+      card(T.eqInj, META_4R.eqInj, 'Equipas Injectáveis') +
+      card(T.pInj, META_4R.pessoasInj, 'Pessoas Injectáveis') +
+    '</div>';
+
+  const td = (v, b) => '<td style="text-align:center' + (b ? ';font-weight:800' : '') + '">' + v + '</td>';
+  const rows = linhas.map(l =>
+    '<tr><td style="font-weight:700;color:var(--text)">' + escH(l.c) + '</td>' +
+    td(l.coord ? '✓' : '—') + td(l.sups) + td(l.eqOral) + td(l.pOral) + td(l.eqInj) + td(l.pInj) +
+    td(l.comp + '/' + l.totEq) + '</tr>').join('');
+  const tot = '<tr style="border-top:2px solid var(--border)"><td style="font-weight:800">TOTAL</td>' +
+    td(T.coord + '/' + META_4R.coords, 1) + td(T.sups + '/' + META_4R.sups, 1) +
+    td(T.eqOral + '/' + META_4R.eqOral, 1) + td(T.pOral + '/' + META_4R.pessoasOral, 1) +
+    td(T.eqInj + '/' + META_4R.eqInj, 1) + td(T.pInj + '/' + META_4R.pessoasInj, 1) +
+    td(T.comp + '/' + T.totEq, 1) + '</tr>';
+
+  el.innerHTML = cards +
+    '<div style="overflow-x:auto"><table class="history-table"><thead><tr>' +
+      '<th>Coordenação</th><th style="text-align:center">Coord</th><th style="text-align:center">Supervisores</th>' +
+      '<th style="text-align:center">Eq. Orais</th><th style="text-align:center">Pessoas Orais</th>' +
+      '<th style="text-align:center">Eq. Injectáveis</th><th style="text-align:center">Pessoas Inj.</th>' +
+      '<th style="text-align:center">Equipas Completas</th></tr></thead><tbody>' + rows + tot + '</tbody></table></div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-top:10px">Metas globais: ' + META_4R.coords + ' coordenadores · ' + META_4R.sups +
+    ' supervisores · ' + META_4R.eqOral + ' equipas orais (' + META_4R.pessoasOral + ' pessoas) · ' + META_4R.eqInj + ' equipas injectáveis (' +
+    META_4R.pessoasInj + ' pessoas). A distribuição por coordenação é manual e não-igualitária. ' +
+    'Os ' + META_4R.postos + ' mobilizadores de posto fixo entram quando o posto estiver modelado.</div>';
+}
+
+// ── RH Registados (novos RH da 4ª Ronda) ─────────────────────────────────────
+function renderRhList4R() {
+  const el = document.getElementById('rh4r-list-content');
+  if (!el) return;
+  const q = (document.getElementById('rh4r-list-search')?.value || '').toLowerCase();
+  const todos = Object.values(_rhNovos4RCache);
+  const cnt = document.getElementById('rh4r-list-count');
+  if (cnt) cnt.textContent = todos.length + ' registado' + (todos.length !== 1 ? 's' : '');
+  if (!todos.length) {
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:var(--text3)">' +
+      '<div class="empty-state"><div style="font-weight:700;margin-bottom:6px">Nenhum RH novo registado na 4ª Ronda</div>' +
+      '<div style="font-size:12px">Use a sub-aba "Registar Novo RH" para pessoas que nunca participaram numa ronda anterior.</div></div></div>';
+    return;
+  }
+  const filtrados = q ? todos.filter(r => ((r.nome||'') + ' ' + (r.bi||'') + ' ' + (r.funcao||'') + ' ' + (r.coordenacao||'')).toLowerCase().includes(q)) : todos;
+  if (!filtrados.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Nenhum resultado para "' + escH(q) + '"</div>';
+    return;
+  }
+  const linhas = filtrados.map((r, i) => {
+    const lugar = getLugar4R(r.bi);
+    const estado = lugar
+      ? '<span style="font-size:9px;font-weight:700;background:rgba(96,165,250,.12);color:var(--blue);padding:2px 7px;border-radius:10px" title="' + escAttr(lugar.txt) + '">' + escH(lugar.txt.length > 34 ? lugar.txt.slice(0, 32) + '…' : lugar.txt) + '</span>'
+      : '<span style="font-size:9px;font-weight:700;background:rgba(46,204,113,.15);color:var(--green);padding:2px 7px;border-radius:10px">Disponível</span>';
+    const bloq = !!lugar;
+    return '<tr>' +
+      '<td style="color:var(--text3);font-size:11px">' + (i + 1) + '</td>' +
+      '<td><span class="rh-novo-badge">NOVO</span></td>' +
+      '<td style="font-weight:700;color:var(--text)">' + escH(r.nome) + '</td>' +
+      '<td style="font-size:11px"><span class="funcao-badge ' + funcaoBadgeCls(r.funcao) + '">' + escH(r.funcao) + '</span></td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + escH(r.coordenacao || '—') + '</td>' +
+      '<td><code style="font-size:11px">' + escH(r.bi) + '</code></td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + escH(r.telefone || '—') + '</td>' +
+      '<td>' + estado + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn-row-action" title="' + (bloq ? 'Remova-a primeiro do lugar actual para editar' : 'Editar') + '"' + (bloq ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') +
+          ' data-bi="' + escAttr(r.bi) + '" onclick="editRhNovo4R(this.dataset.bi)">✎</button> ' +
+        '<button class="btn-del-val" title="' + (bloq ? 'Remova-a primeiro do lugar actual para eliminar' : 'Eliminar') + '"' + (bloq ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') +
+          ' data-bi="' + escAttr(r.bi) + '" onclick="deleteRhNovo4R(this.dataset.bi)">🗑</button>' +
+      '</td></tr>';
+  }).join('');
+  el.innerHTML = '<div style="overflow-x:auto"><table class="history-table"><thead><tr>' +
+    '<th>#</th><th>Tipo</th><th>Nome Completo</th><th>Função</th><th>Coordenação</th><th>BI</th><th>Contacto</th>' +
+    '<th>Estado 4ª Ronda</th><th>Acções</th></tr></thead><tbody>' + linhas + '</tbody></table></div>';
+}
+
+// ── Registar Novo RH (página) ────────────────────────────────────────────────
+let _editingRh4RBI = null;
+
+function rh4FormMsg(tipo, texto) {
+  const el = document.getElementById('rh4-form-msg');
+  if (!el) return;
+  if (!tipo || !texto) { el.className = 'rh-form-msg'; el.textContent = ''; return; }
+  el.className = 'rh-form-msg on rh-msg-' + tipo;
+  el.textContent = texto;
+}
+function rh4PrepararFormulario() {
+  const sel = document.getElementById('rh4-f-coord');
+  if (sel && sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+      COORDENACOES_2R.map(c => '<option value="' + escAttr(c) + '">' + escH(c) + '</option>').join('');
+  }
+}
+function rh4FormReset() {
+  _editingRh4RBI = null;
+  rh4PrepararFormulario();
+  ['rh4-f-nome', 'rh4-f-bi', 'rh4-f-tel'].forEach(id => { const e = document.getElementById(id); if (e) { e.value = ''; e.classList.remove('inp-err', 'inp-ok'); } });
+  const bi = document.getElementById('rh4-f-bi'); if (bi) { bi.readOnly = false; bi.style.opacity = ''; }
+  ['rh4-f-funcao', 'rh4-f-coord'].forEach(id => { const e = document.getElementById(id); if (e) { e.value = ''; e.classList.remove('inp-err'); } });
+  const sx = document.getElementById('rh4-f-sexo'); if (sx) sx.value = 'M';
+  const h = document.getElementById('rh4-bi-hint'); if (h) h.textContent = '';
+  const t = document.getElementById('rh4-form-title'); if (t) t.textContent = 'Registar Novo RH — 4ª Ronda';
+  const b = document.getElementById('btn-rh4-save'); if (b) { b.disabled = false; b.textContent = 'Guardar'; }
+  rh4FormMsg('', '');
+}
+function biJaExiste4R(bi) {
+  return getUniversalSearchPool4R(true).find(r => (r.bi || '').toUpperCase() === bi.toUpperCase()) || null;
+}
+function biInlineValidate4R(input) {
+  const bi = (input.value || '').toUpperCase().replace(/\s/g, '');
+  const hint = document.getElementById('rh4-bi-hint');
+  if (!hint) return;
+  input.value = bi;
+  if (!bi) { hint.textContent = ''; input.classList.remove('inp-err', 'inp-ok'); return; }
+  const val = validarFormatoBI(bi);
+  if (!val.ok) { hint.textContent = val.msg; hint.style.color = 'var(--red, #f05252)'; input.classList.add('inp-err'); input.classList.remove('inp-ok'); return; }
+  const dup = !_editingRh4RBI && biJaExiste4R(bi);
+  if (dup) {
+    hint.textContent = 'Este BI já existe: ' + dup.nome + ' (' + dup._fonteLabel + '). Pesquise-o no picker em vez de registar de novo.';
+    hint.style.color = 'var(--accent2, #f97316)'; input.classList.add('inp-err'); input.classList.remove('inp-ok');
+  } else {
+    hint.textContent = 'BI válido'; hint.style.color = 'var(--green, #34d399)'; input.classList.remove('inp-err'); input.classList.add('inp-ok');
+  }
+}
+
+async function saveRhNovo4R() {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const g = id => (document.getElementById(id).value || '').trim();
+  const nome = g('rh4-f-nome').replace(/\s+/g, ' ');
+  const bi = g('rh4-f-bi').toUpperCase().replace(/\s/g, '');
+  const funcao = g('rh4-f-funcao'), coord = g('rh4-f-coord'), tel = g('rh4-f-tel');
+  const sexo = g('rh4-f-sexo') || 'M';
+  const btn = document.getElementById('btn-rh4-save');
+  const modoEdicao = !!_editingRh4RBI;
+  ['rh4-f-nome', 'rh4-f-bi', 'rh4-f-funcao', 'rh4-f-coord'].forEach(id => document.getElementById(id)?.classList.remove('inp-err'));
+  rh4FormMsg('', '');
+
+  const erros = [];
+  if (nome.length < 5 || !/\s/.test(nome)) { erros.push('Indique o nome completo.'); document.getElementById('rh4-f-nome').classList.add('inp-err'); }
+  if (!funcao) { erros.push('Função obrigatória.'); document.getElementById('rh4-f-funcao').classList.add('inp-err'); }
+  if (!coord)  { erros.push('Coordenação obrigatória.'); document.getElementById('rh4-f-coord').classList.add('inp-err'); }
+  const biVal = validarFormatoBI(bi);
+  if (!biVal.ok) { erros.push(biVal.msg); document.getElementById('rh4-f-bi').classList.add('inp-err'); }
+  if (erros.length) { rh4FormMsg('err', erros.join(' ')); return; }
+
+  if (modoEdicao && getLugar4R(_editingRh4RBI)) {
+    rh4FormMsg('err', 'Esta pessoa já tem lugar na 4ª Ronda. Remova-a primeiro para a poder editar.');
+    return;
+  }
+  if (!modoEdicao) {
+    const dup = biJaExiste4R(bi);
+    if (dup) {
+      rh4FormMsg('err', 'O BI ' + bi + ' já existe no sistema (' + dup.nome + ' · ' + dup._fonteLabel + '). Procure-o pelo BI no picker em vez de o registar de novo.');
+      document.getElementById('rh4-f-bi').classList.add('inp-err');
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'A verificar...';
+    const existe = await fbCheckBiExists4R(bi);
+    if (existe) {
+      await recarregarAvalENovos4R();
+      btn.disabled = false; btn.textContent = 'Guardar';
+      rh4FormMsg('err', 'Este BI acabou de ser registado por outro operador. Actualize a lista em "RH Registados".');
+      return;
+    }
+  }
+  btn.disabled = true; btn.textContent = modoEdicao ? 'A actualizar...' : 'A guardar...';
+  const now = new Date();
+  const stamp = now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  const existing = modoEdicao ? (_rhNovos4RCache[bi] || {}) : {};
+  const doc = {
+    ...existing,
+    bi, nome, funcao, coordenacao: coord, telefone: tel, sexo,
+    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+    registadoPor: existing.registadoPor || APP_SESSION.bi || '',
+    registadoEm:  existing.registadoEm  || (window._FB ? window._FB.serverTimestamp() : null),
+    dataRegisto:  existing.dataRegisto  || stamp,
+    dataActualizacao: stamp,
+  };
+  const result = await fbSaveRhNovo4R(doc);
+  btn.disabled = false; btn.textContent = 'Guardar';
+  if (!result.success) { rh4FormMsg('err', 'Erro ao guardar: ' + result.error); return; }
+
+  _rhNovos4RCache[bi] = doc;
+  registarAuditoria(modoEdicao ? 'rh_novo_4r_editado' : 'rh_novo_4r_registado', { ronda: RONDA_ID_4R, bi, nome, funcao, coordenacao: coord });
+  rh4FormReset();
+  if (modoEdicao) {
+    equipasSubtab4R('rh-list');
+    showToast('Registo de ' + nome.split(' ')[0] + ' actualizado.', 'success');
+  } else {
+    showToast(nome.split(' ')[0] + ' registado(a) na 4ª Ronda. Já aparece na pesquisa de atribuição.', 'success');
+    document.getElementById('rh4-f-nome')?.focus();
+  }
+  renderRhList4R(); renderHierarquia4R();
+}
+
+function editRhNovo4R(bi) {
+  const r = _rhNovos4RCache[(bi || '').toUpperCase()];
+  if (!r) return;
+  if (getLugar4R(r.bi)) { showToast('Remova primeiro esta pessoa do lugar actual para a editar.', 'warn'); return; }
+  equipasSubtab4R('rh-novo');
+  _editingRh4RBI = r.bi.toUpperCase();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+  set('rh4-f-nome', r.nome); set('rh4-f-bi', r.bi); set('rh4-f-tel', r.telefone);
+  set('rh4-f-funcao', r.funcao); set('rh4-f-coord', r.coordenacao); set('rh4-f-sexo', r.sexo || 'M');
+  const b = document.getElementById('rh4-f-bi'); if (b) { b.readOnly = true; b.style.opacity = '0.6'; }
+  const t = document.getElementById('rh4-form-title'); if (t) t.textContent = 'Editar RH — 4ª Ronda';
+  const sv = document.getElementById('btn-rh4-save'); if (sv) sv.textContent = 'Actualizar';
+}
+
+async function deleteRhNovo4R(bi) {
+  const r = _rhNovos4RCache[(bi || '').toUpperCase()];
+  if (!r) return;
+  if (getLugar4R(r.bi)) { showToast('Remova primeiro esta pessoa do lugar actual.', 'warn'); return; }
+  if (!guardEliminacao('o registo de ' + r.nome.split(' ')[0])) return;
+  const ok = await showConfirmModal({
+    title: 'Eliminar registo', body: 'Eliminar o registo de ' + r.nome + ' (BI ' + r.bi + ') da 4ª Ronda? Esta acção não pode ser desfeita.',
+    confirmLabel: 'Eliminar', danger: true,
+  });
+  if (!ok) return;
+  const res = await fbDeleteRhNovo4R(r.bi);
+  if (!res.success) { showToast('Erro ao eliminar: ' + res.error, 'error'); return; }
+  delete _rhNovos4RCache[r.bi.toUpperCase()];
+  registarAuditoria('rh_novo_4r_eliminado', { ronda: RONDA_ID_4R, bi: r.bi, nome: r.nome });
+  renderRhList4R(); renderHierarquia4R();
+  showToast('Registo eliminado.', 'success');
+}
+
+// Atalho do picker: fecha-o e abre a página Registar Novo RH (com o que foi escrito na pesquisa)
+function irParaRegistarNovoRH4R() {
+  const q = (document.getElementById('assign-search-inp-4r')?.value || '').trim();
+  closeAssignModal4R();
+  equipasSubtab4R('rh-novo');
+  rh4FormReset();
+  const pareceBI = /\d/.test(q) && !/\s/.test(q);
+  if (q) {
+    if (pareceBI) { const b = document.getElementById('rh4-f-bi'); b.value = q.toUpperCase(); biInlineValidate4R(b); }
+    else document.getElementById('rh4-f-nome').value = q;
+  }
+}
+
 let _hier4rExpanded = new Set();
 
 function renderHierarquia4R() {
@@ -8851,11 +9226,16 @@ function renderHierarquia4R() {
     hierSumCard(coordsOk + '/' + totalCoords, 'Coords Definidos', coordsOk === totalCoords ? 'var(--green)' : 'var(--accent2)') +
     hierSumCard(totalSups, 'Supervisores', 'var(--blue)') +
     hierSumCard(equipasComp + '/' + totalEquipas, 'Equipas Completas', equipasComp === totalEquipas && totalEquipas > 0 ? 'var(--green)' : 'var(--accent2)') +
+    hierSumCard(getDisponiveis4R().length, 'Disponíveis', 'var(--text2)') +
     hierSumCard(Object.keys(_alocacoesCache4R).length, 'Total Alocados', 'var(--text3)');
 
   const grid = document.getElementById('hier4r-grid');
   if (!grid) return;
   grid.innerHTML = COORDENACOES_2R.map(coord => renderCoordCard4R(coord)).join('');
+  // Mantém as restantes sub-abas e a pesquisa em sincronia com cada alteração
+  renderProgresso4R();
+  renderRhList4R();
+  if ((document.getElementById('hier4r-search-inp')?.value || '').trim()) hier4rSearchUpdate();
 }
 
 function getCoordsAreaDa4R(coordenacao) {
@@ -10952,7 +11332,7 @@ function switchTab(name) {
   if (name === 'ronda1')      renderRonda1Table();
   if (name === 'ronda2')      { if (_ronda2ArquivoCache) renderRonda2Table(); else carregarRonda2Arquivo(); }
   if (name === 'equipas')     renderEquipasTab(); // FASES A+B
-  if (name === 'equipas4r')   loadHierarquia4R(); // 4ª Ronda — Etapa 1
+  if (name === 'equipas4r')   equipasSubtab4R(_sub4R || 'hierarquia'); // 4ª Ronda
   if (name === 'audit')       { auditSubtab('dados'); renderAudit(); }
 }
 
