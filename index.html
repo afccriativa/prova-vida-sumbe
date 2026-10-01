@@ -2330,7 +2330,35 @@ input, textarea, select {
     </div>
     <div class="assign-list" id="assign-list-content-4r"></div>
     <div class="assign-box-ftr">
+      <button class="btn-assign-cancel" style="border-color:var(--accent2);color:var(--accent2)" onclick="abrirRhNovo4R()">+ Registar pessoa nova</button>
       <button class="btn-assign-cancel" onclick="closeAssignModal4R()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOTE B — Modal: Registar pessoa nova (4ª Ronda) -->
+<div id="rh-novo-modal-4r" class="assign-modal" style="display:none">
+  <div class="assign-box">
+    <div class="assign-box-hdr">
+      <h3>Registar pessoa nova — 4ª Ronda</h3>
+      <p id="rh-n4-sub"></p>
+    </div>
+    <div style="padding:6px 18px 14px;display:grid;gap:10px;overflow-y:auto">
+      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Nome completo *</label>
+        <input id="rh-n4-nome" type="text" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box" autocomplete="off"></div>
+      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Bilhete de Identidade *</label>
+        <input id="rh-n4-bi" type="text" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;text-transform:uppercase" placeholder="ex: 006185927KS046" autocomplete="off"></div>
+      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Telefone</label>
+        <input id="rh-n4-tel" type="tel" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box" autocomplete="off"></div>
+      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Coordenação *</label>
+        <select id="rh-n4-coord" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"></select></div>
+      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.4px">Sexo</label>
+        <select id="rh-n4-sexo" style="width:100%;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+      <div id="rh-n4-msg" style="display:none;color:var(--error);font-size:12px;font-weight:600"></div>
+    </div>
+    <div class="assign-box-ftr">
+      <button class="btn-assign-cancel" onclick="fecharRhNovo4R(true)">Voltar</button>
+      <button class="btn-assign-cancel" id="btn-rh-n4-save" style="border-color:var(--accent2);color:var(--accent2)" onclick="guardarRhNovo4R()">Guardar e atribuir</button>
     </div>
   </div>
 </div>
@@ -8134,9 +8162,9 @@ async function criarNovaEquipa4R(supervisorBI, coordenacao, tipoEquipa) {
 // memberRole: 'mobilizador'|'vacinador'|'registador'|'vacinador_tecnico_1'|'vacinador_tecnico_2'
 async function _assignMemberToTeam4R(equipaId, memberRole, prof) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  const bloqueio = checkAvaliacaoBloqueio(prof.bi);
+  const bloqueio = checkAvaliacaoBloqueio4R(prof.bi);
   if (bloqueio.blocked) {
-    showToast('🚫 ' + prof.nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) nesta avaliação e não pode ser atribuído(a) à 4ª Ronda.', 'error');
+    showToast('🚫 ' + prof.nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) na avaliação da 4ª Ronda e não pode ser atribuído(a) à 4ª Ronda.', 'error');
     return;
   }
   const eq = _equipasCache4R[equipaId];
@@ -8236,6 +8264,7 @@ async function loadHierarquia4R() {
   updateAlocacoesCache4R(alocDocs);
   updateEquipasCache4R(eqDocs);
   updateRhNovosCache(novosDocs);
+  await recarregarAvalENovos4R(); // avaliacoes_4r + rh_novos_4r
   if (!_ronda2ArquivoCache) await carregarRonda2Arquivo().catch(() => {});
   renderHierarquia4R();
 }
@@ -8243,6 +8272,173 @@ async function loadHierarquia4R() {
 function updateAlocacoesCache4R(docs) {
   _alocacoesCache4R = {};
   docs.forEach(doc => { const bi = (doc.bi || doc._id || '').toUpperCase(); if (bi) _alocacoesCache4R[bi] = doc; });
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// LOTE B — Avaliação POR RONDA (avaliacoes_4r) + Registar Novo RH da 4ª Ronda (rh_novos_4r)
+// A avaliação da 3ª Ronda (avaliacoes_3r) NÃO se aplica à 4ª: a 4ª começa limpa.
+// Situação derivada da nota por situacaoAvaliacao() (<10 excluído; >=10 admitido).
+// Ainda não existe UI para avaliar na 4ª Ronda — a camada de dados e o bloqueio já estão prontos.
+// ════════════════════════════════════════════════════════════════════════
+let _avaliacoesCache4R = {}; // { [BI_UPPER]: doc }
+let _rhNovos4RCache    = {}; // { [BI_UPPER]: doc }
+let _rhNovo4RCtx       = null;
+
+async function fbGetAvaliacoes4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('avaliacoes_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetAvaliacoes4R:', e); return []; }
+}
+async function fbSaveAvaliacao4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('avaliacoes_4r/' + data.bi.toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+function updateAvaliacoesCache4R(docs) {
+  _avaliacoesCache4R = {};
+  docs.forEach(doc => { const bi = (doc.bi || doc._id || '').toUpperCase().trim(); if (bi) _avaliacoesCache4R[bi] = doc; });
+}
+function checkAvaliacaoBloqueio4R(bi) {
+  const av = _avaliacoesCache4R[(bi || '').toUpperCase()];
+  if (!av) return { blocked: false };
+  return { blocked: situacaoAvaliacao(av.nota) === 'excluido', nome: av.nome, nota: av.nota };
+}
+
+async function fbGetRhNovos4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('rh_novos_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetRhNovos4R:', e); return []; }
+}
+async function fbSaveRhNovo4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('rh_novos_4r/' + data.bi.toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+async function fbCheckBiExists4R(bi) {
+  if (!fbReady()) return false;
+  try {
+    const snap = await window._FB.getDoc(window._FB.docRef('rh_novos_4r/' + bi.toUpperCase()));
+    return snap.exists();
+  } catch(e) { return false; }
+}
+function updateRhNovos4RCache(docs) {
+  _rhNovos4RCache = {};
+  docs.forEach(doc => { const bi = (doc.bi || doc._id || '').toUpperCase().trim(); if (bi) _rhNovos4RCache[bi] = doc; });
+}
+// Carrega as duas colecções novas da 4ª Ronda (chamada junto das outras caches 4R).
+async function recarregarAvalENovos4R() {
+  try {
+    const [avDocs, novDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R()]);
+    updateAvaliacoesCache4R(avDocs);
+    updateRhNovos4RCache(novDocs);
+  } catch(e) { console.warn('[4R] erro ao carregar avaliações/novos RH:', e); }
+}
+
+// ── Registar pessoa nova (4ª Ronda) — aberto a partir do picker ──────────────
+const _MEMBER_LABELS_4R = {
+  mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador',
+  vacinador_tecnico_1:'Vacinador Técnico', vacinador_tecnico_2:'Vacinador Técnico',
+};
+function _rhN4Msg(txt) {
+  const el = document.getElementById('rh-n4-msg');
+  if (!el) return;
+  el.textContent = txt || '';
+  el.style.display = txt ? 'block' : 'none';
+}
+function abrirRhNovo4R() {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  if (!_assignContext4R) return;
+  _rhNovo4RCtx = { ..._assignContext4R };
+  const q = (document.getElementById('assign-search-inp-4r').value || '').trim();
+  const pareceBI = /\d/.test(q) && !/\s/.test(q);
+  document.getElementById('rh-n4-nome').value = pareceBI ? '' : q;
+  document.getElementById('rh-n4-bi').value   = pareceBI ? q.toUpperCase() : '';
+  document.getElementById('rh-n4-tel').value  = '';
+  document.getElementById('rh-n4-sexo').value = 'M';
+  const sel = document.getElementById('rh-n4-coord');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    COORDENACOES_2R.map(c => '<option value="' + escAttr(c) + '">' + escH(c) + '</option>').join('');
+  sel.value = _rhNovo4RCtx.coordenacao || '';
+  const papel = _rhNovo4RCtx.role === 'coord' ? 'Coord. de área'
+              : _rhNovo4RCtx.role === 'supervisor' ? 'Supervisor de Vacinação'
+              : (_MEMBER_LABELS_4R[_rhNovo4RCtx.memberRole] || 'Membro de equipa');
+  document.getElementById('rh-n4-sub').textContent = 'Será atribuído(a) a seguir como: ' + papel + ' — ' + (_rhNovo4RCtx.coordenacao || '');
+  _rhN4Msg('');
+  document.getElementById('btn-rh-n4-save').disabled = false;
+  document.getElementById('assign-modal-4r').style.display = 'none';
+  document.getElementById('rh-novo-modal-4r').style.display = 'flex';
+  setTimeout(() => document.getElementById(pareceBI ? 'rh-n4-nome' : 'rh-n4-bi').focus(), 100);
+}
+function fecharRhNovo4R(voltar) {
+  document.getElementById('rh-novo-modal-4r').style.display = 'none';
+  if (voltar && _assignContext4R) document.getElementById('assign-modal-4r').style.display = 'flex';
+}
+async function guardarRhNovo4R() {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  if (!_rhNovo4RCtx) return;
+  const g = id => (document.getElementById(id).value || '').trim();
+  const nome  = g('rh-n4-nome').replace(/\s+/g, ' ');
+  const bi    = g('rh-n4-bi').toUpperCase().replace(/\s/g, '');
+  const tel   = g('rh-n4-tel');
+  const sexo  = g('rh-n4-sexo') || 'M';
+  const coord = g('rh-n4-coord');
+  const btn   = document.getElementById('btn-rh-n4-save');
+
+  if (nome.length < 5 || !/\s/.test(nome)) { _rhN4Msg('Indique o nome completo.'); return; }
+  const biVal = validarFormatoBI(bi);
+  if (!biVal.ok) { _rhN4Msg(biVal.msg); return; }
+  if (!coord) { _rhN4Msg('Coordenação obrigatória.'); return; }
+
+  // Duplicados: RH_DATA + 2ª Ronda + novos RH 3ª + novos RH 4ª (cache local) e Firestore (multi-dispositivo)
+  const existente = getUniversalSearchPool4R(true).find(r => (r.bi || '').toUpperCase() === bi);
+  if (existente) {
+    _rhN4Msg('O BI ' + bi + ' já existe no sistema (' + existente.nome + ' · ' + existente._fonteLabel +
+             '). Volte à pesquisa e procure-o pelo BI.');
+    return;
+  }
+  btn.disabled = true;
+  if (await fbCheckBiExists4R(bi)) {
+    await recarregarAvalENovos4R();
+    btn.disabled = false;
+    _rhN4Msg('Este BI acabou de ser registado por outro operador. Volte à pesquisa e procure-o pelo BI.');
+    return;
+  }
+
+  const { role, memberRole } = _rhNovo4RCtx;
+  const funcao = role === 'coord' ? 'Coord area/ Comuna'
+               : role === 'supervisor' ? 'Supervisor equipa'
+               : (_MEMBER_LABELS_4R[memberRole] || 'Membro de equipa');
+  const now = new Date();
+  const doc = {
+    bi, nome, funcao, coordenacao: coord, telefone: tel, sexo,
+    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+    registadoPor: APP_SESSION.bi || '',
+    registadoEm:  window._FB ? window._FB.serverTimestamp() : null,
+    dataRegisto:  now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+  };
+  const result = await fbSaveRhNovo4R(doc);
+  btn.disabled = false;
+  if (!result.success) { _rhN4Msg('Erro ao guardar: ' + result.error); return; }
+
+  _rhNovos4RCache[bi] = doc;
+  // Atribuir logo ao lugar de onde partiu o pedido — mesmo caminho do picker (mesmas validações)
+  _assignContext4R = { ..._rhNovo4RCtx };
+  _assignPoolIndex4R[bi] = {
+    bi, nome, funcao, coordenacao: coord, telefone: tel, sexo,
+    _fonte: 'rh_novo', _fonteLabel: 'Novo RH 4ª', _bloqueado: false,
+  };
+  fecharRhNovo4R(false);
+  await selectAssignItem4R(bi);
 }
 
 // Pool universal de pesquisa — mesma base histórica da 3ª Ronda (RH_DATA +
@@ -8290,6 +8486,16 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
     };
   });
 
+  Object.values(_rhNovos4RCache).forEach(r => {
+    const bi = (r.bi || '').toUpperCase();
+    if (!bi) return;
+    map[bi] = {
+      bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
+      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      _fonte: 'rh_novo', _fonteLabel: 'Novo RH 4ª',
+    };
+  });
+
   const todos = Object.values(map);
   if (incluirAlocados) return todos.map(r => ({ ...r, _bloqueado: blocked.has(r.bi.toUpperCase()) }));
   return todos.filter(r => !blocked.has(r.bi.toUpperCase()));
@@ -8298,9 +8504,9 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
 // ── Alocar Coordenador/Supervisor — 4ª Ronda ─────────────────────────────────
 async function _alocarProfissional4R(bi, nome, funcao, coordenacao, sexo, status, fonte, skipRender = false) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  const bloqueio = checkAvaliacaoBloqueio(bi);
+  const bloqueio = checkAvaliacaoBloqueio4R(bi);
   if (bloqueio.blocked) {
-    showToast('🚫 ' + nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) nesta avaliação e não pode ser atribuído(a) à 4ª Ronda.', 'error');
+    showToast('🚫 ' + nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) na avaliação da 4ª Ronda e não pode ser atribuído(a) à 4ª Ronda.', 'error');
     return { success: false, blocked: true };
   }
   const now = new Date();
@@ -8502,6 +8708,7 @@ async function openAssignModal4R(coordenacao, role, equipaId, memberRole) {
     updateAlocacoesCache4R(alocDocs);
     updateEquipasCache4R(eqDocs);
     updateRhNovosCache(novosDocs);
+    await recarregarAvalENovos4R();
   } catch(e) { console.warn('[4R picker] erro ao actualizar caches:', e); }
 
   renderAssignList4R();
@@ -8537,8 +8744,8 @@ function renderAssignList4R() {
 
   if (pool.length === 0) {
     el.innerHTML = '<div class="assign-empty"><div class="empty-state"><p>Nenhum resultado para &ldquo;' + escH(q) + '&rdquo;</p>' +
-      '<small>Se a pessoa é totalmente nova (nunca participou numa ronda), o registo de novos RH para a 4ª Ronda ainda não está disponível nesta aba — fale com o Administrador. ' +
-      'Se já participou, tente pesquisar pelo BI ou por outra parte do nome.</small></div></div>';
+      '<small>Se já participou numa ronda, tente pesquisar pelo BI ou por outra parte do nome. ' +
+      'Se é totalmente nova, use "+ Registar pessoa nova" no fundo desta janela.</small></div></div>';
     return;
   }
 
@@ -8570,9 +8777,9 @@ function renderAssignList4R() {
     const biUpper = (r.bi || '').toUpperCase();
     const isAuto  = r.coordenacao === coordenacao;
     const fonte   = '<span class="origem-badge origem-' + r._fonte + '">' + escH(r._fonteLabel) + '</span>';
-    const bloqueio = checkAvaliacaoBloqueio(r.bi);
+    const bloqueio = checkAvaliacaoBloqueio4R(r.bi);
     const exclBadge = bloqueio.blocked
-      ? ' <span style="background:rgba(231,76,60,.15);color:var(--error);font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;border:1px solid rgba(231,76,60,.3)" title="Marcado como Excluído na Avaliação de Desempenho">🚫 EXCLUÍDO</span>'
+      ? ' <span style="background:rgba(231,76,60,.15);color:var(--error);font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;border:1px solid rgba(231,76,60,.3)" title="Marcado como Excluído na avaliação da 4ª Ronda">🚫 EXCLUÍDO</span>'
       : '';
     const teamInfo = r._bloqueado ? inTeamMap[biUpper] : null;
     const lockTxt = !r._bloqueado ? '' :
