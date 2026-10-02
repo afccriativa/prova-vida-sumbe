@@ -2326,7 +2326,10 @@ input, textarea, select {
     <div class="hier-toolbar">
       <span class="hier-toolbar-lbl">Exportar:</span>
       <button class="btn-hier-action" onclick="exportarCSVEquipas4R()" title="Uma linha por pessoa (formato longo) — bom para análise"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> CSV</button>
-      <button class="btn-hier-action" onclick="exportarExcelEquipas4R(this)" title="Excel com 5 folhas: Equipas Orais, Injectáveis, Coord e Supervisores, Resumo, Disponíveis"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Excel</button>
+      <button class="btn-hier-action" onclick="exportarExcelEquipas4R(this)" title="Excel com 6 folhas: Equipas Orais, Injectáveis, Postos Fixos, Coord e Supervisores, Resumo, Disponíveis"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Excel</button>
+      <span class="hier-toolbar-lbl" style="margin-left:8px">Formação:</span>
+      <button class="btn-hier-action" onclick="exportarListaFormacaoMob4R(this)"
+        title="Lista de presença da formação dos Mobilizadores (Excel, modelo oficial) — equipas orais + postos fixos"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Lista MOB</button>
       <span class="hier-toolbar-lbl" style="margin-left:8px">Presenças:</span>
       <button class="btn-hier-action" id="btn-lista-pres4r-toggle" onclick="toggleListaPresencaPanel4R()"
         title="Lista de presença de campo por supervisor (equipas orais e injectáveis)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M5 2h7l3 3v13H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="7.3" y1="9.5" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.3" y1="12.5" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Lista Presença</button>
@@ -8445,10 +8448,226 @@ function updateRhNovos4RCache(docs) {
 // Carrega as duas colecções novas da 4ª Ronda (chamada junto das outras caches 4R).
 async function recarregarAvalENovos4R() {
   try {
-    const [avDocs, novDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R()]);
+    const [avDocs, novDocs, postoDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R(), fbGetPostos4R()]);
     updateAvaliacoesCache4R(avDocs);
     updateRhNovos4RCache(novDocs);
+    updatePostosCache4R(postoDocs);
   } catch(e) { console.warn('[4R] erro ao carregar avaliações/novos RH:', e); }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// LOTE C — POSTO FIXO (4ª Ronda)
+// O posto pertence à COORDENAÇÃO (não ao supervisor). Tem 1 slot de Mobilizador.
+// Equipas injectáveis ligam-se ao posto através de equipa.posto_id (além do supervisor).
+// Colecção própria: postos_4r  (requer a regra no Firestore — ver instruções).
+// ════════════════════════════════════════════════════════════════════════
+let _postosCache4R = {}; // { [posto_id]: doc }
+
+async function fbGetPostos4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('postos_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetPostos4R:', e); return []; }
+}
+async function fbSavePosto4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('postos_4r/' + data.id), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+async function _fbSavePosto4RWithRetry(data) {
+  let r = await fbSavePosto4R(data);
+  if (!r.success) { await new Promise(res => setTimeout(res, 1200)); r = await fbSavePosto4R(data); }
+  return r;
+}
+async function fbDeletePosto4R(id) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('postos_4r/' + id));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+function updatePostosCache4R(docs) {
+  _postosCache4R = {};
+  docs.forEach(d => { const id = d.id || d._id; if (id) _postosCache4R[id] = d; });
+}
+function _erroPostos4R(res) {
+  const msg = (res && res.error) || '';
+  return /permission|insufficient/i.test(msg)
+    ? 'Sem permissão em postos_4r: publique a regra desta colecção no Firestore (ver instruções).'
+    : 'Erro: ' + msg;
+}
+function getPostosDa4R(coordenacao) {
+  return Object.values(_postosCache4R).filter(p => p.coordenacao === coordenacao)
+    .sort((a, b) => (a.posto_num || 0) - (b.posto_num || 0));
+}
+function _rotuloPosto4R(p) {
+  return 'Posto ' + (p.posto_num || '?') + (p.nome ? ' — ' + p.nome : '');
+}
+function getEqsDoPosto4R(postoId) {
+  return Object.values(_equipasCache4R).filter(e => e.tipo_equipa === 'INJECTAVEL' && e.posto_id === postoId);
+}
+
+async function criarPosto4R(coordenacao) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const num = getPostosDa4R(coordenacao).reduce((m, p) => Math.max(m, p.posto_num || 0), 0) + 1;
+  const id  = 'POSTO_' + coordenacao.replace(/[^A-Za-z0-9]/g, '').slice(0, 14) + '_' + Date.now();
+  const p = {
+    id, ronda: RONDA_ID_4R, municipio: MUNICIPIO, coordenacao, posto_num: num, nome: '', mobilizador: null,
+    createdAt: window._FB ? window._FB.serverTimestamp() : null, updatedBy: APP_SESSION.bi || '',
+  };
+  const r = await _fbSavePosto4RWithRetry(p);
+  if (!r.success) { showToast(_erroPostos4R(r), 'error'); return; }
+  _postosCache4R[id] = p;
+  registarAuditoria('criar_posto_4r', { modulo: 'postos_4r', coordenacao, antes: null, depois: { posto_num: num, posto_id: id } });
+  renderHierarquia4R();
+  showToast('Posto ' + num + ' criado.', 'success');
+}
+
+async function renomearPosto4R(postoId) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const p = _postosCache4R[postoId]; if (!p) return;
+  const novo = window.prompt('Local do posto fixo (ex.: Mercado Central, Escola n.º 5). Deixe vazio para só "Posto ' + p.posto_num + '".', p.nome || '');
+  if (novo === null) return;
+  const prev = p.nome;
+  p.nome = novo.trim().slice(0, 60);
+  const r = await _fbSavePosto4RWithRetry(p);
+  if (!r.success) { p.nome = prev; showToast(_erroPostos4R(r), 'error'); return; }
+  renderHierarquia4R();
+}
+
+// Atribuir mobilizador ao posto (chamada pelo picker, role 'posto')
+async function _assignMobilizadorPosto4R(postoId, prof) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const bloqueio = checkAvaliacaoBloqueio4R(prof.bi);
+  if (bloqueio.blocked) {
+    showToast('🚫 ' + prof.nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) na avaliação da 4ª Ronda e não pode ser atribuído(a).', 'error');
+    return;
+  }
+  const p = _postosCache4R[postoId];
+  if (!p) { showToast('Posto não encontrado. Recarregue a hierarquia.', 'error'); return; }
+  if (p.mobilizador?.bi) { showToast('Este posto já tem mobilizador. Remova-o primeiro.', 'warn'); return; }
+  const biUpper = (prof.bi || '').toUpperCase();
+  const now = new Date();
+  const doc = {
+    bi: prof.bi, nome: prof.nome, funcao: 'Mobilizador', coordenacao: p.coordenacao, sexo: prof.sexo || 'M',
+    fonte: prof._fonte || 'rh_data', status: 'alocado', posto_id: postoId, tipo_equipa: 'POSTO', role_na_equipa: 'mobilizador_posto',
+    confirmadoPor: APP_SESSION.bi || '', confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
+    dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+    ronda: RONDA_ID_4R, municipio: MUNICIPIO,
+  };
+  const a = await fbSaveAlocacao4R(doc);
+  if (!a.success) { showToast('Erro ao gravar alocação: ligação instável. Tente novamente.', 'error'); return; }
+  _alocacoesCache4R[biUpper] = doc;
+  const prev = p.mobilizador;
+  p.mobilizador = { bi: prof.bi, nome: prof.nome };
+  const r = await _fbSavePosto4RWithRetry(p);
+  if (!r.success) {
+    p.mobilizador = prev;
+    await fbRemoveAlocacao4R(prof.bi).catch(() => {});
+    delete _alocacoesCache4R[biUpper];
+    renderHierarquia4R();
+    showToast(_erroPostos4R(r) + ' Operação revertida.', 'error');
+    return;
+  }
+  _invalidatePickerCache();
+  registarAuditoria('atribuir_mobilizador_posto_4r', {
+    alvoBI: prof.bi, alvoNome: prof.nome, modulo: 'postos_4r', coordenacao: p.coordenacao,
+    antes: null, depois: { posto_num: p.posto_num, posto_id: postoId },
+  });
+  renderHierarquia4R();
+  showToast(prof.nome.split(' ')[0] + ' adicionado ao Posto ' + p.posto_num + '. ✅', 'success');
+}
+
+async function removerMobilizadorPosto4R(postoId) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const p = _postosCache4R[postoId];
+  if (!p || !p.mobilizador?.bi) return;
+  const { bi, nome } = p.mobilizador;
+  const prev = p.mobilizador;
+  p.mobilizador = null;
+  const r = await _fbSavePosto4RWithRetry(p);
+  if (!r.success) {
+    p.mobilizador = prev; renderHierarquia4R();
+    showToast('Erro ao gravar: ligação instável. ' + (nome || '').split(' ')[0] + ' não foi removido.', 'error');
+    return;
+  }
+  await fbRemoveAlocacao4R(bi).catch(() => {});
+  delete _alocacoesCache4R[(bi || '').toUpperCase()];
+  _invalidatePickerCache();
+  registarAuditoria('remover_mobilizador_posto_4r', {
+    alvoBI: bi, alvoNome: nome, modulo: 'postos_4r', coordenacao: p.coordenacao,
+    antes: { posto_num: p.posto_num, posto_id: postoId }, depois: null,
+  });
+  renderHierarquia4R();
+  showToast((nome || '').split(' ')[0] + ' removido do posto.', 'warn');
+}
+
+async function removerPosto4R(postoId) {
+  if (!guardEliminacao('este posto')) return;
+  const p = _postosCache4R[postoId]; if (!p) return;
+  const ligadas = getEqsDoPosto4R(postoId);
+  const ok = await showConfirmModal({
+    title: 'Eliminar ' + _rotuloPosto4R(p),
+    body: (p.mobilizador?.bi ? p.mobilizador.nome + ' volta ao pool disponível.\n' : '') +
+          (ligadas.length ? ligadas.length + ' equipa(s) injectável(is) ficam sem posto.' : 'Sem equipas ligadas.'),
+    confirmLabel: 'Eliminar Posto', danger: true,
+  });
+  if (!ok) return;
+  // 1) desligar as equipas injectáveis (aborta se alguma gravação falhar)
+  for (const eq of ligadas) {
+    const prev = eq.posto_id;
+    eq.posto_id = null;
+    const r = await _fbSaveEquipa4RWithRetry(eq);
+    if (!r.success) {
+      eq.posto_id = prev; renderHierarquia4R();
+      showToast('Ligação instável: o posto não foi eliminado. Tente novamente.', 'error');
+      return;
+    }
+  }
+  // 2) libertar o mobilizador
+  if (p.mobilizador?.bi) {
+    await fbRemoveAlocacao4R(p.mobilizador.bi).catch(() => {});
+    delete _alocacoesCache4R[p.mobilizador.bi.toUpperCase()];
+  }
+  // 3) apagar o posto
+  let d = await fbDeletePosto4R(postoId);
+  if (!d.success) { await new Promise(res => setTimeout(res, 1200)); d = await fbDeletePosto4R(postoId); }
+  if (!d.success) { showToast('Erro ao eliminar posto: ' + d.error, 'error'); await loadHierarquia4R(); return; }
+  delete _postosCache4R[postoId];
+  _invalidatePickerCache();
+  registarAuditoria('remover_posto_4r', {
+    modulo: 'postos_4r', coordenacao: p.coordenacao, antes: { posto_num: p.posto_num, posto_id: postoId }, depois: null,
+  });
+  renderHierarquia4R();
+  showToast('Posto eliminado.', 'warn');
+}
+
+// Ligar / desligar uma equipa injectável a um posto da sua coordenação
+async function ligarEquipaPosto4R(equipaId, postoId) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); renderHierarquia4R(); return; }
+  const eq = _equipasCache4R[equipaId]; if (!eq) return;
+  const novo = postoId || null;
+  if (novo && _postosCache4R[novo]?.coordenacao !== eq.coordenacao) {
+    showToast('O posto tem de ser da mesma coordenação da equipa.', 'warn'); renderHierarquia4R(); return;
+  }
+  const prev = eq.posto_id || null;
+  if (prev === novo) return;
+  eq.posto_id = novo;
+  const r = await _fbSaveEquipa4RWithRetry(eq);
+  if (!r.success) {
+    eq.posto_id = prev; renderHierarquia4R();
+    showToast('Erro ao gravar: ligação instável. A ligação ao posto não foi alterada.', 'error');
+    return;
+  }
+  registarAuditoria('ligar_equipa_posto_4r', {
+    modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: { posto_id: prev }, depois: { posto_id: novo, equipa_num: eq.equipa_num },
+  });
+  renderHierarquia4R();
 }
 
 // Pool universal de pesquisa — mesma base histórica da 3ª Ronda (RH_DATA +
@@ -8465,6 +8684,7 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
   Object.values(_alocacoesCache4R).forEach(a => {
     if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) blocked.add(a.bi.toUpperCase());
   });
+  Object.values(_postosCache4R).forEach(p => { if (p.mobilizador?.bi) blocked.add(p.mobilizador.bi.toUpperCase()); });
 
   const map = {};
   RH_DATA.forEach(r => {
@@ -8697,15 +8917,17 @@ async function openAssignModal4R(coordenacao, role, equipaId, memberRole) {
   _assignContext4R = { coordenacao, role, equipaId: equipaId || null, memberRole: memberRole || null };
   const isCoord  = role === 'coord';
   const isMember = role === 'member';
+  const isPosto  = role === 'posto';
   const memberTitles = {
     mobilizador: 'Atribuir Mobilizador', vacinador: 'Atribuir Vacinador', registador: 'Atribuir Registador',
     vacinador_tecnico_1: 'Atribuir Vacinador Técnico (1)', vacinador_tecnico_2: 'Atribuir Vacinador Técnico (2)',
   };
-  document.getElementById('assign-modal-title-4r').textContent = isMember
+  document.getElementById('assign-modal-title-4r').textContent = isPosto ? 'Atribuir Mobilizador de Posto' : isMember
     ? (memberTitles[memberRole] || 'Atribuir Membro')
     : isCoord ? 'Atribuir Coord área/Comuna' : 'Atribuir Supervisor de Vacinação';
-  document.getElementById('assign-modal-sub-4r').textContent = isMember
-    ? 'Equipa — ' + coordenacao : 'Coordenação: ' + coordenacao;
+  document.getElementById('assign-modal-sub-4r').textContent = isPosto
+    ? (_postosCache4R[equipaId] ? _rotuloPosto4R(_postosCache4R[equipaId]) + ' — ' + coordenacao : 'Posto — ' + coordenacao)
+    : isMember ? 'Equipa — ' + coordenacao : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp-4r').value = '';
   document.getElementById('assign-modal-4r').style.display = 'flex';
   document.getElementById('assign-list-content-4r').innerHTML =
@@ -8780,6 +9002,10 @@ function renderAssignList4R() {
     }
   });
 
+  Object.values(_postosCache4R).forEach(p => {
+    if (p.mobilizador?.bi) inTeamMap[p.mobilizador.bi.toUpperCase()] = { papel: 'Mobilizador do ' + _rotuloPosto4R(p), coordenacao: p.coordenacao || '—' };
+  });
+
   _assignPoolIndex4R = {};
   pool.forEach(r => { _assignPoolIndex4R[r.bi.toUpperCase()] = r; });
 
@@ -8836,7 +9062,9 @@ async function selectAssignItem4R(bi) {
     mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador',
     vacinador_tecnico_1:'Vacinador Técnico', vacinador_tecnico_2:'Vacinador Técnico',
   };
-  if (role === 'member') {
+  if (role === 'posto') {
+    await _assignMobilizadorPosto4R(equipaId, prof);
+  } else if (role === 'member') {
     const profParaEquipa = { ...prof, funcao: MEMBER_LABELS[memberRole] || prof.funcao };
     await _assignMemberToTeam4R(equipaId, memberRole, profParaEquipa);
   } else {
@@ -8850,8 +9078,8 @@ async function selectAssignItem4R(bi) {
 // PAINEL "COMPOR RH 4ª RONDA" — estrutura igual à da 3ª Ronda
 // Sub-abas: RH Registados · Hierarquia · Progresso · Registar Novo RH
 // ════════════════════════════════════════════════════════════════════════
-// Metas globais da 4ª Ronda (ofício / handoff) — editar aqui se mudarem.
-const META_4R = { coords: 7, sups: 19, eqOral: 74, eqInj: 74, pessoasOral: 222, pessoasInj: 222, postos: 19 };
+// Metas globais da 4ª Ronda (quadro de RH de 02/10/2026: 570 pessoas no sistema) — editar aqui se mudarem.
+const META_4R = { coords: 7, sups: 22, eqOral: 87, eqInj: 87, pessoasOral: 261, pessoasInj: 261, postos: 19 };
 const ROLES_ORAL_4R = ['mobilizador', 'vacinador', 'registador'];
 const ROLES_INJ_4R  = ['vacinador_tecnico_1', 'vacinador_tecnico_2', 'registador'];
 let _sub4R = 'hierarquia';
@@ -8889,6 +9117,7 @@ function getBisAlocados4R() {
   Object.values(_alocacoesCache4R).forEach(a => {
     if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) set.add(a.bi.toUpperCase());
   });
+  Object.values(_postosCache4R).forEach(p => { if (p.mobilizador?.bi) set.add(p.mobilizador.bi.toUpperCase()); });
   return set;
 }
 // Registados na 4ª Ronda (rh_novos_4r) ainda sem lugar
@@ -8902,6 +9131,10 @@ function getLugar4R(bi) {
   const a = _alocacoesCache4R[biU];
   if (a && a.status === 'coord')      return { tipo: 'coord', txt: 'Coord. de área · ' + (a.coordenacao || '—') };
   if (a && a.status === 'supervisor') return { tipo: 'supervisor', txt: 'Supervisor · ' + (a.coordenacao || '—') };
+  for (const p of Object.values(_postosCache4R)) {
+    if ((p.mobilizador?.bi || '').toUpperCase() === biU)
+      return { tipo: 'posto', txt: 'Mobilizador · ' + _rotuloPosto4R(p) + ' · ' + (p.coordenacao || '—') };
+  }
   for (const eq of Object.values(_equipasCache4R)) {
     for (const role of [...ROLES_ORAL_4R, ...ROLES_INJ_4R]) {
       if ((eq[role]?.bi || '').toUpperCase() === biU) {
@@ -8955,6 +9188,11 @@ function hier4rSearchUpdate() {
               (sup ? ' · Sup ' + sup.nome.split(' ').slice(0, 2).join(' ') : '') });
     });
   });
+  Object.values(_postosCache4R).forEach(p => {
+    const m = p.mobilizador;
+    if (!m?.bi || !match(m.nome, m.bi, p.coordenacao, 'posto')) return;
+    results.push({ nome: m.nome, bi: m.bi, funcao: 'Mobilizador de Posto', cor: 'var(--green)', onde: _rotuloPosto4R(p) + ' · ' + (p.coordenacao || '—') });
+  });
   getDisponiveis4R().forEach(r => {
     if (!match(r.nome, r.bi, r.funcao, r.coordenacao)) return;
     pool.push({ nome: r.nome, bi: r.bi, funcao: r.funcao, cor: 'var(--text2)', onde: r.coordenacao || '—' });
@@ -8997,11 +9235,12 @@ function renderProgresso4R() {
       eqOral: oral.length, pOral: oral.reduce((n, e) => n + cnt(e, ROLES_ORAL_4R), 0),
       eqInj:  inj.length,  pInj:  inj.reduce((n, e) => n + cnt(e, ROLES_INJ_4R), 0),
       comp:   eqs.filter(e => e.status === 'completa').length, totEq: eqs.length,
+      postos: getPostosDa4R(c).length, mobP: getPostosDa4R(c).filter(p => p.mobilizador?.bi).length,
     };
   });
   const T = linhas.reduce((t, l) => {
-    ['coord','sups','eqOral','pOral','eqInj','pInj','comp','totEq'].forEach(k => t[k] += l[k]); return t;
-  }, { coord:0, sups:0, eqOral:0, pOral:0, eqInj:0, pInj:0, comp:0, totEq:0 });
+    ['coord','sups','eqOral','pOral','eqInj','pInj','comp','totEq','postos','mobP'].forEach(k => t[k] += l[k]); return t;
+  }, { coord:0, sups:0, eqOral:0, pOral:0, eqInj:0, pInj:0, comp:0, totEq:0, postos:0, mobP:0 });
 
   const card = (n, meta, lbl) => hierSumCard(n + '/' + meta, lbl, n === meta ? 'var(--green)' : (n > meta ? 'var(--error)' : 'var(--accent2)'));
   const cards =
@@ -9012,29 +9251,31 @@ function renderProgresso4R() {
       card(T.pOral, META_4R.pessoasOral, 'Pessoas Orais') +
       card(T.eqInj, META_4R.eqInj, 'Equipas Injectáveis') +
       card(T.pInj, META_4R.pessoasInj, 'Pessoas Injectáveis') +
+      card(T.postos, META_4R.postos, 'Postos Fixos') +
+      card(T.mobP, META_4R.postos, 'Mobilizadores de Posto') +
     '</div>';
 
   const td = (v, b) => '<td style="text-align:center' + (b ? ';font-weight:800' : '') + '">' + v + '</td>';
   const rows = linhas.map(l =>
     '<tr><td style="font-weight:700;color:var(--text)">' + escH(l.c) + '</td>' +
     td(l.coord ? '✓' : '—') + td(l.sups) + td(l.eqOral) + td(l.pOral) + td(l.eqInj) + td(l.pInj) +
-    td(l.comp + '/' + l.totEq) + '</tr>').join('');
+    td(l.comp + '/' + l.totEq) + td(l.postos) + td(l.mobP) + '</tr>').join('');
   const tot = '<tr style="border-top:2px solid var(--border)"><td style="font-weight:800">TOTAL</td>' +
     td(T.coord + '/' + META_4R.coords, 1) + td(T.sups + '/' + META_4R.sups, 1) +
     td(T.eqOral + '/' + META_4R.eqOral, 1) + td(T.pOral + '/' + META_4R.pessoasOral, 1) +
     td(T.eqInj + '/' + META_4R.eqInj, 1) + td(T.pInj + '/' + META_4R.pessoasInj, 1) +
-    td(T.comp + '/' + T.totEq, 1) + '</tr>';
+    td(T.comp + '/' + T.totEq, 1) + td(T.postos + '/' + META_4R.postos, 1) + td(T.mobP + '/' + META_4R.postos, 1) + '</tr>';
 
   el.innerHTML = cards +
     '<div style="overflow-x:auto"><table class="history-table"><thead><tr>' +
       '<th>Coordenação</th><th style="text-align:center">Coord</th><th style="text-align:center">Supervisores</th>' +
       '<th style="text-align:center">Eq. Orais</th><th style="text-align:center">Pessoas Orais</th>' +
       '<th style="text-align:center">Eq. Injectáveis</th><th style="text-align:center">Pessoas Inj.</th>' +
-      '<th style="text-align:center">Equipas Completas</th></tr></thead><tbody>' + rows + tot + '</tbody></table></div>' +
+      '<th style="text-align:center">Equipas Completas</th><th style="text-align:center">Postos</th><th style="text-align:center">Mob. Posto</th></tr></thead><tbody>' + rows + tot + '</tbody></table></div>' +
     '<div style="font-size:11px;color:var(--text3);margin-top:10px">Metas globais: ' + META_4R.coords + ' coordenadores · ' + META_4R.sups +
     ' supervisores · ' + META_4R.eqOral + ' equipas orais (' + META_4R.pessoasOral + ' pessoas) · ' + META_4R.eqInj + ' equipas injectáveis (' +
     META_4R.pessoasInj + ' pessoas). A distribuição por coordenação é manual e não-igualitária. ' +
-    'Os ' + META_4R.postos + ' mobilizadores de posto fixo entram quando o posto estiver modelado.</div>';
+    'Mobilizadores totais: ' + (T.eqOral + T.mobP) + ' (equipas orais + postos) de ' + (META_4R.eqOral + META_4R.postos) + '.</div>';
 }
 
 // ── RH Registados (novos RH da 4ª Ronda) ─────────────────────────────────────
@@ -9321,6 +9562,11 @@ function getLinhasPessoas4R() {
       });
     });
   });
+  Object.values(_postosCache4R).sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0)).forEach(p => {
+    if (!p.mobilizador?.bi) return;
+    rows.push({ coordenacao: p.coordenacao || '', tipo: 'Posto fixo', num: p.posto_num || '', estado: 'completa', supervisor: '',
+      funcao: 'Mobilizador de posto', nome: p.mobilizador.nome || '', bi: p.mobilizador.bi, tel: _tel4R(p.mobilizador.bi, tm) });
+  });
   return rows;
 }
 function exportarCSVEquipas4R() {
@@ -9362,10 +9608,19 @@ async function exportarExcelEquipas4R(btn) {
 
     const injs = eqs.filter(e => e.tipo_equipa === 'INJECTAVEL');
     addSheet('Equipas Injectáveis', [
-      ['Coordenação','Supervisor','Tel. Supervisor','Nº Equipa','Estado','Vacinador Técnico 1','BI VT1','Tel. VT1','Vacinador Técnico 2','BI VT2','Tel. VT2','Registador','BI Reg','Tel. Reg'],
+      ['Coordenação','Supervisor','Tel. Supervisor','Nº Equipa','Estado','Vacinador Técnico 1','BI VT1','Tel. VT1','Vacinador Técnico 2','BI VT2','Tel. VT2','Registador','BI Reg','Tel. Reg','Posto'],
       ...injs.map(e => [e.coordenacao, _supNome4R(e), supTel(e), e.equipa_num, e.status || 'vazia',
-        ...mem(e, 'vacinador_tecnico_1'), ...mem(e, 'vacinador_tecnico_2'), ...mem(e, 'registador')]),
-    ], [28,28,13,9,12,28,16,13,28,16,13,28,16,13]);
+        ...mem(e, 'vacinador_tecnico_1'), ...mem(e, 'vacinador_tecnico_2'), ...mem(e, 'registador'),
+        e.posto_id && _postosCache4R[e.posto_id] ? _rotuloPosto4R(_postosCache4R[e.posto_id]) : '']),
+    ], [28,28,13,9,12,28,16,13,28,16,13,28,16,13,26]);
+
+    addSheet('Postos Fixos', [
+      ['Coordenação','Posto','Local','Mobilizador','BI','Telefone','Equipas injectáveis ligadas'],
+      ...Object.values(_postosCache4R).sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0))
+        .map(p => [p.coordenacao, 'Posto ' + (p.posto_num || ''), p.nome || '', p.mobilizador?.nome || '', p.mobilizador?.bi || '',
+                   p.mobilizador?.bi ? _tel4R(p.mobilizador.bi, tm) : '',
+                   getEqsDoPosto4R(p.id).map(e => 'Inj. ' + e.equipa_num).join(', ')]),
+    ], [32,10,28,30,18,14,34]);
 
     addSheet('Coord e Supervisores', [
       ['Coordenação','Função','Nome','BI','Telefone'],
@@ -9374,21 +9629,22 @@ async function exportarExcelEquipas4R(btn) {
     ], [32,24,34,18,14]);
 
     const pessoas = (lista) => lista.reduce((n, e) => n + _rolesDe4R(e).reduce((k, r) => k + (e[r]?.bi ? 1 : 0), 0), 0);
-    const resumo = [['Coordenação','Coordenador','Supervisores','Eq. Orais','Pessoas Orais','Eq. Injectáveis','Pessoas Inj.','Completas','Incompletas','Vazias']];
-    const T = { sup: 0, eo: 0, po: 0, ei: 0, pi: 0, c: 0, i: 0, v: 0, coord: 0 };
+    const resumo = [['Coordenação','Coordenador','Supervisores','Eq. Orais','Pessoas Orais','Eq. Injectáveis','Pessoas Inj.','Completas','Incompletas','Vazias','Postos','Mob. de Posto']];
+    const T = { sup: 0, eo: 0, po: 0, ei: 0, pi: 0, c: 0, i: 0, v: 0, coord: 0, ps: 0, mp: 0 };
     COORDENACOES_2R.forEach(c => {
       const ce = eqs.filter(e => e.coordenacao === c), o = ce.filter(e => e.tipo_equipa !== 'INJECTAVEL'), j = ce.filter(e => e.tipo_equipa === 'INJECTAVEL');
       const sups = alocs.filter(a => a.status === 'supervisor' && a.coordenacao === c).length;
       const cn = _coordNome4R(c);
       const row = [c, cn || '—', sups, o.length, pessoas(o), j.length, pessoas(j),
-        ce.filter(e => e.status === 'completa').length, ce.filter(e => e.status === 'incompleta').length, ce.filter(e => (e.status || 'vazia') === 'vazia').length];
+        ce.filter(e => e.status === 'completa').length, ce.filter(e => e.status === 'incompleta').length, ce.filter(e => (e.status || 'vazia') === 'vazia').length,
+        getPostosDa4R(c).length, getPostosDa4R(c).filter(p => p.mobilizador?.bi).length];
       resumo.push(row);
       T.coord += cn ? 1 : 0; T.sup += sups; T.eo += o.length; T.po += pessoas(o); T.ei += j.length; T.pi += pessoas(j);
-      T.c += row[7]; T.i += row[8]; T.v += row[9];
+      T.c += row[7]; T.i += row[8]; T.v += row[9]; T.ps += row[10]; T.mp += row[11];
     });
     resumo.push(['TOTAL', T.coord + '/' + META_4R.coords, T.sup + '/' + META_4R.sups, T.eo + '/' + META_4R.eqOral, T.po + '/' + META_4R.pessoasOral,
-                 T.ei + '/' + META_4R.eqInj, T.pi + '/' + META_4R.pessoasInj, T.c, T.i, T.v]);
-    addSheet('Resumo', resumo, [32,30,13,11,14,15,13,11,13,9]);
+                 T.ei + '/' + META_4R.eqInj, T.pi + '/' + META_4R.pessoasInj, T.c, T.i, T.v, T.ps + '/' + META_4R.postos, T.mp + '/' + META_4R.postos]);
+    addSheet('Resumo', resumo, [32,30,13,11,14,15,13,11,13,9,9,14]);
 
     addSheet('Disponíveis', [
       ['Nome Completo','Função','Coordenação','BI','Contacto'],
@@ -9396,10 +9652,93 @@ async function exportarExcelEquipas4R(btn) {
     ], [34,22,32,18,14]);
 
     X.writeFile(wb, 'Equipas_4R_Sumbe_' + new Date().toISOString().slice(0, 10) + '.xlsx');
-    showToast('Excel exportado — 5 folhas.', 'success');
+    showToast('Excel exportado — 6 folhas.', 'success');
   } catch(e) {
     console.error('[4R] exportarExcel:', e);
     showToast('Erro ao gerar o Excel: ' + e.message, 'error');
+  }
+  restaurar();
+}
+
+// ── Formação: Lista de presença dos Mobilizadores (Excel, modelo oficial) ────
+// Hoje: 1 slot por equipa ORAL (87). Os 19 mobilizadores de posto fixo entram aqui
+// quando o posto estiver modelado (Lote C).
+function getMobilizadores4R() {
+  const tm = _mapaTel4R();
+  const deEquipas = Object.values(_equipasCache4R)
+    .filter(e => e.tipo_equipa !== 'INJECTAVEL')
+    .map(e => {
+      const m = e.mobilizador;
+      return { nome: m?.bi ? _toTitleCase(m.nome || '') : '', telefone: m?.bi ? _tel4R(m.bi, tm, m.telefone) : '',
+               coord: e.coordenacao || '(Sem coordenação)', funcao: 'MOBILIZADOR' };
+    });
+  const dePostos = Object.values(_postosCache4R).map(p => {
+    const m = p.mobilizador;
+    return { nome: m?.bi ? _toTitleCase(m.nome || '') : '', telefone: m?.bi ? _tel4R(m.bi, tm) : '',
+             coord: p.coordenacao || '(Sem coordenação)', funcao: 'MOBILIZADOR (POSTO)' };
+  });
+  return [...deEquipas, ...dePostos];
+}
+async function exportarListaFormacaoMob4R(btn) {
+  const todos = getMobilizadores4R();
+  if (!todos.length) { showToast('Sem equipas orais nem postos na 4ª Ronda. Componha as equipas primeiro.', 'warn'); return; }
+  const htmlOrig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ A gerar...'; }
+  const restaurar = () => { if (btn) { btn.disabled = false; btn.innerHTML = htmlOrig; } };
+  try { await loadSheetJS(); } catch(e) { showToast('Erro ao carregar motor Excel. Verifique a ligação.', 'error'); restaurar(); return; }
+  try {
+    const X = window.XLSX;
+    const porCoord = {};
+    todos.forEach(m => { (porCoord[m.coord] = porCoord[m.coord] || []).push(m); });
+    // Mesma ordem da 3ª Ronda: coordenações com menos mobilizadores preenchidos primeiro;
+    // dentro de cada uma, nomes por ordem alfabética e slots vazios no fim.
+    const preenchidos = c => porCoord[c].filter(m => m.nome).length;
+    const linhas = [];
+    Object.keys(porCoord).sort((a, b) => preenchidos(a) - preenchidos(b) || _cmp4R(a, b)).forEach(c => {
+      [...porCoord[c]].sort((a, b) => (a.nome && !b.nome) ? -1 : (!a.nome && b.nome) ? 1 : _cmp4R(a.nome, b.nome))
+        .forEach(m => linhas.push({ ...m, coord: c }));
+    });
+    const aoa = [
+      [], [], [],
+      ['REPÚBLICA DE ANGOLA','','','',''],
+      ['DIREÇÃO NACIONAL DE SAÚDE PÚBLICA','','','',''],
+      ['GOVERNO DA PROVÍNCIA DO CUANZA SUL','','','',''],
+      ['ADMINISTRAÇÃO MUNICIPAL DO SUMBE','','','',''],
+      ['DIRECÇÃO DE SAÚDE','','','',''],
+      [CAMPANHA_4R.titulo,'','','',''],
+      [],
+      [CAMPANHA_4R.datas,'','','',''],
+      ['LISTA DE PRESENÇA - FORMAÇÃO','','','',''],
+      [],
+      ['Formador:_______________________________________________','','','Data:__________/_____________/2026',''],
+      [],
+      ['Nº','NOME COMPLETO','FUNÇÃO','COORDENAÇÃO','CONTACTO'],
+    ];
+    linhas.forEach((l, i) => aoa.push([i + 1, l.nome, l.funcao || 'MOBILIZADOR', l.coord, l.telefone]));
+    const fR = aoa.length;
+    aoa.push([]);
+    aoa.push(['DIRECÇÃO MUNICIPAL DA SAÚDE, AOS _______ DE ______________________ DE 2026','','','','']);
+    aoa.push([]);
+    aoa.push(['A CHEFE DE SECÇÃO DE SAÚDE PÚBLICA','','','','']);
+    aoa.push(['__________________________________________','','','','']);
+    aoa.push(['MARIA JÚLIA DOMINGOS DA SILVA','','','','']);
+    aoa.push(['Msc. Em Saúde Pública','','','','']);
+    const ws = X.utils.aoa_to_sheet(aoa);
+    const merges = [];
+    [3,4,5,6,7,8,10,11].forEach(r => merges.push({ s:{r,c:0}, e:{r,c:4} }));
+    merges.push({ s:{r:13,c:0}, e:{r:13,c:2} });
+    merges.push({ s:{r:13,c:3}, e:{r:13,c:4} });
+    [1,2,3,4,5,6].forEach(off => merges.push({ s:{r:fR+off,c:0}, e:{r:fR+off,c:4} }));
+    ws['!merges'] = merges;
+    ws['!cols'] = [{ wch: 6.5 }, { wch: 45 }, { wch: 22 }, { wch: 36 }, { wch: 22 }];
+    ws['!rows'] = Array.from({ length: 16 }, (_, i) => ({ hpx: [14,14,14,14,14,15,15,15,30,13,20,19,19,19,14,22][i] }));
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws, 'FORMAÇÃO MOB');
+    X.writeFile(wb, 'Lista_Formacao_Mobilizadores_4R_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    showToast('Lista exportada — ' + linhas.filter(l => l.nome).length + ' mobilizadores / ' + linhas.length + ' slots (equipas orais + postos fixos).', 'success');
+  } catch(e) {
+    console.error('[4R] exportarListaFormacaoMob4R:', e);
+    showToast('Erro ao gerar a lista: ' + e.message, 'error');
   }
   restaurar();
 }
@@ -9647,11 +9986,13 @@ function renderCoordCard4R(coordenacao) {
   const pillEqs = eqs.length === 0
     ? '<span class="coord-pill coord-pill-warn">Sem equipas</span>'
     : '<span class="coord-pill ' + (eqCompletas===eqs.length?'coord-pill-ok':'coord-pill-warn') + '">' + eqCompletas + '/' + eqs.length + '</span>';
+  const nPostos = getPostosDa4R(coordenacao).length;
+  const pillPostos = nPostos ? '<span class="coord-pill coord-pill-inf">' + nPostos + ' posto' + (nPostos !== 1 ? 's' : '') + '</span>' : '';
   const pillSups = '<span class="coord-pill coord-pill-inf">' + sups.length + ' sup' + (sups.length!==1?'s':'') + '</span>';
 
   const hdr = '<div class="coord-card-hdr" onclick="toggleCoordCard4R(\'' + escAttr(coordenacao) + '\', event)">' +
     '<h3>' + escH(shortCoord) + '</h3>' +
-    '<div class="coord-card-hdr-pills">' + pillCoord + pillSups + pillEqs + '</div>' +
+    '<div class="coord-card-hdr-pills">' + pillCoord + pillSups + pillPostos + pillEqs + '</div>' +
     '<span class="coord-card-toggle">' + (isExpanded ? '▾' : '▸') + '</span></div>';
 
   let slotCoord;
@@ -9674,8 +10015,29 @@ function renderCoordCard4R(coordenacao) {
     '<button class="btn-slot-add" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'supervisor\')">+ Adicionar</button></div>' +
     '<div class="sup-list">' + supsHtml + '</div>';
 
+  const postos = getPostosDa4R(coordenacao);
+  const postoCards = postos.map(p => {
+    const nEq = getEqsDoPosto4R(p.id).length;
+    const m = p.mobilizador;
+    const slot = m?.bi
+      ? '<div class="team-slot filled"><span class="team-slot-role">Mob</span>' +
+          '<span class="team-slot-name">' + escH((m.nome || '').split(' ')[0]) + '</span>' +
+          '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" onclick="removerMobilizadorPosto4R(\'' + escAttr(p.id) + '\')" title="Remover">✕</button></div>'
+      : '<div class="team-slot"><span class="team-slot-role">Mob</span>' +
+          '<button class="btn-slot-add" style="padding:3px 8px;font-size:10px" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'posto\',\'' + escAttr(p.id) + '\')">+ Mobilizador</button></div>';
+    return '<div class="team-card"><div class="team-header">' + escH(_rotuloPosto4R(p)) +
+      '<span class="team-status ' + (m?.bi ? 'ts-completa' : 'ts-vazia') + '">' + (m?.bi ? 'Completo' : 'Vazio') + '</span>' +
+      '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" onclick="renomearPosto4R(\'' + escAttr(p.id) + '\')" title="Definir o local do posto">✎</button>' +
+      '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" onclick="removerPosto4R(\'' + escAttr(p.id) + '\')" title="Eliminar posto">🗑</button>' +
+      '</div>' + slot +
+      '<div style="font-size:10px;color:var(--text3);margin-top:4px">' + nEq + ' equipa' + (nEq !== 1 ? 's' : '') + ' injectáve' + (nEq !== 1 ? 'is' : 'l') + ' ligada' + (nEq !== 1 ? 's' : '') + '</div></div>';
+  }).join('');
+  const postosSection = '<div class="sup-section-lbl"><span>Postos Fixos (' + postos.length + ')</span>' +
+    '<button class="btn-slot-add" onclick="criarPosto4R(\'' + escAttr(coordenacao) + '\')">+ Novo Posto</button></div>' +
+    '<div class="sup-list">' + (postoCards || '<div class="pool-empty">Nenhum posto fixo</div>') + '</div>';
+
   return '<div class="coord-card' + (isExpanded ? '' : ' collapsed') + '" id="' + cardId + '">' +
-    hdr + '<div class="coord-card-body">' + slotCoord + supsSection + '</div></div>';
+    hdr + '<div class="coord-card-body">' + slotCoord + supsSection + postosSection + '</div></div>';
 }
 
 function renderSupWithTeams4R(s, coordenacao) {
@@ -9731,6 +10093,18 @@ function renderEquipaCard4R(eq) {
         '</div>';
   };
 
+  let postoRow = '';
+  if (isInj) {
+    const ps = getPostosDa4R(eq.coordenacao);
+    postoRow = ps.length
+      ? '<div class="team-slot"><span class="team-slot-role">Posto</span>' +
+          '<select onchange="ligarEquipaPosto4R(\'' + escAttr(eq.id) + '\', this.value)" ' +
+            'style="flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px">' +
+            '<option value="">— sem posto —</option>' +
+            ps.map(p => '<option value="' + escAttr(p.id) + '"' + (eq.posto_id === p.id ? ' selected' : '') + '>' + escH(_rotuloPosto4R(p)) + '</option>').join('') +
+          '</select></div>'
+      : '<div class="team-slot"><span class="team-slot-role">Posto</span><span style="font-size:10px;color:var(--text3)">crie primeiro um posto na coordenação</span></div>';
+  }
   const slots = isInj
     ? memberSlot('vacinador_tecnico_1','Vac.Téc.1') + memberSlot('vacinador_tecnico_2','Vac.Téc.2') + memberSlot('registador','Reg')
     : memberSlot('mobilizador','Mob') + memberSlot('vacinador','Vac') + memberSlot('registador','Reg');
@@ -9741,7 +10115,7 @@ function renderEquipaCard4R(eq) {
       '<span class="team-status ' + statusCls + '">' + statusLbl + '</span>' +
       '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" ' +
         'onclick="removerEquipa4R(\'' + escAttr(eq.id) + '\')" title="Eliminar equipa">🗑</button>' +
-    '</div>' + slots +
+    '</div>' + slots + postoRow +
   '</div>';
 }
 
