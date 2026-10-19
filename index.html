@@ -8448,113 +8448,121 @@ function updateRhNovos4RCache(docs) {
 // Carrega as duas colecções novas da 4ª Ronda (chamada junto das outras caches 4R).
 async function recarregarAvalENovos4R() {
   try {
-    const [avDocs, novDocs, postoDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R(), fbGetPostos4R()]);
+    const [avDocs, novDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R()]);
     updateAvaliacoesCache4R(avDocs);
     updateRhNovos4RCache(novDocs);
-    updatePostosCache4R(postoDocs);
   } catch(e) { console.warn('[4R] erro ao carregar avaliações/novos RH:', e); }
 }
 
 // ════════════════════════════════════════════════════════════════════════
-// LOTE C — POSTO FIXO (4ª Ronda)
-// O posto pertence à COORDENAÇÃO (não ao supervisor). Tem 1 slot de Mobilizador.
-// Equipas injectáveis ligam-se ao posto através de equipa.posto_id (além do supervisor).
-// Colecção própria: postos_4r  (requer a regra no Firestore — ver instruções).
+// POSTO FIXO (4ª Ronda) — 1 posto fixo = 1 equipa injectável marcada.
+// Das 87 equipas injectáveis escolhem-se (com um clique) até 19 como posto fixo.
+// A equipa marcada ganha um slot extra de Mobilizador de Posto.
+// Campos guardados na própria equipa (equipas_4r):
+//   posto_fixo (bool) · posto_local (texto livre) · mobilizador_posto ({bi,nome} | null)
+// Não existe colecção própria de postos: os postos são DERIVADOS das equipas.
 // ════════════════════════════════════════════════════════════════════════
-let _postosCache4R = {}; // { [posto_id]: doc }
-
-async function fbGetPostos4R() {
-  if (!fbReady()) return [];
-  try {
-    const snap = await window._FB.getDocs(window._FB.colRef('postos_4r'));
-    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
-    return docs;
-  } catch(e) { console.error('[Firebase] fbGetPostos4R:', e); return []; }
+function _postoView4R(eq) {
+  return { id: eq.id, coordenacao: eq.coordenacao, posto_num: eq.equipa_num,
+           nome: eq.posto_local || '', mobilizador: eq.mobilizador_posto || null, equipa: eq };
 }
-async function fbSavePosto4R(data) {
-  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
-  try {
-    await window._FB.setDoc(window._FB.docRef('postos_4r/' + data.id), data);
-    return { success: true };
-  } catch(e) { return { success: false, error: e.message }; }
-}
-async function _fbSavePosto4RWithRetry(data) {
-  let r = await fbSavePosto4R(data);
-  if (!r.success) { await new Promise(res => setTimeout(res, 1200)); r = await fbSavePosto4R(data); }
-  return r;
-}
-async function fbDeletePosto4R(id) {
-  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
-  try {
-    await window._FB.deleteDoc(window._FB.docRef('postos_4r/' + id));
-    return { success: true };
-  } catch(e) { return { success: false, error: e.message }; }
-}
-function updatePostosCache4R(docs) {
-  _postosCache4R = {};
-  docs.forEach(d => { const id = d.id || d._id; if (id) _postosCache4R[id] = d; });
-}
-function _erroPostos4R(res) {
-  const msg = (res && res.error) || '';
-  return /permission|insufficient/i.test(msg)
-    ? 'Sem permissão em postos_4r: publique a regra desta colecção no Firestore (ver instruções).'
-    : 'Erro: ' + msg;
+function getTodosPostos4R() {
+  return Object.values(_equipasCache4R)
+    .filter(e => e.tipo_equipa === 'INJECTAVEL' && e.posto_fixo).map(_postoView4R);
 }
 function getPostosDa4R(coordenacao) {
-  return Object.values(_postosCache4R).filter(p => p.coordenacao === coordenacao)
+  return getTodosPostos4R().filter(p => p.coordenacao === coordenacao)
     .sort((a, b) => (a.posto_num || 0) - (b.posto_num || 0));
 }
+function _postoPorId4R(id) {
+  const e = _equipasCache4R[id];
+  return e && e.posto_fixo ? _postoView4R(e) : null;
+}
 function _rotuloPosto4R(p) {
-  return 'Posto ' + (p.posto_num || '?') + (p.nome ? ' — ' + p.nome : '');
-}
-function getEqsDoPosto4R(postoId) {
-  return Object.values(_equipasCache4R).filter(e => e.tipo_equipa === 'INJECTAVEL' && e.posto_id === postoId);
+  return 'Posto Fixo · Eq. Inj. ' + (p.posto_num || '?') + (p.nome ? ' — ' + p.nome : '');
 }
 
-async function criarPosto4R(coordenacao) {
+// Marcar / desmarcar uma equipa injectável como posto fixo (um clique)
+async function alternarPostoFixo4R(equipaId) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  const num = getPostosDa4R(coordenacao).reduce((m, p) => Math.max(m, p.posto_num || 0), 0) + 1;
-  const id  = 'POSTO_' + coordenacao.replace(/[^A-Za-z0-9]/g, '').slice(0, 14) + '_' + Date.now();
-  const p = {
-    id, ronda: RONDA_ID_4R, municipio: MUNICIPIO, coordenacao, posto_num: num, nome: '', mobilizador: null,
-    createdAt: window._FB ? window._FB.serverTimestamp() : null, updatedBy: APP_SESSION.bi || '',
-  };
-  const r = await _fbSavePosto4RWithRetry(p);
-  if (!r.success) { showToast(_erroPostos4R(r), 'error'); return; }
-  _postosCache4R[id] = p;
-  registarAuditoria('criar_posto_4r', { modulo: 'postos_4r', coordenacao, antes: null, depois: { posto_num: num, posto_id: id } });
+  const eq = _equipasCache4R[equipaId];
+  if (!eq || eq.tipo_equipa !== 'INJECTAVEL') return;
+  const eraPosto = !!eq.posto_fixo;
+  const mob = eq.mobilizador_posto;
+  const prev = { posto_fixo: eq.posto_fixo || false, posto_local: eq.posto_local || '', mobilizador_posto: mob || null };
+
+  if (eraPosto && mob?.bi) {
+    const ok = await showConfirmModal({
+      title: 'Desmarcar posto fixo — Eq. Inj. ' + eq.equipa_num,
+      body: (mob.nome || 'O mobilizador') + ' (mobilizador do posto) volta ao pool disponível.',
+      confirmLabel: 'Desmarcar', danger: true,
+    });
+    if (!ok) return;
+  }
+
+  eq.posto_fixo = !eraPosto;
+  eq.posto_local = eraPosto ? '' : (eq.posto_local || '');
+  eq.mobilizador_posto = null;
+  const r = await _fbSaveEquipa4RWithRetry(eq);
+  if (!r.success) {
+    Object.assign(eq, prev); renderHierarquia4R();
+    showToast('Erro ao gravar: ligação instável. O posto fixo não foi alterado.', 'error');
+    return;
+  }
+  if (eraPosto && mob?.bi) {
+    await fbRemoveAlocacao4R(mob.bi).catch(() => {});
+    delete _alocacoesCache4R[mob.bi.toUpperCase()];
+    _invalidatePickerCache();
+  }
+  registarAuditoria(eraPosto ? 'desmarcar_posto_fixo_4r' : 'marcar_posto_fixo_4r', {
+    alvoBI: mob?.bi || '', alvoNome: mob?.nome || '', modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: { posto_fixo: eraPosto, equipa_num: eq.equipa_num, equipa_id: equipaId },
+    depois: { posto_fixo: !eraPosto, equipa_num: eq.equipa_num },
+  });
   renderHierarquia4R();
-  showToast('Posto ' + num + ' criado.', 'success');
+  if (eraPosto) {
+    showToast('Eq. Inj. ' + eq.equipa_num + ' deixou de ser posto fixo.' + (mob?.bi ? ' Mobilizador devolvido ao pool.' : ''), 'warn');
+  } else {
+    const total = getTodosPostos4R().length;
+    showToast('Eq. Inj. ' + eq.equipa_num + ' marcada como posto fixo (' + total + '/' + META_4R.postos + ').' +
+      (total > META_4R.postos ? ' Atenção: acima da meta.' : ''), total > META_4R.postos ? 'warn' : 'success');
+  }
 }
 
-async function renomearPosto4R(postoId) {
+// Definir o local do posto (ex.: Mercado Central, Escola n.º 5)
+async function renomearPosto4R(equipaId) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  const p = _postosCache4R[postoId]; if (!p) return;
-  const novo = window.prompt('Local do posto fixo (ex.: Mercado Central, Escola n.º 5). Deixe vazio para só "Posto ' + p.posto_num + '".', p.nome || '');
+  const eq = _equipasCache4R[equipaId]; if (!eq || !eq.posto_fixo) return;
+  const novo = window.prompt('Local do posto fixo (ex.: Mercado Central, Escola n.º 5). Deixe vazio para limpar.', eq.posto_local || '');
   if (novo === null) return;
-  const prev = p.nome;
-  p.nome = novo.trim().slice(0, 60);
-  const r = await _fbSavePosto4RWithRetry(p);
-  if (!r.success) { p.nome = prev; showToast(_erroPostos4R(r), 'error'); return; }
+  const prev = eq.posto_local || '';
+  eq.posto_local = novo.trim();
+  const r = await _fbSaveEquipa4RWithRetry(eq);
+  if (!r.success) { eq.posto_local = prev; renderHierarquia4R(); showToast('Erro ao gravar: ligação instável. O local não foi alterado.', 'error'); return; }
+  registarAuditoria('local_posto_fixo_4r', {
+    modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: { posto_local: prev, equipa_num: eq.equipa_num }, depois: { posto_local: eq.posto_local, equipa_num: eq.equipa_num },
+  });
   renderHierarquia4R();
 }
 
-// Atribuir mobilizador ao posto (chamada pelo picker, role 'posto')
-async function _assignMobilizadorPosto4R(postoId, prof) {
+// Atribuir mobilizador ao posto (chamada pelo picker, role 'posto'; equipaId = id da equipa-posto)
+async function _assignMobilizadorPosto4R(equipaId, prof) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
   const bloqueio = checkAvaliacaoBloqueio4R(prof.bi);
   if (bloqueio.blocked) {
     showToast('🚫 ' + prof.nome.split(' ')[0] + ' foi marcado(a) como EXCLUÍDO(A) na avaliação da 4ª Ronda e não pode ser atribuído(a).', 'error');
     return;
   }
-  const p = _postosCache4R[postoId];
-  if (!p) { showToast('Posto não encontrado. Recarregue a hierarquia.', 'error'); return; }
-  if (p.mobilizador?.bi) { showToast('Este posto já tem mobilizador. Remova-o primeiro.', 'warn'); return; }
+  const eq = _equipasCache4R[equipaId];
+  if (!eq || !eq.posto_fixo) { showToast('Esta equipa já não está marcada como posto fixo. Recarregue a hierarquia.', 'error'); return; }
+  if (eq.mobilizador_posto?.bi) { showToast('Este posto já tem mobilizador. Remova-o primeiro.', 'warn'); return; }
   const biUpper = (prof.bi || '').toUpperCase();
   const now = new Date();
   const doc = {
-    bi: prof.bi, nome: prof.nome, funcao: 'Mobilizador', coordenacao: p.coordenacao, sexo: prof.sexo || 'M',
-    fonte: prof._fonte || 'rh_data', status: 'alocado', posto_id: postoId, tipo_equipa: 'POSTO', role_na_equipa: 'mobilizador_posto',
+    bi: prof.bi, nome: prof.nome, funcao: 'Mobilizador', coordenacao: eq.coordenacao, sexo: prof.sexo || 'M',
+    fonte: prof._fonte || 'rh_data', status: 'alocado', equipa_id: equipaId, posto_id: equipaId,
+    tipo_equipa: 'POSTO', role_na_equipa: 'mobilizador_posto',
     confirmadoPor: APP_SESSION.bi || '', confirmedAt: window._FB ? window._FB.serverTimestamp() : null,
     dataHoraLocal: now.toLocaleDateString('pt-PT') + ' ' + now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
     ronda: RONDA_ID_4R, municipio: MUNICIPIO,
@@ -8562,36 +8570,36 @@ async function _assignMobilizadorPosto4R(postoId, prof) {
   const a = await fbSaveAlocacao4R(doc);
   if (!a.success) { showToast('Erro ao gravar alocação: ligação instável. Tente novamente.', 'error'); return; }
   _alocacoesCache4R[biUpper] = doc;
-  const prev = p.mobilizador;
-  p.mobilizador = { bi: prof.bi, nome: prof.nome };
-  const r = await _fbSavePosto4RWithRetry(p);
+  const prev = eq.mobilizador_posto || null;
+  eq.mobilizador_posto = { bi: prof.bi, nome: prof.nome };
+  const r = await _fbSaveEquipa4RWithRetry(eq);
   if (!r.success) {
-    p.mobilizador = prev;
+    eq.mobilizador_posto = prev;
     await fbRemoveAlocacao4R(prof.bi).catch(() => {});
     delete _alocacoesCache4R[biUpper];
     renderHierarquia4R();
-    showToast(_erroPostos4R(r) + ' Operação revertida.', 'error');
+    showToast('Erro ao gravar equipa: ligação instável. Operação revertida.', 'error');
     return;
   }
   _invalidatePickerCache();
   registarAuditoria('atribuir_mobilizador_posto_4r', {
-    alvoBI: prof.bi, alvoNome: prof.nome, modulo: 'postos_4r', coordenacao: p.coordenacao,
-    antes: null, depois: { posto_num: p.posto_num, posto_id: postoId },
+    alvoBI: prof.bi, alvoNome: prof.nome, modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: null, depois: { posto_fixo: true, equipa_num: eq.equipa_num, equipa_id: equipaId },
   });
   renderHierarquia4R();
-  showToast(prof.nome.split(' ')[0] + ' adicionado ao Posto ' + p.posto_num + '. ✅', 'success');
+  showToast(prof.nome.split(' ')[0] + ' adicionado ao posto fixo (Eq. Inj. ' + eq.equipa_num + '). ✅', 'success');
 }
 
-async function removerMobilizadorPosto4R(postoId) {
+async function removerMobilizadorPosto4R(equipaId) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
-  const p = _postosCache4R[postoId];
-  if (!p || !p.mobilizador?.bi) return;
-  const { bi, nome } = p.mobilizador;
-  const prev = p.mobilizador;
-  p.mobilizador = null;
-  const r = await _fbSavePosto4RWithRetry(p);
+  const eq = _equipasCache4R[equipaId];
+  if (!eq || !eq.mobilizador_posto?.bi) return;
+  const { bi, nome } = eq.mobilizador_posto;
+  const prev = eq.mobilizador_posto;
+  eq.mobilizador_posto = null;
+  const r = await _fbSaveEquipa4RWithRetry(eq);
   if (!r.success) {
-    p.mobilizador = prev; renderHierarquia4R();
+    eq.mobilizador_posto = prev; renderHierarquia4R();
     showToast('Erro ao gravar: ligação instável. ' + (nome || '').split(' ')[0] + ' não foi removido.', 'error');
     return;
   }
@@ -8599,75 +8607,11 @@ async function removerMobilizadorPosto4R(postoId) {
   delete _alocacoesCache4R[(bi || '').toUpperCase()];
   _invalidatePickerCache();
   registarAuditoria('remover_mobilizador_posto_4r', {
-    alvoBI: bi, alvoNome: nome, modulo: 'postos_4r', coordenacao: p.coordenacao,
-    antes: { posto_num: p.posto_num, posto_id: postoId }, depois: null,
+    alvoBI: bi, alvoNome: nome, modulo: 'equipas_4r', coordenacao: eq.coordenacao,
+    antes: { posto_fixo: true, equipa_num: eq.equipa_num, equipa_id: equipaId }, depois: null,
   });
   renderHierarquia4R();
   showToast((nome || '').split(' ')[0] + ' removido do posto.', 'warn');
-}
-
-async function removerPosto4R(postoId) {
-  if (!guardEliminacao('este posto')) return;
-  const p = _postosCache4R[postoId]; if (!p) return;
-  const ligadas = getEqsDoPosto4R(postoId);
-  const ok = await showConfirmModal({
-    title: 'Eliminar ' + _rotuloPosto4R(p),
-    body: (p.mobilizador?.bi ? p.mobilizador.nome + ' volta ao pool disponível.\n' : '') +
-          (ligadas.length ? ligadas.length + ' equipa(s) injectável(is) ficam sem posto.' : 'Sem equipas ligadas.'),
-    confirmLabel: 'Eliminar Posto', danger: true,
-  });
-  if (!ok) return;
-  // 1) desligar as equipas injectáveis (aborta se alguma gravação falhar)
-  for (const eq of ligadas) {
-    const prev = eq.posto_id;
-    eq.posto_id = null;
-    const r = await _fbSaveEquipa4RWithRetry(eq);
-    if (!r.success) {
-      eq.posto_id = prev; renderHierarquia4R();
-      showToast('Ligação instável: o posto não foi eliminado. Tente novamente.', 'error');
-      return;
-    }
-  }
-  // 2) libertar o mobilizador
-  if (p.mobilizador?.bi) {
-    await fbRemoveAlocacao4R(p.mobilizador.bi).catch(() => {});
-    delete _alocacoesCache4R[p.mobilizador.bi.toUpperCase()];
-  }
-  // 3) apagar o posto
-  let d = await fbDeletePosto4R(postoId);
-  if (!d.success) { await new Promise(res => setTimeout(res, 1200)); d = await fbDeletePosto4R(postoId); }
-  if (!d.success) { showToast('Erro ao eliminar posto: ' + d.error, 'error'); await loadHierarquia4R(); return; }
-  delete _postosCache4R[postoId];
-  _invalidatePickerCache();
-  registarAuditoria('remover_posto_4r', {
-    modulo: 'postos_4r', coordenacao: p.coordenacao, antes: { posto_num: p.posto_num, posto_id: postoId }, depois: null,
-  });
-  renderHierarquia4R();
-  showToast('Posto eliminado.', 'warn');
-}
-
-// Ligar / desligar uma equipa injectável a um posto da sua coordenação
-async function ligarEquipaPosto4R(equipaId, postoId) {
-  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); renderHierarquia4R(); return; }
-  const eq = _equipasCache4R[equipaId]; if (!eq) return;
-  const novo = postoId || null;
-  if (novo && _postosCache4R[novo]?.coordenacao !== eq.coordenacao) {
-    showToast('O posto tem de ser da mesma coordenação da equipa.', 'warn'); renderHierarquia4R(); return;
-  }
-  const prev = eq.posto_id || null;
-  if (prev === novo) return;
-  eq.posto_id = novo;
-  const r = await _fbSaveEquipa4RWithRetry(eq);
-  if (!r.success) {
-    eq.posto_id = prev; renderHierarquia4R();
-    showToast('Erro ao gravar: ligação instável. A ligação ao posto não foi alterada.', 'error');
-    return;
-  }
-  registarAuditoria('ligar_equipa_posto_4r', {
-    modulo: 'equipas_4r', coordenacao: eq.coordenacao,
-    antes: { posto_id: prev }, depois: { posto_id: novo, equipa_num: eq.equipa_num },
-  });
-  renderHierarquia4R();
 }
 
 // Pool universal de pesquisa — mesma base histórica da 3ª Ronda (RH_DATA +
@@ -8684,7 +8628,7 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
   Object.values(_alocacoesCache4R).forEach(a => {
     if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) blocked.add(a.bi.toUpperCase());
   });
-  Object.values(_postosCache4R).forEach(p => { if (p.mobilizador?.bi) blocked.add(p.mobilizador.bi.toUpperCase()); });
+  getTodosPostos4R().forEach(p => { if (p.mobilizador?.bi) blocked.add(p.mobilizador.bi.toUpperCase()); });
 
   const map = {};
   RH_DATA.forEach(r => {
@@ -8789,7 +8733,7 @@ async function removerAlocacao4R(bi) {
     const nTeams   = supTeams.length;
     const nMembers = supTeams.reduce((acc, e) =>
       acc + ['mobilizador','vacinador','registador','vacinador_tecnico_1','vacinador_tecnico_2']
-        .filter(r => e[r]?.bi).length, 0);
+        .filter(r => e[r]?.bi).length + (e.mobilizador_posto?.bi ? 1 : 0), 0);
     modalTitle = 'Remover Supervisor — ' + nome.split(' ').slice(0,3).join(' ');
     modalBody  = nTeams > 0
       ? nTeams + ' equipa(s) e ' + nMembers + ' membro(s) serão libertados para o pool disponível.'
@@ -8815,6 +8759,10 @@ async function removerAlocacao4R(bi) {
           if (!rm.success) { falhou = true; break; }
           delete _alocacoesCache4R[eq[role].bi.toUpperCase()];
         }
+      }
+      if (!falhou && eq.mobilizador_posto?.bi) {
+        const rmP = await fbRemoveAlocacao4R(eq.mobilizador_posto.bi);
+        if (!rmP.success) falhou = true; else delete _alocacoesCache4R[eq.mobilizador_posto.bi.toUpperCase()];
       }
       if (falhou) break;
       let del = await fbDeleteEquipa4R(eqId);
@@ -8856,7 +8804,7 @@ async function removerEquipa4R(equipaId) {
   if (!eq) return;
   const ok = await showConfirmModal({
     title: 'Eliminar ' + (eq.tipo_equipa === 'INJECTAVEL' ? 'Equipa Inj. ' : 'Equipa ') + eq.equipa_num,
-    body: 'Supervisor: ' + (eq.supervisor_nome || '—') + '\n\nOs membros voltam ao pool disponível.',
+    body: 'Supervisor: ' + (eq.supervisor_nome || '—') + (eq.posto_fixo ? '\nEsta equipa é um POSTO FIXO: deixa de contar como posto.' : '') + '\n\nOs membros voltam ao pool disponível.',
     confirmLabel: 'Eliminar Equipa', danger: true,
   });
   if (!ok) return;
@@ -8867,6 +8815,10 @@ async function removerEquipa4R(equipaId) {
     delete _alocacoesCache4R[(eq[r].bi||'').toUpperCase()];
     return fbRemoveAlocacao4R(eq[r].bi).catch(() => {});
   });
+  if (eq.mobilizador_posto?.bi) {  // posto fixo: o mobilizador do posto também volta ao pool
+    delete _alocacoesCache4R[(eq.mobilizador_posto.bi||'').toUpperCase()];
+    removals.push(fbRemoveAlocacao4R(eq.mobilizador_posto.bi).catch(() => {}));
+  }
   await Promise.all(removals);
   let result = await fbDeleteEquipa4R(equipaId);
   if (!result.success) {
@@ -8926,7 +8878,7 @@ async function openAssignModal4R(coordenacao, role, equipaId, memberRole) {
     ? (memberTitles[memberRole] || 'Atribuir Membro')
     : isCoord ? 'Atribuir Coord área/Comuna' : 'Atribuir Supervisor de Vacinação';
   document.getElementById('assign-modal-sub-4r').textContent = isPosto
-    ? (_postosCache4R[equipaId] ? _rotuloPosto4R(_postosCache4R[equipaId]) + ' — ' + coordenacao : 'Posto — ' + coordenacao)
+    ? (_postoPorId4R(equipaId) ? _rotuloPosto4R(_postoPorId4R(equipaId)) + ' — ' + coordenacao : 'Posto — ' + coordenacao)
     : isMember ? 'Equipa — ' + coordenacao : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp-4r').value = '';
   document.getElementById('assign-modal-4r').style.display = 'flex';
@@ -9002,7 +8954,7 @@ function renderAssignList4R() {
     }
   });
 
-  Object.values(_postosCache4R).forEach(p => {
+  getTodosPostos4R().forEach(p => {
     if (p.mobilizador?.bi) inTeamMap[p.mobilizador.bi.toUpperCase()] = { papel: 'Mobilizador do ' + _rotuloPosto4R(p), coordenacao: p.coordenacao || '—' };
   });
 
@@ -9117,7 +9069,7 @@ function getBisAlocados4R() {
   Object.values(_alocacoesCache4R).forEach(a => {
     if ((a.status === 'coord' || a.status === 'supervisor') && a.bi) set.add(a.bi.toUpperCase());
   });
-  Object.values(_postosCache4R).forEach(p => { if (p.mobilizador?.bi) set.add(p.mobilizador.bi.toUpperCase()); });
+  getTodosPostos4R().forEach(p => { if (p.mobilizador?.bi) set.add(p.mobilizador.bi.toUpperCase()); });
   return set;
 }
 // Registados na 4ª Ronda (rh_novos_4r) ainda sem lugar
@@ -9131,7 +9083,7 @@ function getLugar4R(bi) {
   const a = _alocacoesCache4R[biU];
   if (a && a.status === 'coord')      return { tipo: 'coord', txt: 'Coord. de área · ' + (a.coordenacao || '—') };
   if (a && a.status === 'supervisor') return { tipo: 'supervisor', txt: 'Supervisor · ' + (a.coordenacao || '—') };
-  for (const p of Object.values(_postosCache4R)) {
+  for (const p of getTodosPostos4R()) {
     if ((p.mobilizador?.bi || '').toUpperCase() === biU)
       return { tipo: 'posto', txt: 'Mobilizador · ' + _rotuloPosto4R(p) + ' · ' + (p.coordenacao || '—') };
   }
@@ -9188,7 +9140,7 @@ function hier4rSearchUpdate() {
               (sup ? ' · Sup ' + sup.nome.split(' ').slice(0, 2).join(' ') : '') });
     });
   });
-  Object.values(_postosCache4R).forEach(p => {
+  getTodosPostos4R().forEach(p => {
     const m = p.mobilizador;
     if (!m?.bi || !match(m.nome, m.bi, p.coordenacao, 'posto')) return;
     results.push({ nome: m.nome, bi: m.bi, funcao: 'Mobilizador de Posto', cor: 'var(--green)', onde: _rotuloPosto4R(p) + ' · ' + (p.coordenacao || '—') });
@@ -9562,7 +9514,7 @@ function getLinhasPessoas4R() {
       });
     });
   });
-  Object.values(_postosCache4R).sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0)).forEach(p => {
+  getTodosPostos4R().sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0)).forEach(p => {
     if (!p.mobilizador?.bi) return;
     rows.push({ coordenacao: p.coordenacao || '', tipo: 'Posto fixo', num: p.posto_num || '', estado: 'completa', supervisor: '',
       funcao: 'Mobilizador de posto', nome: p.mobilizador.nome || '', bi: p.mobilizador.bi, tel: _tel4R(p.mobilizador.bi, tm) });
@@ -9611,15 +9563,15 @@ async function exportarExcelEquipas4R(btn) {
       ['Coordenação','Supervisor','Tel. Supervisor','Nº Equipa','Estado','Vacinador Técnico 1','BI VT1','Tel. VT1','Vacinador Técnico 2','BI VT2','Tel. VT2','Registador','BI Reg','Tel. Reg','Posto'],
       ...injs.map(e => [e.coordenacao, _supNome4R(e), supTel(e), e.equipa_num, e.status || 'vazia',
         ...mem(e, 'vacinador_tecnico_1'), ...mem(e, 'vacinador_tecnico_2'), ...mem(e, 'registador'),
-        e.posto_id && _postosCache4R[e.posto_id] ? _rotuloPosto4R(_postosCache4R[e.posto_id]) : '']),
+        e.posto_fixo ? _rotuloPosto4R(_postoView4R(e)) : '']),
     ], [28,28,13,9,12,28,16,13,28,16,13,28,16,13,26]);
 
     addSheet('Postos Fixos', [
-      ['Coordenação','Posto','Local','Mobilizador','BI','Telefone','Equipas injectáveis ligadas'],
-      ...Object.values(_postosCache4R).sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0))
-        .map(p => [p.coordenacao, 'Posto ' + (p.posto_num || ''), p.nome || '', p.mobilizador?.nome || '', p.mobilizador?.bi || '',
+      ['Coordenação','Equipa injectável','Local','Mobilizador','BI','Telefone','Supervisor'],
+      ...getTodosPostos4R().sort((a, b) => _cmp4R(a.coordenacao, b.coordenacao) || (a.posto_num || 0) - (b.posto_num || 0))
+        .map(p => [p.coordenacao, 'Eq. Inj. ' + (p.posto_num || ''), p.nome || '', p.mobilizador?.nome || '', p.mobilizador?.bi || '',
                    p.mobilizador?.bi ? _tel4R(p.mobilizador.bi, tm) : '',
-                   getEqsDoPosto4R(p.id).map(e => 'Inj. ' + e.equipa_num).join(', ')]),
+                   _supNome4R(p.equipa)]),
     ], [32,10,28,30,18,14,34]);
 
     addSheet('Coord e Supervisores', [
@@ -9661,8 +9613,7 @@ async function exportarExcelEquipas4R(btn) {
 }
 
 // ── Formação: Lista de presença dos Mobilizadores (Excel, modelo oficial) ────
-// Hoje: 1 slot por equipa ORAL (87). Os 19 mobilizadores de posto fixo entram aqui
-// quando o posto estiver modelado (Lote C).
+// 1 slot por equipa ORAL (87) + 1 slot por posto fixo (equipa injectável marcada, até 19).
 function getMobilizadores4R() {
   const tm = _mapaTel4R();
   const deEquipas = Object.values(_equipasCache4R)
@@ -9672,7 +9623,7 @@ function getMobilizadores4R() {
       return { nome: m?.bi ? _toTitleCase(m.nome || '') : '', telefone: m?.bi ? _tel4R(m.bi, tm, m.telefone) : '',
                coord: e.coordenacao || '(Sem coordenação)', funcao: 'MOBILIZADOR' };
     });
-  const dePostos = Object.values(_postosCache4R).map(p => {
+  const dePostos = getTodosPostos4R().map(p => {
     const m = p.mobilizador;
     return { nome: m?.bi ? _toTitleCase(m.nome || '') : '', telefone: m?.bi ? _tel4R(m.bi, tm) : '',
              coord: p.coordenacao || '(Sem coordenação)', funcao: 'MOBILIZADOR (POSTO)' };
@@ -10016,25 +9967,12 @@ function renderCoordCard4R(coordenacao) {
     '<div class="sup-list">' + supsHtml + '</div>';
 
   const postos = getPostosDa4R(coordenacao);
-  const postoCards = postos.map(p => {
-    const nEq = getEqsDoPosto4R(p.id).length;
-    const m = p.mobilizador;
-    const slot = m?.bi
-      ? '<div class="team-slot filled"><span class="team-slot-role">Mob</span>' +
-          '<span class="team-slot-name">' + escH((m.nome || '').split(' ')[0]) + '</span>' +
-          '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" onclick="removerMobilizadorPosto4R(\'' + escAttr(p.id) + '\')" title="Remover">✕</button></div>'
-      : '<div class="team-slot"><span class="team-slot-role">Mob</span>' +
-          '<button class="btn-slot-add" style="padding:3px 8px;font-size:10px" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'posto\',\'' + escAttr(p.id) + '\')">+ Mobilizador</button></div>';
-    return '<div class="team-card"><div class="team-header">' + escH(_rotuloPosto4R(p)) +
-      '<span class="team-status ' + (m?.bi ? 'ts-completa' : 'ts-vazia') + '">' + (m?.bi ? 'Completo' : 'Vazio') + '</span>' +
-      '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" onclick="renomearPosto4R(\'' + escAttr(p.id) + '\')" title="Definir o local do posto">✎</button>' +
-      '<button class="btn-slot-remove" style="font-size:10px;padding:2px 6px" onclick="removerPosto4R(\'' + escAttr(p.id) + '\')" title="Eliminar posto">🗑</button>' +
-      '</div>' + slot +
-      '<div style="font-size:10px;color:var(--text3);margin-top:4px">' + nEq + ' equipa' + (nEq !== 1 ? 's' : '') + ' injectáve' + (nEq !== 1 ? 'is' : 'l') + ' ligada' + (nEq !== 1 ? 's' : '') + '</div></div>';
-  }).join('');
-  const postosSection = '<div class="sup-section-lbl"><span>Postos Fixos (' + postos.length + ')</span>' +
-    '<button class="btn-slot-add" onclick="criarPosto4R(\'' + escAttr(coordenacao) + '\')">+ Novo Posto</button></div>' +
-    '<div class="sup-list">' + (postoCards || '<div class="pool-empty">Nenhum posto fixo</div>') + '</div>';
+  const postosSection = '<div class="sup-section-lbl"><span>Postos Fixos (' + postos.length + ')</span></div>' +
+    (postos.length
+      ? '<div style="font-size:11px;color:var(--text2);padding:2px 2px 8px;line-height:1.6">' +
+          postos.map(p => 'Eq. Inj. ' + p.posto_num + (p.nome ? ' (' + escH(p.nome) + ')' : '') +
+            (p.mobilizador?.bi ? ' ✓' : ' — sem mobilizador')).join(' · ') + '</div>'
+      : '<div class="pool-empty">Nenhum posto fixo — marque equipas injectáveis como posto fixo nos cards acima.</div>');
 
   return '<div class="coord-card' + (isExpanded ? '' : ' collapsed') + '" id="' + cardId + '">' +
     hdr + '<div class="coord-card-body">' + slotCoord + supsSection + postosSection + '</div></div>';
@@ -10095,24 +10033,33 @@ function renderEquipaCard4R(eq) {
 
   let postoRow = '';
   if (isInj) {
-    const ps = getPostosDa4R(eq.coordenacao);
-    postoRow = ps.length
-      ? '<div class="team-slot"><span class="team-slot-role">Posto</span>' +
-          '<select onchange="ligarEquipaPosto4R(\'' + escAttr(eq.id) + '\', this.value)" ' +
-            'style="flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px">' +
-            '<option value="">— sem posto —</option>' +
-            ps.map(p => '<option value="' + escAttr(p.id) + '"' + (eq.posto_id === p.id ? ' selected' : '') + '>' + escH(_rotuloPosto4R(p)) + '</option>').join('') +
-          '</select></div>'
-      : '<div class="team-slot"><span class="team-slot-role">Posto</span><span style="font-size:10px;color:var(--text3)">crie primeiro um posto na coordenação</span></div>';
+    const mp = eq.mobilizador_posto;
+    const btnMini = 'font-size:10px;padding:2px 6px';
+    if (eq.posto_fixo) {
+      postoRow =
+        '<div class="team-slot filled" style="border-top:1px dashed var(--border);margin-top:4px;padding-top:6px"><span class="team-slot-role">Posto</span>' +
+          '<span class="team-slot-name">' + (eq.posto_local ? escH(eq.posto_local) : '<span style="color:var(--text3)">local por definir</span>') + '</span>' +
+          '<button class="btn-slot-remove" style="' + btnMini + '" onclick="renomearPosto4R(\'' + escAttr(eq.id) + '\')" title="Definir o local do posto">✎</button></div>' +
+        (mp?.bi
+          ? '<div class="team-slot filled"><span class="team-slot-role">Mob.Posto</span>' +
+              '<span class="team-slot-name">' + escH((mp.nome || '').split(' ')[0]) + '</span>' +
+              '<button class="btn-slot-remove" style="' + btnMini + '" onclick="removerMobilizadorPosto4R(\'' + escAttr(eq.id) + '\')" title="Remover">✕</button></div>'
+          : '<div class="team-slot"><span class="team-slot-role">Mob.Posto</span>' +
+              '<button class="btn-slot-add" style="padding:3px 8px;font-size:10px" onclick="openAssignModal4R(\'' + escAttr(eq.coordenacao) + '\',\'posto\',\'' + escAttr(eq.id) + '\')">+ Mobilizador</button></div>') +
+        '<div style="margin-top:4px"><button class="btn-slot-remove" style="' + btnMini + '" onclick="alternarPostoFixo4R(\'' + escAttr(eq.id) + '\')" title="Deixa de ser posto fixo">Desmarcar posto fixo</button></div>';
+    } else {
+      postoRow = '<div style="margin-top:4px"><button class="btn-slot-add" style="padding:3px 8px;font-size:10px" onclick="alternarPostoFixo4R(\'' + escAttr(eq.id) + '\')" title="Esta equipa passa a ser um posto fixo (ganha slot de mobilizador)">Marcar como posto fixo</button></div>';
+    }
   }
   const slots = isInj
     ? memberSlot('vacinador_tecnico_1','Vac.Téc.1') + memberSlot('vacinador_tecnico_2','Vac.Téc.2') + memberSlot('registador','Reg')
     : memberSlot('mobilizador','Mob') + memberSlot('vacinador','Vac') + memberSlot('registador','Reg');
 
-  return '<div class="team-card">' +
+  return '<div class="team-card"' + (isInj && eq.posto_fixo ? ' style="border-color:var(--accent2)"' : '') + '>' +
     '<div class="team-header">' +
       (isInj ? 'Equipa Inj. ' : 'Equipa ') + eq.equipa_num +
       '<span class="team-status ' + statusCls + '">' + statusLbl + '</span>' +
+      (isInj && eq.posto_fixo ? '<span class="team-status" style="background:rgba(249,115,22,.15);color:var(--accent2);border:1px solid rgba(249,115,22,.3)">POSTO FIXO</span>' : '') +
       '<button class="btn-slot-remove" style="margin-left:auto;font-size:10px;padding:2px 6px" ' +
         'onclick="removerEquipa4R(\'' + escAttr(eq.id) + '\')" title="Eliminar equipa">🗑</button>' +
     '</div>' + slots + postoRow +
