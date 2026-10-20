@@ -3226,7 +3226,10 @@ async function perfilSalvarCorrecao(biOriginal, dados) {
         campos_alterados: dados,
       });
     }
-    showToast('Dados corrigidos com sucesso.', 'success');
+    const sync4 = await _sincronizarPessoa4R(biOrig, (dados.bi_novo || biOrig), dados)
+      .catch(e => ({ ok: false, alterados: 0, erros: [e.message] }));
+    if (sync4.ok) showToast('Dados corrigidos com sucesso' + (sync4.alterados ? ' (4ª Ronda actualizada).' : '.'), 'success');
+    else showToast('Dados corrigidos, mas a 4ª Ronda não ficou totalmente actualizada: ' + sync4.erros.join('; '), 'warn');
     return true;
   } catch (e) {
     console.error('[Correcções RH] Erro ao salvar:', e);
@@ -5167,6 +5170,14 @@ function perfilAcRender() {
     else if ((r.nome || '').toLowerCase().includes(ql)) contains.push(r);
   });
 
+  // Fonte 2b: Novos RH registados na 4ª Ronda
+  Object.values(_rhNovos4RCache).forEach(r => {
+    if (seenBIs.has(r.bi)) return;
+    seenBIs.add(r.bi);
+    if ((r.nome || '').toLowerCase().startsWith(ql)) starts.push(r);
+    else if ((r.nome || '').toLowerCase().includes(ql)) contains.push(r);
+  });
+
   // Fonte 3: Arquivo 2ª Ronda (pode conter profissionais que não estão no RH_DATA)
   if (_ronda2ArquivoCache) {
     _ronda2ArquivoCache.forEach(r => {
@@ -5204,7 +5215,7 @@ function perfilAcRender() {
 function perfilAcSelect(bi) {
   const inp = document.getElementById('perfil-search-input');
   const biUp = bi.toUpperCase();
-  const r = findBI(biUp) || _rhNovosCache[biUp] || (_ronda2ArquivoCache ? _ronda2ArquivoCache.find(x => x.bi === biUp) : null);
+  const r = findBI(biUp) || _rhNovosCache[biUp] || _rhNovos4RCache[biUp] || (_ronda2ArquivoCache ? _ronda2ArquivoCache.find(x => x.bi === biUp) : null);
   if (r && inp) inp.value = r.nome || bi;
   perfilAcClose();
   _perfilRenderCV(bi, document.getElementById('perfil-results'));
@@ -5234,6 +5245,11 @@ function perfilPesquisar() {
     resultados.push({ ..._rhNovosCache[qUp], _fonte_perfil: 'rh_novo' });
   }
 
+  // 2b. Verificar novos RH registados na 4ª Ronda
+  if (_rhNovos4RCache[qUp] && !directBI && !_rhNovosCache[qUp]) {
+    resultados.push({ ..._rhNovos4RCache[qUp], _fonte_perfil: 'rh_novo_4r' });
+  }
+
   // 3. Verificar arquivo 2ª Ronda (pode conter profissionais fora do RH_DATA)
   if (!resultados.length && _ronda2ArquivoCache) {
     const r2Hit = _ronda2ArquivoCache.find(r => r.bi === qUp);
@@ -5248,6 +5264,11 @@ function perfilPesquisar() {
     Object.values(_rhNovosCache).forEach(r => {
       if ((r.nome || '').toLowerCase().includes(ql) && !seenBIs.has(r.bi)) {
         resultados.push({ ...r, _fonte_perfil: 'rh_novo' }); seenBIs.add(r.bi);
+      }
+    });
+    Object.values(_rhNovos4RCache).forEach(r => {
+      if ((r.nome || '').toLowerCase().includes(ql) && !seenBIs.has(r.bi)) {
+        resultados.push({ ...r, _fonte_perfil: 'rh_novo_4r' }); seenBIs.add(r.bi);
       }
     });
     if (_ronda2ArquivoCache) {
@@ -5288,6 +5309,7 @@ function _perfilRenderCV(bi, container) {
   const base = findBI(biUp);
   const r2   = base ? getR2Record(biUp) : null;
   const novo = _rhNovosCache[biUp] || null;
+  const novo4 = _rhNovos4RCache[biUp] || null;
   const aloc = _alocacoesCache[biUp] || null;
   const conf = getMergedConfs()[biUp] || null;
 
@@ -5300,6 +5322,10 @@ function _perfilRenderCV(bi, container) {
     nome = novo.nome; sexo = novo.sexo || ''; telefone = novo.telefone || '';
     telefone_alt = novo.telefone_alt || ''; funcaoBase = novo.funcao_3r || '';
     coordBase = novo.coordenacao_3r || ''; fonteBase = 'Cadastro 3ª Ronda';
+  } else if (novo4) {
+    nome = novo4.nome; sexo = novo4.sexo || ''; telefone = novo4.telefone || '';
+    telefone_alt = novo4.telefone_alt || ''; funcaoBase = novo4.funcao || '';
+    coordBase = novo4.coordenacao || ''; fonteBase = 'Cadastro 4ª Ronda';
   }
 
   // 2ª Ronda Archive
@@ -5516,7 +5542,7 @@ function _perfilToggleEdit(bi) {
 
   const biUp = bi.toUpperCase();
   const base = findBI(biUp);
-  const novo = _rhNovosCache[biUp];
+  const novo = _rhNovosCache[biUp] || _rhNovos4RCache[biUp];
   const rec  = base || novo || {};
 
   const nome  = rec.nome || '';
@@ -5567,7 +5593,7 @@ async function _perfilSaveEdit(biOriginal, isNovo) {
 
   // Verificar se o novo BI já pertence a outra pessoa
   if (biNovo !== biOriginal) {
-    const existing = findBI(biNovo) || _rhNovosCache[biNovo];
+    const existing = findBI(biNovo) || _rhNovosCache[biNovo] || _rhNovos4RCache[biNovo];
     if (existing) {
       if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">O BI <strong>' + escH(biNovo) + '</strong> já pertence a <strong>' + escH(existing.nome) + '</strong>. Verifique antes de alterar.</span>';
       return;
@@ -5576,6 +5602,22 @@ async function _perfilSaveEdit(biOriginal, isNovo) {
 
   if (msgEl) msgEl.innerHTML = '<span style="color:var(--accent2)">A salvar...</span>';
 
+  if (isNovo && !_rhNovosCache[biOriginal] && _rhNovos4RCache[biOriginal]) {
+    // ── Profissional registado só na 4ª Ronda (rh_novos_4r) - a sincronização grava tudo ──
+    try {
+      const sync = await _sincronizarPessoa4R(biOriginal, biNovo, { nome, telefone: tel, telefone_alt: tel2 });
+      if (!sync.ok) { if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">Erro: ' + escH(sync.erros.join('; ')) + '</span>'; return; }
+      if (biNovo !== biOriginal) await _migrarBI_oneTime(biOriginal, biNovo); // 3ª Ronda, se houver dados
+      if (typeof registarAuditoria === 'function') {
+        registarAuditoria('correcao_dados_rh', { bi_original: biOriginal, campos_alterados: { nome, telefone: tel, telefone_alt: tel2, bi_novo: biNovo !== biOriginal ? biNovo : undefined } });
+      }
+      showToast('Dados corrigidos com sucesso (4ª Ronda actualizada).', 'success');
+      _perfilRenderCV(biNovo, document.getElementById('perfil-results'));
+    } catch (e) {
+      if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">Erro: ' + escH(e.message) + '</span>';
+    }
+    return;
+  }
   if (isNovo) {
     // ── Profissional novo (rh_novos_3r) - actualizar directamente no Firestore ──
     try {
@@ -5597,7 +5639,10 @@ async function _perfilSaveEdit(biOriginal, isNovo) {
       if (typeof registarAuditoria === 'function') {
         registarAuditoria('correcao_dados_rh', { bi_original: biOriginal, campos_alterados: { nome, telefone: tel, telefone_alt: tel2, bi_novo: biNovo !== biOriginal ? biNovo : undefined } });
       }
-      showToast('Dados corrigidos com sucesso.', 'success');
+      const sync = await _sincronizarPessoa4R(biOriginal, biNovo, { nome, telefone: tel, telefone_alt: tel2 })
+        .catch(e => ({ ok: false, alterados: 0, erros: [e.message] }));
+      if (sync.ok) showToast('Dados corrigidos com sucesso' + (sync.alterados ? ' (4ª Ronda actualizada).' : '.'), 'success');
+      else showToast('Dados corrigidos, mas a 4ª Ronda não ficou totalmente actualizada: ' + sync.erros.join('; '), 'warn');
       _perfilRenderCV(biNovo, document.getElementById('perfil-results'));
     } catch (e) {
       if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">Erro: ' + escH(e.message) + '</span>';
@@ -8410,6 +8455,7 @@ async function loadHierarquia4R() {
   updateEquipasCache4R(eqDocs);
   updateRhNovosCache(novosDocs);
   await recarregarAvalENovos4R(); // avaliacoes_4r + rh_novos_4r
+  await reconciliarCorrecoes4R().catch(e => console.warn('[4R] reconciliarCorrecoes4R:', e));
   if (!_ronda2ArquivoCache) await carregarRonda2Arquivo().catch(() => {});
   renderHierarquia4R();
 }
@@ -8680,7 +8726,7 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
       if (!bi) return;
       map[bi] = {
         bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
-        telefone: r.telefone || '', sexo: map[bi]?.sexo || 'M',
+        telefone: r.telefone || map[bi]?.telefone || '', sexo: map[bi]?.sexo || 'M',
         _fonte: 'ronda2', _fonteLabel: '2ª Ronda',
       };
     });
@@ -8690,7 +8736,7 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
     if (!bi) return;
     map[bi] = {
       bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
-      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      telefone: r.telefone || map[bi]?.telefone || '', sexo: r.sexo || 'M',
       _fonte: 'rh_novo', _fonteLabel: 'Novo RH',
     };
   });
@@ -8700,7 +8746,7 @@ function getUniversalSearchPool4R(incluirAlocados = false) {
     if (!bi) return;
     map[bi] = {
       bi: r.bi, nome: r.nome, funcao: r.funcao, coordenacao: r.coordenacao,
-      telefone: r.telefone || '', sexo: r.sexo || 'M',
+      telefone: r.telefone || map[bi]?.telefone || '', sexo: r.sexo || 'M',
       _fonte: 'rh_novo', _fonteLabel: 'Novo RH 4ª',
     };
   });
@@ -9300,7 +9346,7 @@ function renderRhList4R() {
       '<td style="font-size:11px;color:var(--text3)">' + escH(r.telefone || '-') + '</td>' +
       '<td>' + estado + '</td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="btn-row-action" title="' + (bloq ? 'Remova-a primeiro do lugar actual para editar' : 'Editar') + '"' + (bloq ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') +
+        '<button class="btn-row-action" title="' + (bloq ? 'Já tem lugar: edite no separador Perfil (ou remova-a do lugar actual)' : 'Editar') + '"' + (bloq ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') +
           ' data-bi="' + escAttr(r.bi) + '" onclick="editRhNovo4R(this.dataset.bi)">✎</button> ' +
         '<button class="btn-del-val" title="' + (bloq ? 'Remova-a primeiro do lugar actual para eliminar' : 'Eliminar') + '"' + (bloq ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') +
           ' data-bi="' + escAttr(r.bi) + '" onclick="deleteRhNovo4R(this.dataset.bi)">🗑</button>' +
@@ -9525,6 +9571,139 @@ async function exportarOrigens4R(btn) {
   restaurar();
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// SINCRONIZAÇÃO PERFIL -> 4ª RONDA
+// O separador Perfil corrige nome, telefone e BI. Na 4ª Ronda o BI é a chave dos
+// documentos (alocacoes_4r, rh_novos_4r, avaliacoes_4r, origens_4r) e há cópias do
+// nome e do BI dentro das equipas (membros, supervisor, mobilizador de posto).
+// Esta função propaga a correcção a todas essas cópias. É idempotente: pode correr
+// várias vezes sem efeito adicional. Nunca apaga o registo antigo se não conseguiu
+// gravar o novo, e não sobrepõe um registo que já exista sob o BI novo.
+// ════════════════════════════════════════════════════════════════════════
+const _SLOTS_4R_TODOS = ['mobilizador', 'vacinador', 'registador', 'vacinador_tecnico_1', 'vacinador_tecnico_2', 'mobilizador_posto'];
+
+async function _sincronizarPessoa4R(biAntigo, biNovo, dados = {}, opcoes = {}) {
+  const OLD = (biAntigo || '').toUpperCase().trim();
+  const NEW = (biNovo || '').toUpperCase().trim() || OLD;
+  const res = { ok: true, alterados: 0, erros: [] };
+  if (!OLD) return res;
+  if (!fbReady()) { res.ok = false; res.erros.push('Firebase indisponível'); return res; }
+  const mudouBI = OLD !== NEW;
+  const nome = (dados.nome || '').trim();
+  const temTel = dados.telefone !== undefined, temTel2 = dados.telefone_alt !== undefined;
+  const dessaPessoa = v => { const u = (v || '').toUpperCase(); return u === OLD || u === NEW; };
+
+  // Dados frescos da 4ª Ronda (só se a chamada não vier de quem já os acabou de carregar)
+  if (!opcoes.semRecarregar) {
+    try {
+      const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes4R(), fbGetEquipas4R()]);
+      if (alocDocs.length || !Object.keys(_alocacoesCache4R).length) updateAlocacoesCache4R(alocDocs);
+      if (eqDocs.length || !Object.keys(_equipasCache4R).length) updateEquipasCache4R(eqDocs);
+      await recarregarAvalENovos4R();
+    } catch (e) { res.ok = false; res.erros.push('leitura da 4ª Ronda: ' + e.message); return res; }
+  }
+
+  const tentar = async (rotulo, fn, contar = true) => {
+    try {
+      const r = await fn();
+      if (r && r.success === false) throw new Error(r.error || 'falhou');
+      if (contar) res.alterados++;
+      return true;
+    } catch (e) { res.ok = false; res.erros.push(rotulo + ': ' + e.message); return false; }
+  };
+  // Move (se o BI mudou) ou actualiza no sítio um documento keyed por BI
+  const migrarDoc = async (rotulo, cache, guardar, apagar, extra) => {
+    const k = cache[OLD] ? OLD : (cache[NEW] ? NEW : null);
+    if (!k) return;
+    const { _id, ...base } = cache[k];
+    const novo = { ...base, bi: NEW, ...(nome ? { nome } : {}), ...(extra ? extra() : {}) };
+    if (k === OLD && mudouBI) {
+      if (cache[NEW]) { res.ok = false; res.erros.push(rotulo + ': já existe um registo sob o BI novo (não foi movido)'); return; }
+      if (await tentar(rotulo, () => guardar(novo))) {
+        await tentar(rotulo + ' (BI antigo)', () => apagar(OLD), false);
+        delete cache[OLD]; cache[NEW] = novo;
+      }
+    } else if (JSON.stringify(novo) !== JSON.stringify(base)) {
+      if (await tentar(rotulo, () => guardar(novo))) cache[k] = novo;
+    }
+  };
+
+  // 1. Alocação da própria pessoa (coordenador, supervisor ou membro de equipa)
+  await migrarDoc('alocação', _alocacoesCache4R, fbSaveAlocacao4R, fbRemoveAlocacao4R);
+  // 1b. Se é supervisor: as alocações dos membros das suas equipas apontam para o BI dele
+  if (mudouBI) {
+    for (const a of Object.values(_alocacoesCache4R)) {
+      if ((a.supervisor_id || '').toUpperCase() !== OLD) continue;
+      const { _id, ...base } = a;
+      const novo = { ...base, supervisor_id: NEW };
+      if (await tentar('alocação de membro da equipa', () => fbSaveAlocacao4R(novo))) _alocacoesCache4R[(base.bi || _id || '').toUpperCase()] = novo;
+    }
+  }
+  // 2. Equipas: supervisor, membros e mobilizador de posto
+  for (const eq0 of Object.values(_equipasCache4R)) {
+    const eq = { ...eq0 };
+    let mudou = false;
+    if (mudouBI && (eq.supervisor_id || '').toUpperCase() === OLD) { eq.supervisor_id = NEW; mudou = true; }
+    if (nome && dessaPessoa(eq.supervisor_id) && eq.supervisor_nome !== nome) { eq.supervisor_nome = nome; mudou = true; }
+    for (const r of _SLOTS_4R_TODOS) {
+      const m = eq[r];
+      if (m && m.bi && dessaPessoa(m.bi)) {
+        const nm = { ...m, bi: NEW, ...(nome ? { nome } : {}) };
+        if (JSON.stringify(nm) !== JSON.stringify(m)) { eq[r] = nm; mudou = true; }
+      }
+    }
+    if (!mudou) continue;
+    const chave = eq0.id || eq0._id;
+    if (await tentar('equipa ' + (eq.equipa_num ?? ''), () => _fbSaveEquipa4RWithRetry(eq))) _equipasCache4R[chave] = eq;
+  }
+  // 3. Registo de novo RH da 4ª Ronda (inclui telefone)
+  await migrarDoc('registo novo RH 4ª Ronda', _rhNovos4RCache, fbSaveRhNovo4R, fbDeleteRhNovo4R, () => ({
+    ...(temTel ? { telefone: dados.telefone } : {}), ...(temTel2 ? { telefone_alt: dados.telefone_alt } : {}) }));
+  // 4. Avaliação e origem
+  await migrarDoc('avaliação', _avaliacoesCache4R, fbSaveAvaliacao4R, async bi => {
+    await window._FB.deleteDoc(window._FB.docRef('avaliacoes_4r/' + bi)); return { success: true };
+  });
+  await migrarDoc('origem', _origensCache4R, fbSaveOrigem4R, fbDeleteOrigem4R);
+
+  _invalidatePickerCache();
+  try { renderHierarquia4R(); } catch (e) { /* DOM indisponível */ }
+  if (res.alterados) {
+    registarAuditoria('sincronizacao_perfil_4r', {
+      alvoBI: NEW, alvoNome: nome, modulo: 'perfil', antes: mudouBI ? OLD : null,
+      depois: { bi: NEW, nome: nome || null, registos_actualizados: res.alterados, erros: res.erros.length },
+    });
+  }
+  return res;
+}
+
+// Correcções de BI feitas no Perfil ANTES desta sincronização existir: se ainda há
+// documentos da 4ª Ronda sob o BI antigo, alinha-os com o BI corrigido (só RH_DATA,
+// onde o BI antigo fica registado em correcoes_rh).
+const _reconc4RTentadas = new Set();
+async function reconciliarCorrecoes4R() {
+  if (!podeGerir() || !fbReady()) return;
+  for (const [antigo, c] of Object.entries(_correcoesCacheRH || {})) {
+    const O = antigo.toUpperCase();
+    if (!c || !c.bi_novo || c.bi_novo.toUpperCase() === O || _reconc4RTentadas.has(O)) continue;
+    const presente = _alocacoesCache4R[O] || _rhNovos4RCache[O] || _avaliacoesCache4R[O] || _origensCache4R[O] ||
+      Object.values(_alocacoesCache4R).some(a => (a.supervisor_id || '').toUpperCase() === O) ||
+      Object.values(_equipasCache4R).some(eq => (eq.supervisor_id || '').toUpperCase() === O ||
+        _SLOTS_4R_TODOS.some(r => (eq[r]?.bi || '').toUpperCase() === O));
+    if (!presente) continue;
+    _reconc4RTentadas.add(O);
+    const r = await _sincronizarPessoa4R(O, c.bi_novo, { nome: c.nome, telefone: c.telefone, telefone_alt: c.telefone_alt }, { semRecarregar: true });
+    if (!r.ok) console.warn('[4R] reconciliação do BI ' + O + ' incompleta:', r.erros);
+  }
+}
+
+// Perfil: garante que os registos novos da 4ª Ronda estão em memória para pesquisa/edição
+let _novos4RCarregados = false;
+async function _garantirNovos4RCarregados() {
+  if (_novos4RCarregados || !fbReady()) return;
+  _novos4RCarregados = true;
+  try { await recarregarAvalENovos4R(); } catch (e) { _novos4RCarregados = false; }
+}
+
 // ── Registar Novo RH (página) ────────────────────────────────────────────────
 let _editingRh4RBI = null;
 
@@ -9647,7 +9826,7 @@ async function saveRhNovo4R() {
 function editRhNovo4R(bi) {
   const r = _rhNovos4RCache[(bi || '').toUpperCase()];
   if (!r) return;
-  if (getLugar4R(r.bi)) { showToast('Remova primeiro esta pessoa do lugar actual para a editar.', 'warn'); return; }
+  if (getLugar4R(r.bi)) { showToast('Esta pessoa já tem lugar na 4ª Ronda. Edite os dados no separador Perfil (actualiza a 4ª Ronda automaticamente) ou remova-a primeiro do lugar actual.', 'warn'); return; }
   equipasSubtab4R('rh-novo');
   _editingRh4RBI = r.bi.toUpperCase();
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
@@ -12286,7 +12465,7 @@ function switchTab(name) {
   if (name === 'dashboard')   renderDashboard();
   if (name === 'history')     renderHistory();
   if (name === 'payments')    renderPayments();
-  if (name === 'perfil')      renderPerfil();
+  if (name === 'perfil')      { renderPerfil(); _garantirNovos4RCarregados(); }
   if (name === 'ronda1')      renderRonda1Table();
   if (name === 'ronda2')      { if (_ronda2ArquivoCache) renderRonda2Table(); else carregarRonda2Arquivo(); }
   if (name === 'equipas')     renderEquipasTab(); // FASES A+B
