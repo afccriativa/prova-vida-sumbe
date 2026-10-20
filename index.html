@@ -1149,6 +1149,16 @@ input, textarea, select {
 .rh-list-header { display:flex; align-items:center; gap:10px;
   margin-bottom:14px; flex-wrap:wrap; }
 .rh-list-count { font-size:12px; color:var(--text3); margin-left:auto; }
+/* Origem / Proveniência (4ª Ronda) */
+.origem-inp { width:100%; min-width:190px; background:var(--bg); border:1.5px solid var(--border);
+  border-radius:6px; padding:6px 9px; font-size:12px; font-weight:700; color:var(--text);
+  text-transform:uppercase; letter-spacing:.2px; }
+.origem-inp:focus { outline:none; border-color:var(--accent2); }
+.origem-inp.saved { border-color:var(--green); }
+.origem-inp.err { border-color:var(--red); }
+.origem-inp:disabled { opacity:.6; cursor:not-allowed; }
+.origem-sel { background:var(--bg); border:2px solid var(--border); border-radius:var(--radius-sm,6px);
+  padding:8px 10px; font-size:13px; color:var(--text); max-width:240px; }
 .rh-novo-badge { display:inline-block; padding:2px 8px; border-radius:10px;
   font-size:9px; font-weight:700; background:rgba(52,152,219,.15);
   color:#3498db; letter-spacing:0.5px; }
@@ -2319,6 +2329,7 @@ input, textarea, select {
     <div class="equipas-subtab active" data-subtab4r="hierarquia" onclick="equipasSubtab4R('hierarquia')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M2.5 6.5h5l1.5 2h8.5v8H2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2.5 6.5V4.8c0-.7.6-1.3 1.3-1.3H7l1.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>️ Hierarquia</div>
     <div class="equipas-subtab" data-subtab4r="progresso" onclick="equipasSubtab4R('progresso')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><line x1="4.5" y1="17" x2="4.5" y2="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="4.5" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.5" y="11" width="2.4" height="6" fill="currentColor"/><rect x="10.3" y="7.5" width="2.4" height="9.5" fill="currentColor"/><rect x="14.1" y="4" width="2.4" height="13" fill="currentColor"/></svg> Progresso<span id="prog-badge" class="subtab-badge" style="display:none">0</span></div>
     <div class="equipas-subtab" data-subtab4r="rh-novo" onclick="equipasSubtab4R('rh-novo')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Registar Novo RH</div>
+    <div class="equipas-subtab" data-subtab4r="origens" onclick="equipasSubtab4R('origens')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 18s-5.5-5.2-5.5-9.3a5.5 5.5 0 0 1 11 0C15.5 12.8 10 18 10 18z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="8.7" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Origem</div>
   </div>
 
   <!-- Sub-painel: Hierarquia -->
@@ -2398,6 +2409,29 @@ input, textarea, select {
       <span class="rh-list-count" id="rh4r-list-count">0 registados</span>
     </div>
     <div id="rh4r-list-content"></div>
+  </div>
+
+  <!-- Sub-painel: Origem / Proveniência (controlo interno de onde vem cada pessoa) -->
+  <div id="equipas4r-sub-origens" class="equipas4r-subpanel" style="display:none">
+    <div class="alert alert-info" style="margin-bottom:12px">
+      <strong>Origem / Proveniência.</strong> Lista de todas as pessoas que já têm lugar ou função na 4ª Ronda.
+      Escreva ao lado de cada uma de onde ela vem (ex.: <em>CRUZ VERMELHA</em>, <em>COLEGA CARLA DMS</em>).
+      Grava sozinho ao sair do campo ou com Enter, e é só um registo de controlo interno.
+    </div>
+    <div id="origens4r-summary" class="hier-summary"></div>
+    <div id="origens4r-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px"></div>
+    <div class="rh-list-header" style="flex-wrap:wrap">
+      <input id="origens4r-search" class="search-input" style="max-width:280px;font-size:13px;padding:8px 12px"
+             placeholder="Filtrar por nome, BI, função ou origem..." oninput="renderOrigens4R()">
+      <select id="origens4r-filtro-coord" class="origem-sel" onchange="renderOrigens4R()"></select>
+      <select id="origens4r-filtro-estado" class="origem-sel" onchange="renderOrigens4R()">
+        <option value="">Todos</option><option value="sem">Sem origem registada</option><option value="com">Com origem registada</option>
+      </select>
+      <button class="btn-hier-action" onclick="exportarOrigens4R(this)" title="Excel com a lista e o resumo por origem">Exportar Excel</button>
+      <span class="rh-list-count" id="origens4r-count"></span>
+    </div>
+    <datalist id="origens4r-sugestoes"></datalist>
+    <div id="origens4r-content"></div>
   </div>
 
   <!-- Sub-painel: Registar Novo RH (página, como nas rondas anteriores) -->
@@ -8448,9 +8482,10 @@ function updateRhNovos4RCache(docs) {
 // Carrega as duas colecções novas da 4ª Ronda (chamada junto das outras caches 4R).
 async function recarregarAvalENovos4R() {
   try {
-    const [avDocs, novDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R()]);
+    const [avDocs, novDocs, orgDocs] = await Promise.all([fbGetAvaliacoes4R(), fbGetRhNovos4R(), fbGetOrigens4R()]);
     updateAvaliacoesCache4R(avDocs);
     updateRhNovos4RCache(novDocs);
+    updateOrigensCache4R(orgDocs);
   } catch(e) { console.warn('[4R] erro ao carregar avaliações/novos RH:', e); }
 }
 
@@ -9276,6 +9311,220 @@ function renderRhList4R() {
     '<th>Estado 4ª Ronda</th><th>Acções</th></tr></thead><tbody>' + linhas + '</tbody></table></div>';
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// ORIGEM / PROVENIÊNCIA (4ª Ronda) - controlo interno de onde vem cada pessoa.
+// Colecção origens_4r/{BI}: { bi, nome, origem, atualizadoPor, atualizadoEm }.
+// Só lista quem já tem lugar/função na 4ª Ronda; a observação fica ligada ao BI
+// (não se perde se a pessoa mudar de equipa ou for retirada e recolocada).
+// ════════════════════════════════════════════════════════════════════════
+let _origensCache4R = {}; // { [BI_UPPER]: doc }
+
+async function fbGetOrigens4R() {
+  if (!fbReady()) return [];
+  try {
+    const snap = await window._FB.getDocs(window._FB.colRef('origens_4r'));
+    const docs = []; snap.forEach(d => docs.push({ _id: d.id, ...d.data() }));
+    return docs;
+  } catch(e) { console.error('[Firebase] fbGetOrigens4R:', e); return []; }
+}
+async function fbSaveOrigem4R(data) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.setDoc(window._FB.docRef('origens_4r/' + data.bi.toUpperCase()), data);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+async function fbDeleteOrigem4R(bi) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    await window._FB.deleteDoc(window._FB.docRef('origens_4r/' + bi.toUpperCase()));
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+function updateOrigensCache4R(docs) {
+  _origensCache4R = {};
+  docs.forEach(d => { const bi = (d.bi || d._id || '').toUpperCase().trim(); if (bi && d.origem) _origensCache4R[bi] = d; });
+}
+
+// Todas as pessoas com lugar na 4ª Ronda (coordenador, supervisor, membros de equipa, mobilizador de posto)
+function getPessoas4R() {
+  const mapa = new Map();
+  const add = (bi, nome, funcao, rank, coordenacao, onde, equipaNum) => {
+    const k = (bi || '').toUpperCase().trim();
+    if (!k || mapa.has(k)) return;
+    mapa.set(k, { bi: k, nome: nome || '', funcao, rank, coordenacao: coordenacao || '', onde: onde || '', equipaNum: equipaNum || 0,
+                  origem: _origensCache4R[k]?.origem || '' });
+  };
+  Object.values(_alocacoesCache4R).forEach(a => {
+    if (a.status === 'coord') add(a.bi, a.nome, 'Coordenador de área', 0, a.coordenacao, '');
+  });
+  Object.values(_alocacoesCache4R).forEach(a => {
+    if (a.status === 'supervisor') add(a.bi, a.nome, 'Supervisor de Vacinação', 1, a.coordenacao, '');
+  });
+  Object.values(_equipasCache4R).forEach(eq => {
+    const inj = eq.tipo_equipa === 'INJECTAVEL';
+    const onde = (inj ? 'Eq. Injectável ' : 'Eq. Oral ') + eq.equipa_num;
+    _rolesDe4R(eq).forEach(r => {
+      if (eq[r]?.bi) add(eq[r].bi, eq[r].nome, _ROLE_LABEL_4R[r] || r, 2, eq.coordenacao, onde, eq.equipa_num);
+    });
+    if (eq.posto_fixo && eq.mobilizador_posto?.bi)
+      add(eq.mobilizador_posto.bi, eq.mobilizador_posto.nome, 'Mobilizador de Posto', 3, eq.coordenacao,
+          'Posto Fixo · Eq. Inj. ' + eq.equipa_num, eq.equipa_num);
+  });
+  const ci = c => { const i = COORDENACOES_2R.indexOf(c); return i < 0 ? 999 : i; };
+  return [...mapa.values()].sort((a, b) =>
+    ci(a.coordenacao) - ci(b.coordenacao) || a.rank - b.rank ||
+    (a.equipaNum - b.equipaNum) || _cmp4R(a.nome, b.nome));
+}
+
+// Cartões, chips por origem e sugestões (não mexe na tabela, para não perder o foco ao escrever)
+function renderOrigensResumo4R() {
+  const pessoas = getPessoas4R();
+  const com = pessoas.filter(p => p.origem).length;
+  const sum = document.getElementById('origens4r-summary');
+  if (sum) sum.innerHTML =
+    hierSumCard(pessoas.length, 'Pessoas na 4ª Ronda', 'var(--blue)') +
+    hierSumCard(com, 'Com origem registada', pessoas.length && com === pessoas.length ? 'var(--green)' : 'var(--accent2)') +
+    hierSumCard(pessoas.length - com, 'Sem origem registada', pessoas.length - com === 0 ? 'var(--green)' : 'var(--text2)');
+  const cont = {};
+  pessoas.forEach(p => { if (p.origem) cont[p.origem] = (cont[p.origem] || 0) + 1; });
+  const ordenadas = Object.entries(cont).sort((a, b) => b[1] - a[1] || _cmp4R(a[0], b[0]));
+  const chips = document.getElementById('origens4r-chips');
+  if (chips) chips.innerHTML = ordenadas.length
+    ? '<span style="font-size:11px;color:var(--text3);align-self:center;margin-right:4px">Por origem:</span>' +
+      ordenadas.map(([o, n]) => '<button type="button" class="btn-hier-action" style="font-size:11px;padding:4px 10px" data-o="' + escAttr(o) +
+        '" onclick="origens4rFiltrarPor(this.dataset.o)" title="Filtrar por esta origem">' + escH(o) + ' <b>' + n + '</b></button>').join('')
+    : '';
+  const dl = document.getElementById('origens4r-sugestoes');
+  if (dl) {
+    const todas = new Set(Object.values(_origensCache4R).map(d => d.origem));
+    dl.innerHTML = [...todas].sort(_cmp4R).map(o => '<option value="' + escAttr(o) + '">').join('');
+  }
+}
+
+function origens4rFiltrarPor(o) {
+  const inp = document.getElementById('origens4r-search');
+  if (!inp) return;
+  inp.value = (inp.value.trim().toUpperCase() === (o || '').toUpperCase()) ? '' : o;
+  renderOrigens4R();
+}
+
+function renderOrigens4R() {
+  const el = document.getElementById('origens4r-content');
+  if (!el) return;
+  const selC = document.getElementById('origens4r-filtro-coord');
+  if (selC && !selC.options.length) {
+    selC.innerHTML = '<option value="">Todas as coordenações</option>' +
+      COORDENACOES_2R.map(c => '<option value="' + escAttr(c) + '">' + escH(c) + '</option>').join('');
+  }
+  renderOrigensResumo4R();
+  const q = (document.getElementById('origens4r-search')?.value || '').toLowerCase().trim();
+  const fc = selC?.value || '';
+  const fe = document.getElementById('origens4r-filtro-estado')?.value || '';
+  const pessoas = getPessoas4R();
+  const cnt = document.getElementById('origens4r-count');
+  if (!pessoas.length) {
+    if (cnt) cnt.textContent = '';
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:var(--text3)"><div class="empty-state">' +
+      '<div style="font-weight:700;margin-bottom:6px">Ainda ninguém foi colocado na 4ª Ronda</div>' +
+      '<div style="font-size:12px">As pessoas aparecem aqui assim que forem colocadas numa função ou equipa na Hierarquia.</div></div></div>';
+    return;
+  }
+  const filtradas = pessoas.filter(p =>
+    (!fc || p.coordenacao === fc) &&
+    (!fe || (fe === 'sem' ? !p.origem : !!p.origem)) &&
+    (!q || (p.nome + ' ' + p.bi + ' ' + p.funcao + ' ' + p.origem + ' ' + p.coordenacao + ' ' + p.onde).toLowerCase().includes(q)));
+  if (cnt) cnt.textContent = filtradas.length + ' de ' + pessoas.length + ' pessoas';
+  if (!filtradas.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Nenhum resultado para os filtros aplicados.</div>';
+    return;
+  }
+  const edita = podeGerir();
+  const linhas = filtradas.map((p, i) =>
+    '<tr>' +
+      '<td style="color:var(--text3);font-size:11px">' + (i + 1) + '</td>' +
+      '<td style="font-weight:700;color:var(--text)">' + escH(p.nome) + '<br><code style="font-size:10px;font-weight:400;color:var(--text3)">' + escH(p.bi) + '</code></td>' +
+      '<td style="font-size:11px">' + escH(p.funcao) + '</td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + escH(p.coordenacao || '-') + '</td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + escH(p.onde || '-') + '</td>' +
+      '<td><input class="origem-inp" type="text" maxlength="60" list="origens4r-sugestoes" autocomplete="off"' +
+        ' placeholder="Ex.: CRUZ VERMELHA" data-bi="' + escAttr(p.bi) + '" value="' + escAttr(p.origem) + '"' +
+        (edita ? '' : ' disabled') + ' onchange="salvarOrigem4R(this)" onkeydown="origens4rTecla(event, this)"></td>' +
+    '</tr>').join('');
+  el.innerHTML = '<div style="overflow-x:auto"><table class="history-table"><thead><tr>' +
+    '<th>#</th><th>Nome Completo</th><th>Função</th><th>Coordenação</th><th>Equipa / Posto</th><th>Origem (observação)</th>' +
+    '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+}
+
+// Enter grava este campo e passa ao seguinte (preenchimento rápido)
+function origens4rTecla(ev, inp) {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  const todos = [...document.querySelectorAll('#origens4r-content .origem-inp')];
+  const prox = todos[todos.indexOf(inp) + 1];
+  if (prox) prox.focus(); else inp.blur();
+}
+
+async function salvarOrigem4R(inp) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const bi = (inp.dataset.bi || '').toUpperCase();
+  if (!bi) return;
+  const pessoa = getPessoas4R().find(p => p.bi === bi);
+  const antes = _origensCache4R[bi]?.origem || '';
+  const novo = (inp.value || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  inp.value = novo;
+  if (novo === antes) return;
+  const r = novo
+    ? await fbSaveOrigem4R({ bi, nome: pessoa?.nome || _origensCache4R[bi]?.nome || '', origem: novo,
+        atualizadoPor: APP_SESSION.nome || '', atualizadoEm: new Date().toISOString() })
+    : await fbDeleteOrigem4R(bi);
+  if (!r.success) {
+    inp.value = antes; inp.classList.remove('saved'); inp.classList.add('err');
+    showToast('Erro ao gravar a origem: ' + (r.error || 'ligação instável') + '. Nada foi alterado.', 'error');
+    return;
+  }
+  if (novo) _origensCache4R[bi] = { bi, nome: pessoa?.nome || '', origem: novo };
+  else delete _origensCache4R[bi];
+  inp.classList.remove('err'); inp.classList.add('saved');
+  registarAuditoria('origem_rh_4r', {
+    alvoBI: bi, alvoNome: pessoa?.nome || '', modulo: 'equipas_4r', coordenacao: pessoa?.coordenacao || '',
+    antes: antes || null, depois: novo || null,
+  });
+  renderOrigensResumo4R();
+}
+
+async function exportarOrigens4R(btn) {
+  const pessoas = getPessoas4R();
+  if (!pessoas.length) { showToast('Ninguém colocado na 4ª Ronda para exportar.', 'warn'); return; }
+  const htmlOrig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'A gerar...'; }
+  const restaurar = () => { if (btn) { btn.disabled = false; btn.innerHTML = htmlOrig; } };
+  try { await loadSheetJS(); } catch(e) {
+    showToast('Erro ao carregar motor Excel. Verifique a ligação.', 'error'); restaurar(); return;
+  }
+  try {
+    const X = window.XLSX, wb = X.utils.book_new(), tm = _mapaTel4R();
+    const addSheet = (nome, aoa, wch) => { const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = wch.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, nome); };
+    addSheet('Origem 4R', [
+      ['Nº','Nome','BI','Função','Coordenação','Equipa / Posto','Telefone','Origem'],
+      ...pessoas.map((p, i) => [i + 1, p.nome, p.bi, p.funcao, p.coordenacao, p.onde, _tel4R(p.bi, tm), p.origem]),
+    ], [6,36,18,24,30,26,14,32]);
+    const cont = {};
+    pessoas.forEach(p => { const o = p.origem || 'SEM ORIGEM REGISTADA'; cont[o] = (cont[o] || 0) + 1; });
+    addSheet('Resumo por Origem', [
+      ['Origem','Nº de pessoas'],
+      ...Object.entries(cont).sort((a, b) => (a[0] === 'SEM ORIGEM REGISTADA') - (b[0] === 'SEM ORIGEM REGISTADA') || b[1] - a[1] || _cmp4R(a[0], b[0])),
+      ['TOTAL', pessoas.length],
+    ], [36,16]);
+    X.writeFile(wb, 'Origem_RH_4R_Sumbe_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    showToast('Excel exportado - lista e resumo por origem.', 'success');
+  } catch(e) {
+    console.error('[4R] exportarOrigens:', e);
+    showToast('Erro ao gerar o Excel: ' + e.message, 'error');
+  }
+  restaurar();
+}
+
 // ── Registar Novo RH (página) ────────────────────────────────────────────────
 let _editingRh4RBI = null;
 
@@ -9912,6 +10161,7 @@ function renderHierarquia4R() {
   // Mantém as restantes sub-abas e a pesquisa em sincronia com cada alteração
   renderProgresso4R();
   renderRhList4R();
+  if (document.getElementById('equipas4r-sub-origens')?.style.display === 'block') renderOrigens4R();
   if ((document.getElementById('hier4r-search-inp')?.value || '').trim()) hier4rSearchUpdate();
 }
 
