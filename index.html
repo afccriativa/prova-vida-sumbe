@@ -2351,6 +2351,8 @@ input, textarea, select {
       <span class="hier-toolbar-lbl" style="margin-left:8px">Cards:</span>
       <button class="btn-hier-action" onclick="hier4rExpandAll()" title="Expandir todas as coordenações">⊞ Expandir tudo</button>
       <button class="btn-hier-action" onclick="hier4rCollapseAll()" title="Colapsar todas as coordenações">⊟ Colapsar tudo</button>
+      <span class="hier-toolbar-lbl" style="margin-left:8px">Dados:</span>
+      <button class="btn-hier-action" onclick="verificarDados4R(this)" title="Compara o BI e o nome de cada pessoa da 4ª Ronda com o Perfil e propõe corrigir o que estiver diferente">Sincronizar com o Perfil</button>
     </div>
 
     <!-- Painel: Lista de Presença de Campo (4ª Ronda) -->
@@ -9694,6 +9696,94 @@ async function reconciliarCorrecoes4R() {
     const r = await _sincronizarPessoa4R(O, c.bi_novo, { nome: c.nome, telefone: c.telefone, telefone_alt: c.telefone_alt }, { semRecarregar: true });
     if (!r.ok) console.warn('[4R] reconciliação do BI ' + O + ' incompleta:', r.erros);
   }
+}
+
+// ── Verificação manual: BI e nomes da 4ª Ronda versus Perfil ─────────────────
+// Para dados que ficaram desalinhados antes da sincronização automática existir
+// (ex.: BI corrigido no Perfil, mas a 4ª Ronda ainda com o BI antigo).
+function _normNome4R(n) {
+  return (n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+// Registo actual de um BI, pela mesma ordem de autoridade do Perfil
+function _registoAtual4R(bi) {
+  const k = (bi || '').toUpperCase();
+  return findBI(k) || _rhNovos4RCache[k] || _rhNovosCache[k] ||
+    (_ronda2ArquivoCache ? _ronda2ArquivoCache.find(r => (r.bi || '').toUpperCase() === k) : null) || null;
+}
+function _candidatosPorNome4R(nome, excluirBI, emUso) {
+  const alvo = _normNome4R(nome);
+  if (!alvo) return [];
+  const vistos = new Map();
+  const ver = r => {
+    const b = (r.bi || '').toUpperCase();
+    if (b && b !== excluirBI && !emUso.has(b) && !vistos.has(b) && _normNome4R(r.nome) === alvo) vistos.set(b, r);
+  };
+  RH_DATA.forEach(ver);
+  Object.values(_rhNovosCache).forEach(ver);
+  Object.values(_rhNovos4RCache).forEach(ver);
+  (_ronda2ArquivoCache || []).forEach(ver);
+  return [...vistos.values()];
+}
+function diagnosticarDados4R() {
+  const pessoas = getPessoas4R();
+  const emUso = new Set(pessoas.map(p => p.bi));
+  const problemas = [], naoResolvidos = [];
+  pessoas.forEach(p => {
+    const rec = _registoAtual4R(p.bi);
+    if (rec) {
+      if (rec.nome && _normNome4R(rec.nome) !== _normNome4R(p.nome))
+        problemas.push({ tipo: 'nome', bi: p.bi, de: p.nome, para: rec.nome });
+      return;
+    }
+    // BI que já não existe em nenhum registo: procurar quem tem exactamente o mesmo nome
+    const cands = _candidatosPorNome4R(p.nome, p.bi, emUso);
+    if (cands.length === 1) problemas.push({ tipo: 'bi', bi: p.bi, novo: cands[0].bi.toUpperCase(), nome: p.nome, rec: cands[0] });
+    else naoResolvidos.push({ bi: p.bi, nome: p.nome, candidatos: cands.length });
+  });
+  return { problemas, naoResolvidos };
+}
+async function verificarDados4R(btn) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const txt = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'A verificar...'; }
+  const restaurar = () => { if (btn) { btn.disabled = false; btn.textContent = txt; } };
+  try {
+    await loadHierarquia4R(); // dados frescos (4ª Ronda e registos do Perfil)
+    const { problemas, naoResolvidos } = diagnosticarDados4R();
+    if (!problemas.length && !naoResolvidos.length) {
+      showToast('Tudo em ordem: o BI e o nome de todas as pessoas da 4ª Ronda coincidem com o Perfil.', 'success');
+      return;
+    }
+    const semResolver = naoResolvidos.length
+      ? '\n\n' + naoResolvidos.length + ' pessoa(s) com um BI que não existe em nenhum registo ficam por resolver (' +
+        naoResolvidos.slice(0, 4).map(n => n.nome).join(', ') + (naoResolvidos.length > 4 ? '...' : '') + '). Corrija-os no Perfil.'
+      : '';
+    if (!problemas.length) { showToast('Nada a corrigir automaticamente.' + semResolver.replace(/\n+/g, ' '), 'warn'); return; }
+    const linhas = problemas.slice(0, 12).map(p => p.tipo === 'bi'
+      ? 'BI: ' + p.nome + '  ' + p.bi + ' -> ' + p.novo
+      : 'Nome: ' + p.de + ' -> ' + p.para + '  (' + p.bi + ')');
+    const ok = await showConfirmModal({
+      title: 'Sincronizar com o Perfil',
+      body: problemas.length + ' pessoa(s) com dados diferentes do Perfil:\n\n' + linhas.join('\n') +
+            (problemas.length > 12 ? '\n... e mais ' + (problemas.length - 12) : '') + semResolver,
+      confirmLabel: 'Corrigir ' + problemas.length,
+    });
+    if (!ok) return;
+    let feitos = 0; const falhas = [];
+    for (const p of problemas) {
+      const dados = p.tipo === 'bi'
+        ? { nome: p.rec.nome, ...(p.rec.telefone ? { telefone: p.rec.telefone } : {}), ...(p.rec.telefone_alt ? { telefone_alt: p.rec.telefone_alt } : {}) }
+        : { nome: p.para };
+      const r = await _sincronizarPessoa4R(p.bi, p.tipo === 'bi' ? p.novo : p.bi, dados, { semRecarregar: true });
+      if (r.ok) feitos++; else falhas.push(...r.erros);
+    }
+    await loadHierarquia4R();
+    if (falhas.length) showToast(feitos + ' corrigida(s); houve erros: ' + falhas.slice(0, 2).join('; '), 'warn');
+    else showToast(feitos + ' pessoa(s) corrigida(s) na 4ª Ronda.', 'success');
+  } catch (e) {
+    console.error('[4R] verificarDados4R:', e);
+    showToast('Erro ao verificar os dados: ' + e.message, 'error');
+  } finally { restaurar(); }
 }
 
 // Perfil: garante que os registos novos da 4ª Ronda estão em memória para pesquisa/edição
