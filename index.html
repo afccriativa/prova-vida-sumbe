@@ -3482,30 +3482,16 @@ async function detectarPerfilPorBI(bi) {
   // 2. Gestor Municipal PAV - BI numa lista fixa autorizada (perfil administrativo restrito)
   if (isGestorPAVBI(bi)) return { tipo: 'gestor_pav', gestor: getGestorPAV(bi) };
 
-  // 3. Supervisor - índice estático (dados de origem + realocações já sincronizadas)
-  if (isSupervisorAuthorized(bi)) {
-    return { tipo: 'supervisor', sup: SUPERVISORES_INDEX[bi] };
-  }
-
-  // 3. Fallback Firebase - cobre Supervisor realocado noutro dispositivo
-  //    e Coordenador de Área, numa única consulta
+  // 3. Supervisor ou Coordenador de Área da 4ª Ronda (alocacoes_4r)
   if (fbReady()) {
     try {
-      const alocDocs = await fbGetAlocacoes();
-      for (const doc of alocDocs) {
-        const docBI = (doc.bi || '').toUpperCase();
-        if (docBI !== bi) continue;
-        if (doc.status === 'supervisor' || doc.funcao === 'Supervisor equipa') {
-          const r2 = getR2Record(doc.bi);
-          const sup = {
-            bi: doc.bi, nome: doc.nome,
-            coordenacao: (r2 && r2.coordenacao_r2) || doc.coordenacao || '',
-            sexo: doc.sexo || 'M', _fromFirebase: true,
-          };
-          SUPERVISORES_INDEX[docBI] = sup; // manter índice coerente com o resto da app
-          return { tipo: 'supervisor', sup };
+      const alocDocs = await fbGetAlocacoes4R();
+      const doc = alocDocs.find(d => (d.bi || '').toUpperCase() === bi && (d.status === 'supervisor' || d.status === 'coord'));
+      if (doc) {
+        if (doc.status === 'supervisor') {
+          return { tipo: 'supervisor', sup: { bi: doc.bi, nome: doc.nome, coordenacao: doc.coordenacao || '', sexo: doc.sexo || 'M' } };
         }
-        if (doc.status === 'coord') return { tipo: 'coordenador', coord: doc };
+        return { tipo: 'coordenador', coord: doc };
       }
     } catch(e) {
       console.error('[Identificação] Falha na consulta Firebase:', e);
@@ -3526,7 +3512,7 @@ function _renderResultadoIdentificacao(perfil, bi) {
       cls: 'id-res-sup', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="3" y="6" width="14" height="12" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 6V3.5h7V6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="10" y1="9.3" x2="10" y2="14.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="7.5" y1="11.8" x2="12.5" y2="11.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>', role: 'Supervisor de Equipa',
       nome: perfil.sup.nome,
       sub: perfil.sup.coordenacao ? 'Coordenação: ' + escH(perfil.sup.coordenacao) : '',
-      desc: 'Vai poder validar a disponibilidade dos profissionais sob a sua supervisão.',
+      desc: 'Vai poder consultar as suas equipas e marcar as presenças diárias da campanha.',
       btnTxt: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Entrar como Supervisor', btnFn: 'confirmarEntradaSupervisor()'
     });
   } else if (perfil.tipo === 'coordenador') {
@@ -3534,7 +3520,7 @@ function _renderResultadoIdentificacao(perfil, bi) {
       cls: 'id-res-coord', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="currentColor"/><circle cx="10" cy="7.4" r="2.3" fill="var(--surface)"/></svg>', role: 'Coordenador de Área',
       nome: perfil.coord.nome || bi,
       sub: perfil.coord.coordenacao ? 'Coordenação: ' + escH(perfil.coord.coordenacao) : '',
-      desc: 'Vai poder monitorizar o estado das equipas e supervisores da sua coordenação.',
+      desc: 'Vai poder monitorizar as equipas e os supervisores da sua coordenação e acompanhar as presenças da campanha.',
       btnTxt: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Entrar como Coordenador', btnFn: 'confirmarEntradaCoordenador()'
     });
   } else if (perfil.tipo === 'gestor_pav') {
@@ -3713,65 +3699,36 @@ async function doAuthGestor() {
 
 // ─── Autenticação: Supervisor ─────────────────────────────────────────────────
 async function doAuthSupervisor() {
-  const biRaw = document.getElementById('auth-sup-bi').value;
-  const bi    = biRaw.toUpperCase().trim();
   const input = document.getElementById('auth-sup-bi');
+  const bi    = (input.value || '').toUpperCase().trim();
   const btn   = document.querySelector('#modal-auth-sup .btn-auth-enter');
 
   if (!bi) {
     showAuthMsg('sup', 'error', 'Por favor insira o número do Bilhete de Identidade.');
     input.focus(); return;
   }
-
-  // ── Caminho rápido: BI já no índice estático (supervisores de origem + realloc local) ──
-  if (isSupervisorAuthorized(bi)) {
-    const sup = SUPERVISORES_INDEX[bi];
-    _completeSupervisorLogin(bi, sup);
-    return;
-  }
-
-  // ── Fallback Firebase: verificar se foi realocado para Supervisor em qualquer dispositivo ──
   if (!fbReady()) {
-    showAuthMsg('sup', 'error',
-      'Acesso negado. Apenas Supervisores de Equipa autorizados podem efectuar validações.');
+    showAuthMsg('sup', 'error', 'Firebase indisponível. Verifique a ligação e tente novamente.');
     input.classList.add('inp-err'); input.focus(); return;
   }
 
+  const htmlBtn = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = '⟳ A verificar...'; }
   try {
-    const alocDocs = await fbGetAlocacoes();
-    alocDocs.forEach(doc => {
-      const docBI = (doc.bi || '').toUpperCase();
-      if (!docBI || SUPERVISORES_INDEX[docBI]) return;
-      // Aceitar quem tem status 'supervisor' OU função 'Supervisor equipa' no Firebase
-      const isSup = doc.status === 'supervisor' || doc.funcao === 'Supervisor equipa';
-      if (!isSup) return;
-      // Também aceitar quem tem efectivamente função de Supervisor (após reparação automática)
-      const r2 = getR2Record(doc.bi);
-      const funcaoEf = (r2 && r2.funcao_r2) || doc.funcao || '';
-      if (!isSup && funcaoEf !== 'Supervisor equipa') return;
-      SUPERVISORES_INDEX[docBI] = {
-        bi:          doc.bi,
-        nome:        doc.nome,
-        coordenacao: (r2 && r2.coordenacao_r2) || doc.coordenacao || '',
-        sexo:        doc.sexo || 'M',
-        _fromFirebase: true,
-      };
-    });
+    // Só entra quem está como Supervisor de Vacinação na 4ª Ronda
+    const alocDocs = await fbGetAlocacoes4R();
+    const doc = alocDocs.find(d => (d.bi || '').toUpperCase() === bi && d.status === 'supervisor');
+    if (!doc) {
+      showAuthMsg('sup', 'error', 'Acesso negado. BI não reconhecido como Supervisor de Vacinação da 4ª Ronda.');
+      input.classList.add('inp-err'); input.focus(); return;
+    }
+    _completeSupervisorLogin(bi, { bi: doc.bi, nome: doc.nome, coordenacao: doc.coordenacao || '', sexo: doc.sexo || 'M' });
   } catch(e) {
-    console.error('[Auth] Firebase fallback falhou:', e);
+    showAuthMsg('sup', 'error', 'Erro ao verificar credenciais. Tente novamente.');
+    console.error('[Auth Sup]', e);
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Entrar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = htmlBtn; }
   }
-
-  if (!isSupervisorAuthorized(bi)) {
-    showAuthMsg('sup', 'error',
-      'Acesso negado. Apenas Supervisores de Equipa autorizados podem efectuar validações.');
-    input.classList.add('inp-err'); input.focus(); return;
-  }
-
-  const sup = SUPERVISORES_INDEX[bi];
-  _completeSupervisorLogin(bi, sup);
 }
 
 // ── Finalizar autenticação de Supervisor ─────────────────────────────────────
@@ -3805,7 +3762,7 @@ async function doAuthCoordenador() {
 
   if (btn) { btn.disabled = true; btn.textContent = '⟳ A verificar...'; }
   try {
-    const alocDocs = await fbGetAlocacoes();
+    const alocDocs = await fbGetAlocacoes4R();
     const coordDoc = alocDocs.find(doc =>
       (doc.bi || '').toUpperCase() === bi && doc.status === 'coord'
     );
@@ -4237,13 +4194,13 @@ async function renderCoordPanel() {
   }
 
   try {
-    const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes(), fbGetEquipas()]);
-    updateAlocacoesCache(alocDocs);
-    updateEquipasCache(eqDocs);
+    const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes4R(), fbGetEquipas4R()]);
+    updateAlocacoesCache4R(alocDocs);
+    updateEquipasCache4R(eqDocs);
 
     const myCoord = (APP_SESSION.coordenacao || '').toUpperCase().trim();
-    const SLOTS   = ['mobilizador', 'vacinador', 'registador', 'vitaminador'];
-    const LABELS  = { mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador', vitaminador: 'Vitaminador' };
+    const SLOTS   = SLOT_ORDEM_4R;
+    const LABELS  = SLOT_LABEL_4R;
 
     // Supervisores desta coordenação
     const supervisors = alocDocs.filter(doc =>
@@ -4256,14 +4213,12 @@ async function renderCoordPanel() {
       const teams  = eqDocs
         .filter(eq => (eq.supervisor_id || '').toUpperCase() === supBI)
         .map(eq => {
-          const membros = {
-            mobilizador: eq.mobilizador?.nome || null,
-            vacinador:   eq.vacinador?.nome   || null,
-            registador:  eq.registador?.nome  || null,
-            vitaminador: eq.vitaminador?.nome || null,
-          };
-          const missing = SLOTS.filter(s => !membros[s]);
-          return { num: eq.equipa_num, membros, missing, complete: missing.length === 0 };
+          const slots = slotsDaEquipa4R(eq);
+          const membros = {};
+          SLOT_ORDEM_4R.forEach(sl => { membros[sl] = eq[sl]?.nome || null; });
+          const missing = slots.filter(sl => !membros[sl]);
+          return { num: eq.equipa_num, tipo: eq.tipo_equipa === 'INJECTAVEL' ? 'INJ' : 'ORAL', posto: !!eq.posto_fixo,
+                   slots, membros, missing, complete: missing.length === 0 };
         })
         .sort((a, b) => (a.num || 0) - (b.num || 0));
       const completeCount = teams.filter(t => t.complete).length;
@@ -4290,7 +4245,7 @@ async function renderCoordPanel() {
     const totalVagas = vagasList.length;
     _coordVagasList = vagasList;
 
-    const SLOT_LABEL = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador', vitaminador:'Vitaminador' };
+    const SLOT_LABEL = SLOT_LABEL_4R;
 
     if (summaryEl) {
       const vagasSubtxt = totalIncomplete > 0
@@ -4375,7 +4330,8 @@ async function renderCoordPanel() {
         sup.teams.forEach(team => {
           html += `<div class="coord-equipa-row">`;
           html += `<span class="coord-equipa-num">Equipa ${team.num != null ? team.num : '-'}</span>`;
-          SLOTS.forEach(slot => {
+          html += `<span style="font-size:10px;color:var(--text3);margin-right:6px">${team.tipo === 'INJ' ? 'Injectável' : 'Oral'}${team.posto ? ' · Posto' : ''}</span>`;
+          team.slots.forEach(slot => {
             const nome = team.membros[slot];
             if (nome)
               html += `<span class="coord-slot slot-ok" title="${escH(nome)}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg> ${LABELS[slot]}: <em style="font-style:normal;font-weight:600">${escH(nome.split(' ').slice(0,2).join(' '))}</em></span>`;
@@ -4424,22 +4380,14 @@ async function renderCoordPanel() {
       ph += `</span></div>`;
 
       ph += `<table class="cpr-table"><thead><tr>`;
-      ph += `<th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th><th>Vitaminador</th>`;
+      ph += COORD_TH_4R;
       ph += `</tr></thead><tbody>`;
 
       if (sup.teams.length === 0) {
-        ph += `<tr><td colspan="5" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
+        ph += `<tr><td colspan="6" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
       } else {
         sup.teams.forEach(team => {
-          ph += `<tr>`;
-          ph += `<td class="cpr-eq-num">Eq. ${team.num != null ? team.num : '-'}</td>`;
-          SLOTS.forEach(slot => {
-            const nome = team.membros[slot];
-            ph += nome
-              ? `<td class="cpr-nome">${escH(nome)}</td>`
-              : `<td class="cpr-vago">- Vago -</td>`;
-          });
-          ph += `</tr>`;
+          ph += _linhaEquipaCoord4R(team, 'cpr-nome', 'cpr-vago', 'cpr-eq-num');
         });
       }
       ph += `</tbody></table></div>`;
@@ -4468,19 +4416,19 @@ async function _renderCoordPresencas() {
   const secEl = document.getElementById('coord-presencas-sec');
   if (!secEl) return;
   const hoje = _presHoje();
-  const diaVer = CAMPANHA_DIAS.includes(hoje) ? hoje : CAMPANHA_DIAS.filter(d => d <= hoje).pop();
+  const diaVer = PRES4R_TODOS.includes(hoje) ? hoje : PRES4R_TODOS.filter(d => d <= hoje).pop();
   if (!diaVer) { secEl.style.display = 'none'; return; }
 
   secEl.style.display = 'block';
-  secEl.innerHTML = `<div class="dash-presencas"><h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças - ${CAMPANHA_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">A carregar...</div></div>`;
+  secEl.innerHTML = `<div class="dash-presencas"><h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças - ${PRES4R_LABELS[diaVer]||diaVer}</h3><div style="font-size:12px;color:var(--text3)">A carregar...</div></div>`;
 
   const myCoord   = (APP_SESSION.coordenacao || '').toUpperCase().trim();
-  const presencas = await fbGetPresencasDia(diaVer);
+  const presencas = await fbGetPresencasDia4R(diaVer);
   const minhas    = presencas.filter(p => (p.coordenacao||'').toUpperCase().trim() === myCoord);
 
-  const totalEsperado = Object.values(_equipasCache)
+  const totalEsperado = Object.values(_equipasCache4R)
     .filter(eq => (eq.coordenacao||'').toUpperCase().trim() === myCoord)
-    .reduce((s, eq) => s + ['mobilizador','vacinador','registador','vitaminador'].filter(sl => eq[sl]?.bi).length, 0);
+    .reduce((s, eq) => s + slotsPresenca4R(eq, diaVer).filter(sl => eq[sl]?.bi).length, 0);
 
   const presentes = minhas.filter(p => p.estado === 'presente').length;
   const ausentes  = minhas.filter(p => p.estado === 'ausente').length;
@@ -4488,7 +4436,7 @@ async function _renderCoordPresencas() {
   const cor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent2)' : '#e74c3c';
 
   secEl.innerHTML = `<div class="dash-presencas">
-    <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças em Campo - ${CAMPANHA_LABELS[diaVer]||diaVer}</h3>
+    <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 1.5c-3.3 0-6 2.6-6 5.9 0 4.4 6 11.1 6 11.1s6-6.7 6-11.1c0-3.3-2.7-5.9-6-5.9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.8l1.7 1.7 3.3-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Presenças em Campo - ${PRES4R_LABELS[diaVer]||diaVer}</h3>
     <div class="dash-pres-grid">
       <div class="dash-pres-card dp-green"><div class="dpn">${presentes}</div><div class="dpl">Presentes</div></div>
       <div class="dash-pres-card dp-red"><div class="dpn">${ausentes}</div><div class="dpl">Ausentes</div></div>
@@ -4509,7 +4457,7 @@ function hideCoordVagasModal() {
 
 function showCoordVagasModal() {
   if (_coordVagasList.length === 0) return;
-  const SLOT_PT = { mobilizador:'Mobilizador', vacinador:'Vacinador', registador:'Registador', vitaminador:'Vitaminador' };
+  const SLOT_PT = SLOT_LABEL_4R;
 
   // Subtítulo
   const subt = document.getElementById('modal-vagas-subtitulo');
@@ -4585,8 +4533,8 @@ function coordFilterTipoChange() {
 }
 
 function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
-  const LABELS  = { mobilizador:'Mobilizadores', vacinador:'Vacinadores', registador:'Registadores', vitaminador:'Vitaminadores' };
-  const SLOTS   = ['mobilizador','vacinador','registador','vitaminador'];
+  const LABELS  = { mobilizador:'Mobilizadores', vacinador:'Vacinadores', tecnico:'Vacinadores Técnicos', registador:'Registadores' };
+  const GRUPOS  = { mobilizador:['mobilizador','mobilizador_posto'], vacinador:['vacinador'], tecnico:['vacinador_tecnico_1','vacinador_tecnico_2'], registador:['registador'] };
   const now     = new Date();
   const dataStr = now.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
   const horaStr = now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
@@ -4611,15 +4559,11 @@ function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
       if (paraImprimir) {
         h += `<div class="cpr-sup-block">`;
         h += `<div class="cpr-sup-title"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="currentColor"/></svg> ${escH(sup.nome)}<span>${sup.teams.length} equipa${sup.teams.length!==1?'s':''} · ${sup.completeCount} <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>${incC>0?' · '+incC+' incompleta'+(incC!==1?'s':''):''}</span></div>`;
-        h += `<table class="cpr-table"><thead><tr><th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th><th>Vitaminador</th></tr></thead><tbody>`;
+        h += `<table class="cpr-table"><thead><tr>${COORD_TH_4R}</tr></thead><tbody>`;
         if (sup.teams.length === 0) {
-          h += `<tr><td colspan="5" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
+          h += `<tr><td colspan="6" class="cpr-vago">Nenhuma equipa atribuída.</td></tr>`;
         } else {
-          sup.teams.forEach(t => {
-            h += `<tr><td class="cpr-eq-num">Eq. ${t.num??'-'}</td>`;
-            SLOTS.forEach(s => h += t.membros[s] ? `<td>${escH(t.membros[s])}</td>` : `<td class="cpr-vago">- Vago -</td>`);
-            h += `</tr>`;
-          });
+          sup.teams.forEach(t => { h += _linhaEquipaCoord4R(t, '', 'cpr-vago', 'cpr-eq-num'); });
         }
         h += `</tbody></table></div>`;
       } else {
@@ -4633,14 +4577,8 @@ function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
         if (sup.teams.length === 0) {
           h += `<div class="coord-empty-msg">Nenhuma equipa atribuída.</div>`;
         } else {
-          h += `<table class="cfp-table"><thead><tr><th>Equipa</th><th>Mobilizador</th><th>Vacinador</th><th>Registador</th><th>Vitaminador</th></tr></thead><tbody>`;
-          sup.teams.forEach(t => {
-            h += `<tr><td class="cfp-eq-num">Eq. ${t.num??'-'}</td>`;
-            SLOTS.forEach(s => h += t.membros[s]
-              ? `<td>${escH(t.membros[s])}</td>`
-              : `<td class="cfp-vago">- Vago -</td>`);
-            h += `</tr>`;
-          });
+          h += `<table class="cfp-table"><thead><tr>${COORD_TH_4R}</tr></thead><tbody>`;
+          sup.teams.forEach(t => { h += _linhaEquipaCoord4R(t, '', 'cfp-vago', 'cfp-eq-num'); });
           h += `</tbody></table>`;
         }
         h += `</div>`;
@@ -4658,9 +4596,9 @@ function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
       const pessoas = [];
       _coordSupData.forEach(sup => {
         sup.teams.forEach(t => {
-          if (t.membros[slot]) {
-            pessoas.push({ nome: t.membros[slot], supervisor: sup.nome, equipa: t.num });
-          }
+          GRUPOS[slot].forEach(sl => {
+            if (t.membros[sl]) pessoas.push({ nome: t.membros[sl], supervisor: sup.nome, equipa: t.num });
+          });
         });
       });
       pessoas.sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
@@ -4700,8 +4638,8 @@ function _buildCoordFilterHTML(tipo, supBI, funcoes, paraImprimir) {
 function _coordGetFilters() {
   const tipo  = document.querySelector('input[name="coord-filter-tipo"]:checked')?.value || 'supervisor';
   const supBI = document.getElementById('cfr-sup-select')?.value || '';
-  const funcoes = ['mobilizador','vacinador','registador','vitaminador'].filter(s => {
-    const map = { mobilizador:'cfr-mob', vacinador:'cfr-vac', registador:'cfr-reg', vitaminador:'cfr-vit' };
+  const funcoes = ['mobilizador','vacinador','tecnico','registador'].filter(s => {
+    const map = { mobilizador:'cfr-mob', vacinador:'cfr-vac', tecnico:'cfr-vit', registador:'cfr-reg' };
     return document.getElementById(map[s])?.checked;
   });
   return { tipo, supBI, funcoes };
@@ -9970,6 +9908,100 @@ const CAMPANHA_4R = {
   dias:       ['23/10/2026', '24/10/2026', '25/10/2026', '26/10/2026', '27/10/2026'],
   repescagem: '28/10/2026',
 };
+
+// ════════════════════════════════════════════════════════════════════════
+// PAINÉIS DO SUPERVISOR E DO COORDENADOR - 4ª RONDA
+// Dias da campanha (5 dias + repescagem), funções por tipo de equipa e presenças
+// (colecção presencas_4r). Os mobilizadores não vão à repescagem.
+// ════════════════════════════════════════════════════════════════════════
+const _isoDeDMY4R = d => d.split('/').reverse().join('-');
+const PRES4R_DIAS  = CAMPANHA_4R.dias.map(_isoDeDMY4R);
+const PRES4R_REP   = _isoDeDMY4R(CAMPANHA_4R.repescagem);
+const PRES4R_TODOS = [...PRES4R_DIAS, PRES4R_REP];
+const PRES4R_LABELS = (() => {
+  const m = {};
+  PRES4R_DIAS.forEach((d, i) => { m[d] = 'Dia ' + (i + 1) + ' · ' + d.slice(8) + ' Out'; });
+  m[PRES4R_REP] = 'Repescagem · ' + PRES4R_REP.slice(8) + ' Out';
+  return m;
+})();
+const CD4R_INICIO = new Date(PRES4R_DIAS[0] + 'T07:00:00');  // início da campanha
+const CD4R_FIM    = new Date(PRES4R_REP + 'T18:00:00');      // fim da repescagem
+
+const SLOT_LABEL_4R = {
+  mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador',
+  vacinador_tecnico_1: 'Vac. Técnico 1', vacinador_tecnico_2: 'Vac. Técnico 2', mobilizador_posto: 'Mob. de Posto',
+};
+const SLOT_ORDEM_4R = ['mobilizador', 'vacinador', 'vacinador_tecnico_1', 'vacinador_tecnico_2', 'registador', 'mobilizador_posto'];
+const ICON_PESSOA_4R = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><circle cx="10" cy="6.5" r="3.5" fill="currentColor"/><path d="M3 18c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+
+// Funções que uma equipa tem: orais (3), injectáveis (3) e, se for posto fixo, o mobilizador do posto
+function slotsDaEquipa4R(eq) {
+  return eq.tipo_equipa === 'INJECTAVEL'
+    ? ['vacinador_tecnico_1', 'vacinador_tecnico_2', 'registador'].concat(eq.posto_fixo ? ['mobilizador_posto'] : [])
+    : ['mobilizador', 'vacinador', 'registador'];
+}
+// Quem se marca em cada dia: na repescagem não entram os mobilizadores
+function slotsPresenca4R(eq, data) {
+  const s = slotsDaEquipa4R(eq);
+  return data === PRES4R_REP ? s.filter(x => x !== 'mobilizador' && x !== 'mobilizador_posto') : s;
+}
+function _tipoRotulo4R(eq) { return eq.tipo_equipa === 'INJECTAVEL' ? 'Injectável' : 'Oral'; }
+function _statusEquipa4R(eq) {
+  const s = slotsDaEquipa4R(eq), n = s.filter(x => eq[x]?.bi).length;
+  return n === s.length ? 'completa' : n === 0 ? 'vazia' : 'incompleta';
+}
+function _presEdicaoPermitida4R() {
+  const agora = new Date();
+  return agora >= CD4R_INICIO && agora <= new Date(PRES4R_REP + 'T20:00:00');
+}
+function _presDiaInicial4R() {
+  const hoje = _presHoje();
+  if (PRES4R_TODOS.includes(hoje)) return hoje;
+  const passados = PRES4R_TODOS.filter(d => d <= hoje);
+  return passados.length ? passados[passados.length - 1] : PRES4R_TODOS[0];
+}
+
+async function fbSavePresenca4R(doc) {
+  if (!fbReady()) return { success: false, error: 'Firebase indisponível' };
+  try {
+    const id = _presDocId(doc.bi, doc.data);
+    await window._FB.setDoc(window._FB.docRef('presencas_4r/' + id), { ...doc, _id: id });
+    return { success: true };
+  } catch (e) { return { success: false, error: e.message }; }
+}
+async function fbGetPresencasSupervisor4R(supervisorBI, data) {
+  if (!fbReady()) return [];
+  try {
+    const { getDocs, query, colRef, where } = window._FB;
+    const snap = await getDocs(query(colRef('presencas_4r'), where('supervisor_bi', '==', supervisorBI.toUpperCase()), where('data', '==', data)));
+    const docs = []; snap.forEach(d => docs.push(d.data()));
+    return docs;
+  } catch (e) { console.error('[Presenças 4R]', e); return []; }
+}
+async function fbGetPresencasDia4R(data) {
+  if (!fbReady()) return [];
+  try {
+    const { getDocs, query, colRef, where } = window._FB;
+    const snap = await getDocs(query(colRef('presencas_4r'), where('data', '==', data)));
+    const docs = []; snap.forEach(d => docs.push(d.data()));
+    return docs;
+  } catch (e) { console.error('[Presenças 4R]', e); return []; }
+}
+
+// Tabela de equipas do coordenador: 6 colunas, as funções de equipas orais e injectáveis lado a lado
+const COORD_TH_4R = '<th>Equipa</th><th>Tipo</th><th>Mobilizador / Vac. Técnico 1</th><th>Vacinador / Vac. Técnico 2</th><th>Registador</th><th>Mob. de Posto</th>';
+function _linhaEquipaCoord4R(t, clsNome, clsVago, clsNum) {
+  const inj = t.tipo === 'INJ';
+  const cel = slot => t.membros[slot]
+    ? '<td class="' + clsNome + '">' + escH(t.membros[slot]) + '</td>'
+    : '<td class="' + clsVago + '">- Vago -</td>';
+  const na = '<td class="' + clsVago + '" style="opacity:.45">n/a</td>';
+  return '<tr><td class="' + clsNum + '">Eq. ' + (t.num ?? '-') + '</td>' +
+    '<td>' + (inj ? 'Injectável' : 'Oral') + (t.posto ? ' · Posto' : '') + '</td>' +
+    cel(inj ? 'vacinador_tecnico_1' : 'mobilizador') + cel(inj ? 'vacinador_tecnico_2' : 'vacinador') +
+    cel('registador') + (t.posto ? cel('mobilizador_posto') : na) + '</tr>';
+}
+
 const _ROLE_LABEL_4R = {
   mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador',
   vacinador_tecnico_1: 'Vacinador Técnico', vacinador_tecnico_2: 'Vacinador Técnico',
@@ -11805,43 +11837,32 @@ async function fbGetPresencasDia(data) {
   } catch(e) { console.error('[Presenças]', e); return []; }
 }
 
-// ── Supervisor: carregar e renderizar presenças ───────────────────────────────
-let _presencasDiaActivo = _presHoje();
-// Garantir que o dia activo é um dia de campanha válido
-if (!CAMPANHA_DIAS.includes(_presencasDiaActivo)) {
-  _presencasDiaActivo = CAMPANHA_DIAS[0];
-}
+// ── Supervisor: presenças da 4ª Ronda (presencas_4r) ───────────────────────────
+// 5 dias de campanha + repescagem. Os mobilizadores (e os mobilizadores de posto) não
+// vão à repescagem. Cada pessoa tem uma marcação por dia (id: BI_AAAAMMDD).
+let _presDia4R = null;
 
 async function supCarregarPresencas() {
   const contentEl = document.getElementById('sup-presencas-content');
   if (contentEl) contentEl.innerHTML = '<div class="pres-loading">A carregar presenças...</div>';
-
-  // Renderizar barra de dias
+  if (!_presDia4R) _presDia4R = _presDiaInicial4R();
   _supRenderDayBar();
-
   if (!isSupervisorSession() || !APP_SESSION.bi) return;
 
-  // Carregar equipas do supervisor (da cache ou Firebase)
-  if (Object.keys(_equipasCache).length === 0) {
-    const eqDocs = await fbGetEquipas();
-    updateEquipasCache(eqDocs);
-  }
+  const eqDocs = await fbGetEquipas4R();
+  if (eqDocs.length || !Object.keys(_equipasCache4R).length) updateEquipasCache4R(eqDocs);
 
   const meuBI = APP_SESSION.bi.toUpperCase();
-  const minhasEquipas = Object.values(_equipasCache)
+  const minhasEquipas = Object.values(_equipasCache4R)
     .filter(eq => (eq.supervisor_id || '').toUpperCase() === meuBI)
     .sort((a, b) => (a.equipa_num || 0) - (b.equipa_num || 0));
-
   if (minhasEquipas.length === 0) {
-    if (contentEl) contentEl.innerHTML = '<div class="pres-empty">Não tens equipas atribuídas.</div>';
+    if (contentEl) contentEl.innerHTML = '<div class="pres-empty">Não tem equipas atribuídas.</div>';
     return;
   }
-
-  // Carregar presenças do dia activo
-  const presencas = await fbGetPresencasSupervisor(meuBI, _presencasDiaActivo);
+  const presencas = await fbGetPresencasSupervisor4R(meuBI, _presDia4R);
   const presMap = {}; // { bi: 'presente'|'ausente' }
-  presencas.forEach(p => { presMap[p.bi.toUpperCase()] = p.estado; });
-
+  presencas.forEach(p => { presMap[(p.bi || '').toUpperCase()] = p.estado; });
   _supRenderPresencas(minhasEquipas, presMap, contentEl);
 }
 
@@ -11849,123 +11870,101 @@ function _supRenderDayBar() {
   const barEl = document.getElementById('pres-day-bar');
   if (!barEl) return;
   const hoje = _presHoje();
-  barEl.innerHTML = CAMPANHA_DIAS.map(d => {
-    const isActive  = d === _presencasDiaActivo;
-    const isFuture  = d > hoje;
+  barEl.innerHTML = PRES4R_TODOS.map(d => {
+    const isActive = d === _presDia4R;
+    const isFuture = d > hoje;
     return `<button class="pres-day-btn ${isActive ? 'active' : ''}"
       ${isFuture ? 'disabled title="Dia ainda não iniciado"' : ''}
-      onclick="_presSetDia('${d}')">${CAMPANHA_LABELS[d]}</button>`;
+      onclick="_presSetDia('${d}')">${PRES4R_LABELS[d]}</button>`;
   }).join('');
 }
 
 function _presSetDia(data) {
-  _presencasDiaActivo = data;
+  _presDia4R = data;
   supCarregarPresencas();
 }
 
 function _supRenderPresencas(equipas, presMap, contentEl) {
   if (!contentEl) return;
-  const podeEditar = _presEdicaoPermitida(_presencasDiaActivo);
-  const SLOTS = ['mobilizador', 'vacinador', 'registador', 'vitaminador'];
-  const LABELS = { mobilizador: 'Mobilizador', vacinador: 'Vacinador', registador: 'Registador', vitaminador: 'Vitaminador' };
+  const dia = _presDia4R;
+  const podeEditar = _presEdicaoPermitida4R();
 
-  // Contar total e marcados
   let totalMembros = 0, presentes = 0, ausentes = 0;
   equipas.forEach(eq => {
-    SLOTS.forEach(s => {
-      if (eq[s]?.bi) {
+    slotsPresenca4R(eq, dia).forEach(sl => {
+      if (eq[sl]?.bi) {
         totalMembros++;
-        const estado = presMap[(eq[s].bi || '').toUpperCase()];
+        const estado = presMap[(eq[sl].bi || '').toUpperCase()];
         if (estado === 'presente') presentes++;
         else if (estado === 'ausente') ausentes++;
       }
     });
   });
-  const porcMarcados = totalMembros > 0 ? Math.round(((presentes + ausentes) / totalMembros) * 100) : 0;
 
-  let html = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">`;
-  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
-  html += `<div style="font-size:22px;font-weight:900;color:var(--green)">${presentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Presentes</div></div>`;
-  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
-  html += `<div style="font-size:22px;font-weight:900;color:#e74c3c">${ausentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Ausentes</div></div>`;
-  html += `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">`;
-  html += `<div style="font-size:22px;font-weight:900;color:var(--text3)">${totalMembros - presentes - ausentes}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Por marcar</div></div>`;
-  html += `</div>`;
+  const card = (n, cor, rot) => `<div class="pres-equipa-block" style="flex:1;min-width:200px;border:none;background:var(--surface2);padding:10px 14px;border-radius:10px">` +
+    `<div style="font-size:22px;font-weight:900;color:${cor}">${n}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">${rot}</div></div>`;
+  let html = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">` +
+    card(presentes, 'var(--green)', 'Presentes') + card(ausentes, '#e74c3c', 'Ausentes') +
+    card(totalMembros - presentes - ausentes, 'var(--text3)', 'Por marcar') + `</div>`;
 
+  if (dia === PRES4R_REP) {
+    html += `<div style="background:rgba(100,150,255,.1);border:1px solid rgba(100,150,255,.3);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--text2);margin-bottom:12px">` +
+      `Dia de repescagem: os mobilizadores (incluindo os de posto) não participam e por isso não aparecem nesta lista.</div>`;
+  }
   if (!podeEditar) {
-    html += `<div style="background:rgba(244,168,50,.1);border:1px solid rgba(244,168,50,.3);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--accent2);margin-bottom:12px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10 2.2L18.5 17H1.5L10 2.2z" fill="var(--warning)"/><rect x="9.1" y="7.5" width="1.8" height="5.2" rx="0.9" fill="#fff"/><rect x="9.1" y="13.6" width="1.8" height="1.8" rx="0.9" fill="#fff"/></svg> Fora do período de edição - apenas leitura.</div>`;
+    html += `<div style="background:rgba(244,168,50,.1);border:1px solid rgba(244,168,50,.3);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--accent2);margin-bottom:12px">` +
+      `A marcação de presenças só está disponível durante a campanha (${CAMPANHA_4R.dias[0]} a ${CAMPANHA_4R.repescagem}).</div>`;
   }
 
   equipas.forEach(eq => {
-    const membros = SLOTS.filter(s => eq[s]?.bi);
+    const membros = slotsPresenca4R(eq, dia).filter(sl => eq[sl]?.bi);
     if (membros.length === 0) return;
-
-    const eqPresentes = membros.filter(s => presMap[(eq[s].bi||'').toUpperCase()] === 'presente').length;
+    const eqPresentes = membros.filter(sl => presMap[(eq[sl].bi || '').toUpperCase()] === 'presente').length;
     html += `<div class="pres-equipa-block">`;
-    html += `<div class="pres-equipa-hdr">Equipa ${eq.equipa_num ?? '-'} <span>${eqPresentes}/${membros.length} presentes</span></div>`;
-
+    html += `<div class="pres-equipa-hdr">Equipa ${eq.equipa_num ?? '-'} · ${_tipoRotulo4R(eq)}${eq.posto_fixo ? ' · Posto fixo' : ''} <span>${eqPresentes}/${membros.length} presentes</span></div>`;
     membros.forEach(slot => {
       const membro = eq[slot];
-      const biUp   = (membro.bi || '').toUpperCase();
+      const biUp = (membro.bi || '').toUpperCase();
       const estado = presMap[biUp];
+      const args = `'${escH(biUp)}','${escH((membro.nome || '').replace(/'/g, ''))}','${slot}',${eq.equipa_num ?? 0}`;
       html += `<div class="pres-membro-row">`;
-      html += `<div class="pres-membro-info">`;
-      html += `<div class="pres-membro-nome">${escH(membro.nome || biUp)}</div>`;
-      html += `<div class="pres-membro-func">${LABELS[slot]}</div>`;
-      html += `</div>`;
+      html += `<div class="pres-membro-info"><div class="pres-membro-nome">${escH(membro.nome || biUp)}</div>` +
+              `<div class="pres-membro-func">${SLOT_LABEL_4R[slot]}</div></div>`;
       html += `<div class="pres-btn-group">`;
-      html += `<button class="pres-btn ${estado === 'presente' ? 'presente' : ''}"
-        ${!podeEditar ? 'disabled' : ''}
-        onclick="_presMarcar('${escH(biUp)}','${escH(membro.nome||'')}','${slot}',${eq.equipa_num??0},'presente',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Presente</button>`;
-      html += `<button class="pres-btn ${estado === 'ausente' ? 'ausente' : ''}"
-        ${!podeEditar ? 'disabled' : ''}
-        onclick="_presMarcar('${escH(biUp)}','${escH(membro.nome||'')}','${slot}',${eq.equipa_num??0},'ausente',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--error)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg> Ausente</button>`;
+      html += `<button class="pres-btn ${estado === 'presente' ? 'presente' : ''}" ${!podeEditar ? 'disabled' : ''} onclick="_presMarcar(${args},'presente',this)">Presente</button>`;
+      html += `<button class="pres-btn ${estado === 'ausente' ? 'ausente' : ''}" ${!podeEditar ? 'disabled' : ''} onclick="_presMarcar(${args},'ausente',this)">Ausente</button>`;
       html += `</div></div>`;
     });
     html += `</div>`;
   });
-
   contentEl.innerHTML = html;
 }
 
-async function _presMarcar(bi, nome, funcao, equipaNum, estado, btnEl) {
+async function _presMarcar(bi, nome, slot, equipaNum, estado, btnEl) {
   if (!isSupervisorSession() || !APP_SESSION.bi) return;
-
-  // Feedback imediato
+  if (!_presEdicaoPermitida4R()) { showToast('Fora do período da campanha: não é possível marcar presenças.', 'warn'); return; }
+  if (_presDia4R === PRES4R_REP && (slot === 'mobilizador' || slot === 'mobilizador_posto')) {
+    showToast('Os mobilizadores não participam na repescagem.', 'warn'); return;
+  }
   const row = btnEl.closest('.pres-membro-row');
   if (row) row.querySelectorAll('.pres-btn').forEach(b => b.disabled = true);
 
-  // Obter coordenação da equipa
-  const meuBI    = APP_SESSION.bi.toUpperCase();
-  const minhaEq  = Object.values(_equipasCache).find(eq =>
-    (eq.supervisor_id||'').toUpperCase() === meuBI &&
-    ['mobilizador','vacinador','registador','vitaminador'].some(s => (eq[s]?.bi||'').toUpperCase() === bi)
-  );
+  const meuBI = APP_SESSION.bi.toUpperCase();
+  const minhaEq = Object.values(_equipasCache4R).find(eq =>
+    (eq.supervisor_id || '').toUpperCase() === meuBI && (eq[slot]?.bi || '').toUpperCase() === bi);
 
   const doc = {
-    bi, nome, funcao,
-    coordenacao:  minhaEq?.coordenacao || APP_SESSION.coordenacao || '',
-    equipa_num:   equipaNum,
-    supervisor_bi:   APP_SESSION.bi,
-    supervisor_nome: APP_SESSION.nome || '',
-    data:  _presencasDiaActivo,
-    estado,
+    bi, nome, funcao: SLOT_LABEL_4R[slot] || slot,
+    coordenacao: minhaEq?.coordenacao || APP_SESSION.coordenacao || '',
+    equipa_num: equipaNum, tipo_equipa: minhaEq?.tipo_equipa || '',
+    supervisor_bi: APP_SESSION.bi, supervisor_nome: APP_SESSION.nome || '',
+    data: _presDia4R, estado,
     registadoPor: APP_SESSION.bi,
-    registadoEm:  window._FB ? window._FB.serverTimestamp() : null,
-    municipio: MUNICIPIO, ronda: RONDA_ID,
+    registadoEm: window._FB ? window._FB.serverTimestamp() : null,
+    municipio: MUNICIPIO, ronda: RONDA_ID_4R,
   };
-
-  const result = await fbSavePresenca(doc);
+  const result = await fbSavePresenca4R(doc);
   if (result.success) {
-    // Actualizar botões
-    if (row) {
-      row.querySelectorAll('.pres-btn').forEach(b => {
-        b.disabled = false;
-        b.classList.remove('presente', 'ausente');
-      });
-      btnEl.classList.add(estado);
-    }
-    // Actualizar contadores do cabeçalho relendo
     await supCarregarPresencas();
   } else {
     if (row) row.querySelectorAll('.pres-btn').forEach(b => b.disabled = false);
@@ -12188,13 +12187,13 @@ async function supCarregarEquipas() {
 
   try {
     // 1. Buscar todas as equipas e filtrar localmente pelo BI do Supervisor
-    const eqDocs   = await fbGetEquipas();
+    const eqDocs   = await fbGetEquipas4R();
     _supTeamsCache = eqDocs
       .filter(e => (e.supervisor_id||'').toUpperCase() === meuBI)
       .sort((a,b) => (a.equipa_num||0) - (b.equipa_num||0));
 
     // 2. Buscar dados do Coord área da sua coordenação (informativo)
-    const alocDocs = await fbGetAlocacoes();
+    const alocDocs = await fbGetAlocacoes4R();
     _supCoordCache = alocDocs.find(a =>
       a.status === 'coord' && a.coordenacao === minhaCoord) || null;
 
@@ -12215,7 +12214,7 @@ function supRenderEquipas() {
   // Cabeçalho informativo
   const minhaCoord = APP_SESSION.coordenacao || '-';
   const totalEq    = _supTeamsCache.length;
-  const completas  = _supTeamsCache.filter(e => e.status === 'completa').length;
+  const completas  = _supTeamsCache.filter(e => _statusEquipa4R(e) === 'completa').length;
   const coordInfo  = _supCoordCache
     ? '<strong>Coord área/Comuna:</strong> ' + escH(_supCoordCache.nome) + '<br>'
     : '<span style="color:var(--text3)">Coord área/Comuna ainda não definido.</span><br>';
@@ -12239,9 +12238,11 @@ function supRenderEquipas() {
   }
 
   // Renderizar cada equipa
+  const tm = _mapaTel4R();
   el.innerHTML = _supTeamsCache.map(eq => {
-    const statusCls = { completa:'st-completa', incompleta:'st-incompleta', vazia:'st-vazia' }[eq.status] || 'st-vazia';
-    const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[eq.status] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+    const st = _statusEquipa4R(eq);
+    const statusCls = { completa:'st-completa', incompleta:'st-incompleta', vazia:'st-vazia' }[st] || 'st-vazia';
+    const statusLbl = { completa:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Completa', incompleta:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--warning)" stroke-width="1.8"/><path d="M10 1v18A9 9 0 0 0 10 1z" fill="var(--warning)"/></svg> Incompleta', vazia:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> Vazia' }[st] || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.1em"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
 
     const memberRow = (role, icon, label, data) => {
       if (!data || !data.bi) {
@@ -12251,8 +12252,7 @@ function supRenderEquipas() {
           '<span class="sup-team-mem-empty">- por preencher -</span>' +
         '</div>';
       }
-      const prof = findProfissional(data.bi);
-      const tel  = prof?.telefone || '';
+      const tel = _tel4R(data.bi, tm);
       return '<div class="sup-team-member">' +
         '<span class="sup-team-mem-icon">' + icon + '</span>' +
         '<span class="sup-team-mem-role">' + label + '</span>' +
@@ -12263,13 +12263,10 @@ function supRenderEquipas() {
 
     return '<div class="sup-team-item">' +
       '<div class="sup-team-item-header">' +
-        '<span class="sup-team-item-num">Equipa ' + (eq.equipa_num || '?') + '</span>' +
+        '<span class="sup-team-item-num">Equipa ' + (eq.equipa_num || '?') + ' <small style="font-weight:600;opacity:.7">' + _tipoRotulo4R(eq) + (eq.posto_fixo ? ' · Posto fixo' : '') + '</small></span>' +
         '<span class="sup-team-item-status ' + statusCls + '">' + statusLbl + '</span>' +
       '</div>' +
-      memberRow('mobilizador', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="6" y="1.5" width="8" height="17" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="8.5" y1="15.3" x2="11.5" y2="15.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>', 'MOB', eq.mobilizador) +
-      memberRow('vacinador',   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M15.5 2.5l2 2-1.8 1.8-2-2z" fill="currentColor"/><path d="M14 4.5L5.5 13l-2.5 4 4-2.5L15.5 6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="10.5" y1="6.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="8.5" y1="8.5" x2="10.5" y2="10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>', 'VAC', eq.vacinador) +
-      memberRow('registador',  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>', 'REG', eq.registador) +
-      memberRow('vitaminador', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="2.3" y="9.1" width="15.4" height="6.6" rx="3.3" transform="rotate(-40 10 12)" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="9.2" y1="7.5" x2="12.6" y2="11.8" stroke="currentColor" stroke-width="1.6"/></svg>', 'VIT', eq.vitaminador) +
+      slotsDaEquipa4R(eq).map(sl => memberRow(sl, ICON_PESSOA_4R, SLOT_LABEL_4R[sl], eq[sl])).join('') +
     '</div>';
   }).join('');
 }
@@ -12281,55 +12278,33 @@ function supImprimirMinhasEquipas() {
     showToast('Não tem equipas para imprimir.', 'warn');
     return;
   }
-  if (typeof buildPrintHTML !== 'function') {
-    showToast('Função de impressão indisponível.', 'error');
-    return;
-  }
-
-  const meuNome    = APP_SESSION.nome || 'Supervisor';
-  const minhaCoord = APP_SESSION.coordenacao || '';
-  const meuBI      = (APP_SESSION.bi || '').toUpperCase();
-
-  // Construir estrutura "flat" no mesmo formato que getEquipasFlat() devolve
-  const flat = _supTeamsCache.map(eq => {
-    const coordTel = _supCoordCache ? (findProfissional(_supCoordCache.bi)?.telefone || '') : '';
-    const meuTel   = findProfissional(meuBI)?.telefone || '';
-    const mobProf  = eq.mobilizador ? findProfissional(eq.mobilizador.bi) : null;
-    const vacProf  = eq.vacinador   ? findProfissional(eq.vacinador.bi)   : null;
-    const regProf  = eq.registador  ? findProfissional(eq.registador.bi)  : null;
-    const vitProf  = eq.vitaminador ? findProfissional(eq.vitaminador.bi) : null;
-    return {
-      coordenacao: minhaCoord,
-      coordNome:   _supCoordCache ? _supCoordCache.nome : '-',
-      coordTel:    coordTel,
-      coordBI:     _supCoordCache ? (_supCoordCache.bi || '') : '',
-      supNome:     meuNome,
-      supTel:      meuTel,
-      supBI:       meuBI,
-      numEquipa:   eq.equipa_num || '?',
-      status:      eq.status || 'vazia',
-      mobNome: eq.mobilizador ? eq.mobilizador.nome : '',
-      mobBI:   eq.mobilizador ? eq.mobilizador.bi   : '',
-      mobTel:  mobProf ? (mobProf.telefone || '') : '',
-      vacNome: eq.vacinador ? eq.vacinador.nome : '',
-      vacBI:   eq.vacinador ? eq.vacinador.bi   : '',
-      vacTel:  vacProf ? (vacProf.telefone || '') : '',
-      regNome: eq.registador ? eq.registador.nome : '',
-      regBI:   eq.registador ? eq.registador.bi   : '',
-      regTel:  regProf ? (regProf.telefone || '') : '',
-      vitNome: eq.vitaminador ? eq.vitaminador.nome : '',
-      vitBI:   eq.vitaminador ? eq.vitaminador.bi   : '',
-      vitTel:  vitProf ? (vitProf.telefone || '') : '',
-    };
-  });
-
-  // Abrir janela de impressão com formato Campo (sem BIs)
-  const pw = window.open('', '_blank', 'width=850,height=700');
-  if (!pw) { showToast('Active popups para este site.', 'error'); return; }
-  pw.document.write(buildPrintHTML(flat, 'campo'));
-  pw.document.close();
-  pw.focus();
-  setTimeout(() => pw.print(), 700);
+  const tm = _mapaTel4R();
+  const cel = (eq, sl) => {
+    const m = eq[sl];
+    if (!m?.bi) return '<td class="vago">- Vago -</td>';
+    const t = _tel4R(m.bi, tm);
+    return '<td>' + escH(m.nome || '') + (t ? '<br><small>' + escH(t) + '</small>' : '') + '</td>';
+  };
+  const linhas = _supTeamsCache.map(eq => {
+    const inj = eq.tipo_equipa === 'INJECTAVEL';
+    return '<tr><td><strong>Eq. ' + (eq.equipa_num ?? '-') + '</strong></td>' +
+      '<td>' + (inj ? 'Injectável' : 'Oral') + (eq.posto_fixo ? ' · Posto fixo' : '') + '</td>' +
+      cel(eq, inj ? 'vacinador_tecnico_1' : 'mobilizador') + cel(eq, inj ? 'vacinador_tecnico_2' : 'vacinador') +
+      cel(eq, 'registador') + (eq.posto_fixo ? cel(eq, 'mobilizador_posto') : '<td class="vago">n/a</td>') + '</tr>';
+  }).join('');
+  const coordNome = _supCoordCache ? (_supCoordCache.nome || '-') : '-';
+  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>As minhas equipas - 4ª Ronda</title><style>' +
+    'body{font-family:Georgia,serif;margin:20px;color:#000}h2{margin:0 0 4px;font-size:16px}p{margin:2px 0;font-size:12px}' +
+    'table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}th,td{border:1px solid #000;padding:5px 7px;text-align:left}' +
+    'th{background:#ddd}.vago{color:#888;font-style:italic}small{color:#444}' +
+    '.btn-print{position:fixed;top:10px;right:10px;padding:8px 14px;background:#1a4fa3;color:#fff;border:0;border-radius:6px;cursor:pointer}' +
+    '@media print{.btn-print{display:none}@page{size:A4 landscape;margin:12mm}}</style></head><body>' +
+    '<button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>' +
+    '<h2>' + _escHTML(CAMPANHA_4R.titulo) + '</h2><p>' + _escHTML(CAMPANHA_4R.datas) + '</p>' +
+    '<p><strong>Supervisor:</strong> ' + escH(APP_SESSION.nome || '') + ' &nbsp;·&nbsp; <strong>Coordenação:</strong> ' + escH(APP_SESSION.coordenacao || '') +
+    ' &nbsp;·&nbsp; <strong>Coordenador de área:</strong> ' + escH(coordNome) + '</p>' +
+    '<table><thead>' + '<tr>' + COORD_TH_4R + '</tr></thead><tbody>' + linhas + '</tbody></table></body></html>';
+  _abrirJanela4R(html, 'Lista das suas equipas aberta numa nova aba.');
 }
 
 // ─── FIM FASES SUP-1 + SUP-2 ──────────────────────────────────────────────────
@@ -13414,8 +13389,8 @@ function exportCSV() {
 }
 
 // ── Contagem regressiva para a Campanha (sessão Supervisor) ──────────────────
-const CD_START = new Date('2026-08-21T07:00:00'); // início oficial da campanha
-const CD_END   = new Date('2026-08-23T18:00:00'); // fim da campanha
+const CD_START = CD4R_INICIO; // 23/10/2026 07:00 - início da 4ª Ronda
+const CD_END   = CD4R_FIM;    // 28/10/2026 18:00 - fim da repescagem
 let   _cdInterval = null;
 
 function _cdRender() {
@@ -13470,7 +13445,7 @@ function _cdRender() {
                + CD_END.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
     }
     el.innerHTML =
-      '<div class="cd-phase" style="color:var(--green)">🟢 CAMPANHA ACTIVA</div>' +
+      '<div class="cd-phase" style="color:var(--green)">🟢 ' + (now >= new Date(PRES4R_REP + 'T00:00:00') ? 'REPESCAGEM' : 'CAMPANHA ACTIVA') + '</div>' +
       '<div class="cd-main" style="color:var(--green)">' + mainTxt + '</div>' +
       '<div class="cd-sub">' + subTxt + '</div>';
     return;
@@ -13480,7 +13455,7 @@ function _cdRender() {
   if (_cdInterval) { clearInterval(_cdInterval); _cdInterval = null; }
   el.innerHTML =
     '<div class="cd-phase" style="color:var(--text3)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="10" cy="10" r="9" fill="var(--success)"/><path d="M6 10.2l2.6 2.6L14.4 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Campanha concluída</div>' +
-    '<div class="cd-main" style="color:var(--text3);font-size:13px">14–16 Ago 2026</div>' +
+    '<div class="cd-main" style="color:var(--text3);font-size:13px">23–28 Out 2026</div>' +
     '<div class="cd-sub">Obrigado pela participação!</div>';
 }
 
@@ -14867,7 +14842,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="checkbox" id="cfr-reg" checked> Registadores
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text)">
-            <input type="checkbox" id="cfr-vit" checked> Vitaminadores
+            <input type="checkbox" id="cfr-vit" checked> Vacinadores Técnicos
           </label>
         </div>
       </div>
