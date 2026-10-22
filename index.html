@@ -2340,8 +2340,8 @@ input, textarea, select {
       <button class="btn-hier-action" onclick="exportarCSVEquipas4R()" title="Uma linha por pessoa (formato longo) - bom para análise"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> CSV</button>
       <button class="btn-hier-action" onclick="exportarExcelEquipas4R(this)" title="Excel com 6 folhas: Equipas Orais, Injectáveis, Postos Fixos, Coord e Supervisores, Resumo, Disponíveis"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M10 2.5v10.5M6 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15.5v1.7c0 .7.6 1.3 1.3 1.3h10.4c.7 0 1.3-.6 1.3-1.3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Excel</button>
       <span class="hier-toolbar-lbl" style="margin-left:8px">Formação:</span>
-      <button class="btn-hier-action" onclick="exportarListaFormacaoMob4R(this)"
-        title="Lista de presença da formação dos Mobilizadores (Excel, modelo oficial) - equipas orais + postos fixos"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Lista MOB</button>
+      <button class="btn-hier-action" onclick="abrirFormacao4R()"
+        title="Listas de presença da formação (Excel, modelo oficial): escolha a coordenação e obtenha uma folha por função"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="4" y="3.5" width="12" height="15" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="2" width="5.6" height="3" rx="1" fill="currentColor"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="12.3" x2="13.5" y2="12.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="6.5" y1="15.6" x2="11" y2="15.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Lista Formação</button>
       <span class="hier-toolbar-lbl" style="margin-left:8px">Presenças:</span>
       <button class="btn-hier-action" id="btn-lista-pres4r-toggle" onclick="toggleListaPresencaPanel4R()"
         title="Lista de presença de campo por supervisor (equipas orais e injectáveis)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M5 2h7l3 3v13H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="7.3" y1="9.5" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.3" y1="12.5" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Lista Presença</button>
@@ -10359,6 +10359,156 @@ async function exportarListaFormacaoMob4R(btn) {
     showToast('Erro ao gerar a lista: ' + e.message, 'error');
   }
   restaurar();
+}
+
+// ── Lista de formação por coordenação: um Excel, uma folha por função ──────────
+// Mesmo modelo oficial da Lista MOB (cabeçalho, formador/data, tabela e assinatura).
+const FORMACAO_FUNCOES_4R = [
+  { id: 'coord', folha: 'COORDENADORES',  rotulo: 'Coordenadores de área' },
+  { id: 'sup',   folha: 'SUPERVISORES',   rotulo: 'Supervisores de equipa' },
+  { id: 'mob',   folha: 'MOBILIZADORES',  rotulo: 'Mobilizadores (equipas orais e postos fixos)' },
+  { id: 'vac',   folha: 'VACINADORES',    rotulo: 'Vacinadores (equipas orais)' },
+  { id: 'tec',   folha: 'VAC. TÉCNICOS',  rotulo: 'Vacinadores técnicos (equipas injectáveis)' },
+  { id: 'reg',   folha: 'REGISTADORES',   rotulo: 'Registadores (orais e injectáveis)' },
+];
+// Pessoas (e vagas, nas funções de equipa) de cada função, de todas as coordenações
+function getPessoasFormacao4R(idFuncao) {
+  const tm = _mapaTel4R();
+  const slot = (e, r, funcao) => {
+    const m = e[r];
+    return { nome: m?.bi ? _toTitleCase(m.nome || '') : '', telefone: m?.bi ? _tel4R(m.bi, tm, m.telefone) : '',
+             coord: e.coordenacao || '(Sem coordenação)', funcao };
+  };
+  const eqs = Object.values(_equipasCache4R);
+  if (idFuncao === 'mob') return getMobilizadores4R();
+  if (idFuncao === 'vac') return eqs.filter(e => e.tipo_equipa !== 'INJECTAVEL').map(e => slot(e, 'vacinador', 'VACINADOR'));
+  if (idFuncao === 'tec') return eqs.filter(e => e.tipo_equipa === 'INJECTAVEL')
+    .flatMap(e => ['vacinador_tecnico_1', 'vacinador_tecnico_2'].map(r => slot(e, r, 'VACINADOR TÉCNICO')));
+  if (idFuncao === 'reg') return eqs.map(e => slot(e, 'registador', 'REGISTADOR'));
+  const status = idFuncao === 'coord' ? 'coord' : 'supervisor';
+  return Object.values(_alocacoesCache4R).filter(a => a.status === status).map(a => ({
+    nome: _toTitleCase(a.nome || ''), telefone: _tel4R(a.bi, tm, a.telefone), coord: a.coordenacao || '(Sem coordenação)',
+    funcao: idFuncao === 'coord' ? 'COORDENADOR DE ÁREA' : 'SUPERVISOR DE VACINAÇÃO' }));
+}
+// Mesma ordem da lista MOB: coordenações com menos pessoas primeiro; nomes por ordem alfabética, vagas no fim
+function _ordenarFormacao4R(todos) {
+  const porCoord = {};
+  todos.forEach(m => { (porCoord[m.coord] = porCoord[m.coord] || []).push(m); });
+  const preenchidos = c => porCoord[c].filter(m => m.nome).length;
+  const linhas = [];
+  Object.keys(porCoord).sort((a, b) => preenchidos(a) - preenchidos(b) || _cmp4R(a, b)).forEach(c => {
+    [...porCoord[c]].sort((a, b) => (a.nome && !b.nome) ? -1 : (!a.nome && b.nome) ? 1 : _cmp4R(a.nome, b.nome))
+      .forEach(m => linhas.push({ ...m, coord: c }));
+  });
+  return linhas;
+}
+function _folhaFormacao4R(X, linhas) {
+  const aoa = [
+    [], [], [],
+    ['REPÚBLICA DE ANGOLA','','','',''],
+    ['DIREÇÃO NACIONAL DE SAÚDE PÚBLICA','','','',''],
+    ['GOVERNO DA PROVÍNCIA DO CUANZA SUL','','','',''],
+    ['ADMINISTRAÇÃO MUNICIPAL DO SUMBE','','','',''],
+    ['DIRECÇÃO DE SAÚDE','','','',''],
+    [CAMPANHA_4R.titulo,'','','',''],
+    [],
+    [CAMPANHA_4R.datas,'','','',''],
+    ['LISTA DE PRESENÇA - FORMAÇÃO','','','',''],
+    [],
+    ['Formador:_______________________________________________','','','Data:__________/_____________/2026',''],
+    [],
+    ['Nº','NOME COMPLETO','FUNÇÃO','COORDENAÇÃO','CONTACTO'],
+  ];
+  linhas.forEach((l, i) => aoa.push([i + 1, l.nome, l.funcao, l.coord, l.telefone]));
+  const fR = aoa.length;
+  aoa.push([]);
+  aoa.push(['DIRECÇÃO MUNICIPAL DA SAÚDE, AOS _______ DE ______________________ DE 2026','','','','']);
+  aoa.push([]);
+  aoa.push(['A CHEFE DE SECÇÃO DE SAÚDE PÚBLICA','','','','']);
+  aoa.push(['__________________________________________','','','','']);
+  aoa.push(['MARIA JÚLIA DOMINGOS DA SILVA','','','','']);
+  aoa.push(['Msc. Em Saúde Pública','','','','']);
+  const ws = X.utils.aoa_to_sheet(aoa);
+  const merges = [];
+  [3,4,5,6,7,8,10,11].forEach(r => merges.push({ s:{r,c:0}, e:{r,c:4} }));
+  merges.push({ s:{r:13,c:0}, e:{r:13,c:2} });
+  merges.push({ s:{r:13,c:3}, e:{r:13,c:4} });
+  [1,2,3,4,5,6].forEach(off => merges.push({ s:{r:fR+off,c:0}, e:{r:fR+off,c:4} }));
+  ws['!merges'] = merges;
+  ws['!cols'] = [{ wch: 6.5 }, { wch: 45 }, { wch: 26 }, { wch: 36 }, { wch: 22 }];
+  ws['!rows'] = Array.from({ length: 16 }, (_, i) => ({ hpx: [14,14,14,14,14,15,15,15,30,13,20,19,19,19,14,22][i] }));
+  return ws;
+}
+
+function fecharFormacao4R() { document.getElementById('formacao-modal-4r')?.remove(); }
+function _contagemFormacao4R() {
+  const coord = document.getElementById('formacao-coord-4r')?.value || '';
+  FORMACAO_FUNCOES_4R.forEach(f => {
+    const todas = getPessoasFormacao4R(f.id).filter(p => !coord || p.coord === coord);
+    const el = document.getElementById('formacao-n-' + f.id);
+    const vagas = todas.filter(p => !p.nome).length;
+    if (el) el.textContent = todas.filter(p => p.nome).length + (vagas ? ' + ' + vagas + ' vagas' : '');
+  });
+}
+function abrirFormacao4R() {
+  if (!Object.keys(_equipasCache4R).length && !Object.keys(_alocacoesCache4R).length) {
+    showToast('Ainda não há hierarquia na 4ª Ronda. Componha as equipas primeiro.', 'warn'); return;
+  }
+  fecharFormacao4R();
+  const ov = document.createElement('div');
+  ov.id = 'formacao-modal-4r';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.onclick = ev => { if (ev.target === ov) fecharFormacao4R(); };
+  const sel = 'background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--text);width:100%';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#1a2638);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.5)">' +
+      '<div style="font-size:16px;font-weight:800;margin-bottom:4px">Lista de Formação</div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">Gera um Excel com uma folha por função, no modelo oficial.</div>' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text3)">Coordenação</label>' +
+      '<select id="formacao-coord-4r" style="' + sel + ';margin:6px 0 16px" onchange="_contagemFormacao4R()">' +
+        '<option value="">Todas as coordenações</option>' + COORDENACOES_2R.map(c => '<option value="' + escAttr(c) + '">' + escH(c) + '</option>').join('') +
+      '</select>' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text3)">Funções (uma folha cada)</label>' +
+      '<div style="margin:8px 0 18px;display:flex;flex-direction:column;gap:7px">' +
+        FORMACAO_FUNCOES_4R.map(f =>
+          '<label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer">' +
+            '<input type="checkbox" class="formacao-func-4r" value="' + f.id + '" checked> <span style="flex:1">' + escH(f.rotulo) + '</span>' +
+            '<span id="formacao-n-' + f.id + '" style="font-size:11px;color:var(--text3)"></span></label>').join('') +
+      '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+        '<button class="btn-hier-action" onclick="fecharFormacao4R()">Cancelar</button>' +
+        '<button class="btn-hier-action" id="formacao-gerar-4r" style="background:var(--accent2);color:#111;border-color:var(--accent2);font-weight:800" onclick="exportarFormacao4R()">Gerar Excel</button>' +
+      '</div></div>';
+  document.body.appendChild(ov);
+  _contagemFormacao4R();
+}
+async function exportarFormacao4R() {
+  const coord = document.getElementById('formacao-coord-4r')?.value || '';
+  const escolhidas = FORMACAO_FUNCOES_4R.filter(f => document.querySelector('.formacao-func-4r[value="' + f.id + '"]')?.checked);
+  if (!escolhidas.length) { showToast('Escolha pelo menos uma função.', 'warn'); return; }
+  const btn = document.getElementById('formacao-gerar-4r');
+  if (btn) { btn.disabled = true; btn.textContent = 'A gerar...'; }
+  const restaurar = () => { if (btn) { btn.disabled = false; btn.textContent = 'Gerar Excel'; } };
+  try { await loadSheetJS(); } catch(e) { showToast('Erro ao carregar motor Excel. Verifique a ligação.', 'error'); restaurar(); return; }
+  try {
+    const X = window.XLSX, wb = X.utils.book_new();
+    const feitas = [], vazias = [];
+    escolhidas.forEach(f => {
+      const linhas = _ordenarFormacao4R(getPessoasFormacao4R(f.id).filter(p => !coord || p.coord === coord));
+      if (!linhas.length) { vazias.push(f.folha); return; }
+      X.utils.book_append_sheet(wb, _folhaFormacao4R(X, linhas), f.folha);
+      feitas.push(f.folha + ' (' + linhas.filter(l => l.nome).length + ')');
+    });
+    if (!feitas.length) { showToast('Nada para exportar nesta coordenação com as funções escolhidas.', 'warn'); restaurar(); return; }
+    const nomeCoord = coord ? coord.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') : 'Todas';
+    X.writeFile(wb, 'Lista_Formacao_4R_' + nomeCoord + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    fecharFormacao4R();
+    showToast('Excel gerado: ' + feitas.join(', ') + (vazias.length ? '. Sem dados: ' + vazias.join(', ') + '.' : '.'), 'success');
+  } catch(e) {
+    console.error('[4R] exportarFormacao4R:', e);
+    showToast('Erro ao gerar a lista: ' + e.message, 'error');
+    restaurar();
+  }
 }
 
 // ── Listas de presença (A4 paisagem) ─────────────────────────────────────────
