@@ -8749,6 +8749,96 @@ async function _alocarProfissional4R(bi, nome, funcao, coordenacao, sexo, status
   }
 }
 
+// ── Substituir Supervisor (4ª Ronda) - mantém as equipas e os membros ──────────
+// O supervisor só está ligado às equipas pelo BI e nome (supervisor_id/supervisor_nome),
+// às alocações dos membros (supervisor_id) e às presenças já marcadas (supervisor_bi).
+// A troca passa tudo isso para o novo supervisor e devolve o antigo ao pool.
+// Ordem: cria o novo -> equipas -> alocações dos membros -> presenças -> remove o antigo.
+// Se uma equipa falhar a gravar, reverte o que já foi mudado e não remove o antigo.
+async function fbGetPresencasDoSupervisor4R(supervisorBI) {
+  if (!fbReady()) return [];
+  try {
+    const { getDocs, query, colRef, where } = window._FB;
+    const snap = await getDocs(query(colRef('presencas_4r'), where('supervisor_bi', '==', supervisorBI.toUpperCase())));
+    const docs = []; snap.forEach(d => docs.push(d.data()));
+    return docs;
+  } catch (e) { console.error('[Substituir supervisor] presenças:', e); return []; }
+}
+
+async function substituirSupervisor4R(biAntigo, prof, coordenacao) {
+  if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
+  const OLD = (biAntigo || '').toUpperCase();
+  const NEW = (prof.bi || '').toUpperCase();
+  const antigo = _alocacoesCache4R[OLD];
+  if (!antigo || antigo.status !== 'supervisor') { showToast('O supervisor a substituir já não está na hierarquia. Actualize a página.', 'error'); return; }
+  if (!NEW || NEW === OLD) { showToast('Escolha uma pessoa diferente do supervisor actual.', 'warn'); return; }
+  const equipas = Object.values(_equipasCache4R).filter(e => (e.supervisor_id || '').toUpperCase() === OLD);
+  const nMembros = equipas.reduce((n, e) => n + SLOT_ORDEM_4R.filter(r => e[r]?.bi).length, 0);
+
+  const ok = await showConfirmModal({
+    title: 'Substituir Supervisor',
+    body: (antigo.nome || OLD) + '  ->  ' + prof.nome + '\n\n' +
+          equipas.length + ' equipa(s) e ' + nMembros + ' membro(s) mantêm-se e passam para o novo supervisor.\n' +
+          (antigo.nome || 'O supervisor actual').split(' ')[0] + ' volta ao pool disponível.' +
+          '\nAs presenças já marcadas passam a constar sob o novo supervisor.',
+    confirmLabel: 'Substituir',
+  });
+  if (!ok) return;
+
+  // 1. Criar o novo supervisor (mesma coordenação)
+  const r1 = await _alocarProfissional4R(prof.bi, prof.nome, 'Supervisor equipa', coordenacao || antigo.coordenacao, prof.sexo || 'M', 'supervisor', prof._fonte || 'rh_data', true);
+  if (!r1 || !r1.success) return; // _alocarProfissional4R já avisou (ex.: excluído na avaliação)
+
+  // 2. Equipas: supervisor_id/supervisor_nome (com reversão se alguma falhar)
+  const feitas = [];
+  let falhou = null;
+  for (const eq0 of equipas) {
+    const eq = { ...eq0, supervisor_id: NEW, supervisor_nome: prof.nome };
+    const r = await _fbSaveEquipa4RWithRetry(eq);
+    if (!r.success) { falhou = eq0; break; }
+    feitas.push(eq0);
+    _equipasCache4R[eq0.id || eq0._id] = eq;
+  }
+  if (falhou) {
+    for (const eq0 of feitas) { await _fbSaveEquipa4RWithRetry(eq0); _equipasCache4R[eq0.id || eq0._id] = eq0; }
+    await fbRemoveAlocacao4R(NEW).catch(() => {});
+    delete _alocacoesCache4R[NEW];
+    renderHierarquia4R();
+    showToast('Erro ao gravar a equipa ' + (falhou.equipa_num ?? '') + ': ligação instável. Nada foi alterado.', 'error');
+    return;
+  }
+
+  // 3. Alocações dos membros (supervisor_id) e presenças já marcadas (supervisor_bi): melhor esforço
+  const avisos = [];
+  for (const a of Object.values(_alocacoesCache4R)) {
+    if ((a.supervisor_id || '').toUpperCase() !== OLD) continue;
+    const { _id, ...base } = a;
+    const novo = { ...base, supervisor_id: NEW };
+    const r = await fbSaveAlocacao4R(novo);
+    if (r.success) _alocacoesCache4R[(base.bi || _id || '').toUpperCase()] = novo; else avisos.push('alocação de ' + (a.nome || a.bi));
+  }
+  const presencas = await fbGetPresencasDoSupervisor4R(OLD);
+  for (const p of presencas) {
+    const { _id, ...base } = p;
+    const r = await fbSavePresenca4R({ ...base, supervisor_bi: prof.bi, supervisor_nome: prof.nome });
+    if (!r.success) avisos.push('presença de ' + (p.nome || p.bi));
+  }
+
+  // 4. Remover o supervisor antigo (volta ao pool)
+  const r4 = await fbRemoveAlocacao4R(antigo.bi);
+  if (r4.success) delete _alocacoesCache4R[OLD]; else avisos.push('remoção do supervisor antigo');
+
+  registarAuditoria('substituir_supervisor_4r', {
+    alvoBI: prof.bi, alvoNome: prof.nome, modulo: 'hierarquia_4r', coordenacao: coordenacao || antigo.coordenacao || '',
+    antes: { supervisor_bi: antigo.bi, supervisor_nome: antigo.nome },
+    depois: { supervisor_bi: prof.bi, supervisor_nome: prof.nome, equipas: equipas.length, membros: nMembros, presencas: presencas.length, avisos: avisos.length },
+  });
+  _invalidatePickerCache();
+  renderHierarquia4R();
+  if (avisos.length) showToast('Supervisor substituído, mas ficou por actualizar: ' + avisos.slice(0, 3).join('; ') + '. Use "Sincronizar com o Perfil" ou tente de novo.', 'warn');
+  else showToast(prof.nome.split(' ')[0] + ' é agora o supervisor das ' + equipas.length + ' equipa(s). ✅', 'success');
+}
+
 // ── Remover Coordenador/Supervisor (com cascata, se supervisor) - 4ª Ronda ──
 async function removerAlocacao4R(bi) {
   if (!podeGerir()) { showToast('Acesso restrito à equipa de gestão.', 'error'); return; }
@@ -8912,12 +9002,16 @@ async function openAssignModal4R(coordenacao, role, equipaId, memberRole) {
     mobilizador: 'Atribuir Mobilizador', vacinador: 'Atribuir Vacinador', registador: 'Atribuir Registador',
     vacinador_tecnico_1: 'Atribuir Vacinador Técnico (1)', vacinador_tecnico_2: 'Atribuir Vacinador Técnico (2)',
   };
+  const isTroca = role === 'supervisor-troca';
   document.getElementById('assign-modal-title-4r').textContent = isPosto ? 'Atribuir Mobilizador de Posto' : isMember
     ? (memberTitles[memberRole] || 'Atribuir Membro')
+    : isTroca ? 'Substituir Supervisor de Vacinação'
     : isCoord ? 'Atribuir Coord área/Comuna' : 'Atribuir Supervisor de Vacinação';
   document.getElementById('assign-modal-sub-4r').textContent = isPosto
     ? (_postoPorId4R(equipaId) ? _rotuloPosto4R(_postoPorId4R(equipaId)) + ' - ' + coordenacao : 'Posto - ' + coordenacao)
-    : isMember ? 'Equipa - ' + coordenacao : 'Coordenação: ' + coordenacao;
+    : isMember ? 'Equipa - ' + coordenacao
+    : isTroca ? 'Coordenação: ' + coordenacao + ' - substitui ' + ((_alocacoesCache4R[(equipaId || '').toUpperCase()] || {}).nome || 'o supervisor actual') + ' (as equipas mantêm-se)'
+    : 'Coordenação: ' + coordenacao;
   document.getElementById('assign-search-inp-4r').value = '';
   document.getElementById('assign-modal-4r').style.display = 'flex';
   document.getElementById('assign-list-content-4r').innerHTML =
@@ -9054,6 +9148,8 @@ async function selectAssignItem4R(bi) {
   };
   if (role === 'posto') {
     await _assignMobilizadorPosto4R(equipaId, prof);
+  } else if (role === 'supervisor-troca') {
+    await substituirSupervisor4R(equipaId, prof, coordenacao); // equipaId = BI do supervisor a substituir
   } else if (role === 'member') {
     const profParaEquipa = { ...prof, funcao: MEMBER_LABELS[memberRole] || prof.funcao };
     await _assignMemberToTeam4R(equipaId, memberRole, profParaEquipa);
@@ -10567,6 +10663,7 @@ function renderSupWithTeams4R(s, coordenacao) {
         '<div class="sup-slot-nome">' + escH((s.nome||'').split(' ').slice(0,3).join(' ')) + '</div>' +
         '<div class="sup-slot-coord">Supervisor de Vacinação · ' + eqsOral.length + ' oral · ' + eqsInj.length + ' inj.</div>' +
       '</div>' +
+      (podeGerir() ? '<button class="btn-slot-remove" style="margin-right:6px" onclick="openAssignModal4R(\'' + escAttr(coordenacao) + '\',\'supervisor-troca\',\'' + escAttr(s.bi) + '\')" title="Substituir supervisor (mantém as equipas)">⇄</button>' : '') +
       '<button class="btn-slot-remove" onclick="removerAlocacao4R(\'' + escAttr(s.bi) + '\')" title="Remover supervisor">✕</button>' +
     '</div>';
 
