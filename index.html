@@ -10598,23 +10598,20 @@ function _paginasSupervisor4R(supBI, tm) {
   const injs  = eqs.filter(e => e.tipo_equipa === 'INJECTAVEL');
   const linhas = (lista, roles) => lista.flatMap(eq => roles.map(role => {
     const m = eq[role];
-    return { eq: (eq.tipo_equipa === 'INJECTAVEL' ? 'Inj. ' : 'Oral ') + (eq.equipa_num || '?'),
+    return { f: role.startsWith('vacinador_tecnico') ? 'Vacinador Técnico' : role.charAt(0).toUpperCase() + role.slice(1),
              nome: m?.bi ? _toTitleCase(m.nome || (findProfissional(m.bi)?.nome) || '') : '',
              tel:  m?.bi ? _tel4R(m.bi, tm, m.telefone) : '' };
   }));
+  // Uma lista por função (orais e injectáveis juntos); a coluna FUNÇÃO distingue Vacinador de Vacinador Técnico
   const defs = [];
-  if (orais.length) {
-    defs.push({ t: 'EQUIPAS ORAIS', f: 'Mobilizador', l: linhas(orais, ['mobilizador']), rep: false });
-    defs.push({ t: 'EQUIPAS ORAIS', f: 'Vacinador',   l: linhas(orais, ['vacinador']) });
-    defs.push({ t: 'EQUIPAS ORAIS', f: 'Registador',  l: linhas(orais, ['registador']) });
-  }
-  if (injs.length) {
-    defs.push({ t: 'EQUIPAS INJECTÁVEIS', f: 'Vacinador Técnico', l: linhas(injs, ['vacinador_tecnico_1', 'vacinador_tecnico_2']) });
-    defs.push({ t: 'EQUIPAS INJECTÁVEIS', f: 'Registador',        l: linhas(injs, ['registador']) });
-  }
+  if (orais.length) defs.push({ t: 'MOBILIZADORES', l: linhas(orais, ['mobilizador']), rep: false });
+  const vac = linhas(orais, ['vacinador']).concat(linhas(injs, ['vacinador_tecnico_1', 'vacinador_tecnico_2']));
+  if (vac.length) defs.push({ t: 'VACINADORES', l: vac });
+  const reg = linhas(orais, ['registador']).concat(linhas(injs, ['registador']));
+  if (reg.length) defs.push({ t: 'REGISTADORES', l: reg });
   return defs.map(d => {
-    const trs = d.l.map((m, i) => `<tr><td class="tc">${i + 1}</td><td class="tc">${_escHTML(m.eq)}</td><td>${_escHTML(m.nome)}</td>` +
-      `<td class="tc">${_escHTML(d.f)}</td><td>${_escHTML(m.tel)}</td>${d.rep === false ? _TD_DIAS_SEM_REP4R : _TD_DIAS4R}</tr>`).join('');
+    const trs = d.l.map((m, i) => `<tr><td class="tc">${i + 1}</td><td>${_escHTML(m.nome)}</td>` +
+      `<td class="tc">${_escHTML(m.f)}</td><td>${_escHTML(m.tel)}</td>${d.rep === false ? _TD_DIAS_SEM_REP4R : _TD_DIAS4R}</tr>`).join('');
     return `<div class="pagina">${_cab4R()}
       <div class="titulo-lista">LISTA DE PRESENÇA - ${d.t}</div>
       <div class="campos-row">
@@ -10622,7 +10619,7 @@ function _paginasSupervisor4R(supBI, tm) {
         <span>Nome do Coordenador: <span class="campo-linha" style="min-width:200px"></span></span>
         <span>Nome do Supervisor: <span class="campo-linha" style="min-width:200px"></span></span>
       </div>
-      <table><thead><tr><th class="col-num">Nº</th><th class="col-eq">EQUIPA</th><th class="col-nome">NOME COMPLETO</th>
+      <table><thead><tr><th class="col-num">Nº</th><th class="col-nome">NOME COMPLETO</th>
         <th class="col-func">FUNÇÃO</th><th class="col-tel">CONTACTO</th>${_diasTh4R(d.rep !== false)}</tr></thead>
         <tbody>${trs}</tbody></table>
       ${_rodape4R()}</div>`;
