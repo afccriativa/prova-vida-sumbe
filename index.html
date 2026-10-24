@@ -12099,6 +12099,27 @@ async function fbGetPresencasDia(data) {
   } catch(e) { console.error('[Presenças]', e); return []; }
 }
 
+// Supervisor: gerar a sua lista de presença (mesmas páginas do administrador) e abrir para imprimir/guardar PDF
+async function supGerarListaPresenca() {
+  if (!isSupervisorSession() || !APP_SESSION.bi) return;
+  const btn = document.getElementById('btn-sup-gerar-lista');
+  const txt = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'A gerar...'; }
+  try {
+    const [alocDocs, eqDocs] = await Promise.all([fbGetAlocacoes4R(), fbGetEquipas4R()]);
+    if (alocDocs.length) updateAlocacoesCache4R(alocDocs);
+    if (eqDocs.length) updateEquipasCache4R(eqDocs);
+    await recarregarAvalENovos4R(); // telefones dos registos novos
+    const paginas = _paginasSupervisor4R(APP_SESSION.bi, _mapaTel4R());
+    if (!paginas.length) { showToast('Não tem equipas atribuídas para gerar a lista.', 'warn'); return; }
+    _abrirJanela4R(_doc4R('Lista de Presença - ' + (APP_SESSION.nome || 'Supervisor') + ' - 4ª Ronda', paginas.join('\n')),
+                   'Lista aberta em nova aba (' + paginas.length + ' página(s)). Use "Imprimir / Guardar PDF".');
+  } catch (e) {
+    console.error('[Sup] supGerarListaPresenca:', e);
+    showToast('Erro ao gerar a lista: ' + e.message, 'error');
+  } finally { if (btn) { btn.disabled = false; btn.textContent = txt; } }
+}
+
 // ── Supervisor: presenças da 4ª Ronda (presencas_4r) ───────────────────────────
 // 5 dias de campanha + repescagem. Os mobilizadores (e os mobilizadores de posto) não
 // vão à repescagem. Cada pessoa tem uma marcação por dia (id: BI_AAAAMMDD).
@@ -15017,6 +15038,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><rect x="3" y="4" width="14" height="13" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="3" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.6"/><line x1="6.5" y1="2.3" x2="6.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="13.5" y1="2.3" x2="13.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Presenças em Campo</h3>
       <div class="sup-teams-actions" style="margin-top:6px">
         <button class="btn-sup-refresh" onclick="supCarregarPresencas()" title="Actualizar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" style="vertical-align:-0.15em"><path d="M16.5 10a6.5 6.5 0 1 1-2-4.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3v4.3h-4.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn-sup-refresh" id="btn-sup-gerar-lista" style="width:auto;padding:0 14px;gap:6px" onclick="supGerarListaPresenca()" title="Gerar a lista de presença das suas equipas (abre numa nova aba para imprimir ou guardar em PDF)">Gerar Lista de Presença</button>
       </div>
     </div>
     <div class="pres-day-bar" id="pres-day-bar"></div>
